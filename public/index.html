@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Auth Test Console</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <p class="eyebrow">Authentication Sandbox</p>
+        <h1>Test your auth flow from one page.</h1>
+        <p class="lede">
+          Register, log in, refresh, inspect the current profile, and run the
+          forgot/reset password flow without leaving the browser.
+        </p>
+      </section>
+
+      <section class="panel token-panel">
+        <div>
+          <h2>Access Token</h2>
+          <p class="panel-copy">
+            The page stores the current access token in local storage so you can
+            refresh and retry protected requests quickly.
+          </p>
+        </div>
+
+        <label class="field">
+          <span>Current token</span>
+          <textarea
+            id="access-token"
+            rows="5"
+            placeholder="Login or paste a token here"
+          ></textarea>
+        </label>
+
+        <div class="button-row">
+          <button id="save-token" type="button" class="ghost">Save token</button>
+          <button id="clear-token" type="button" class="ghost">
+            Clear token
+          </button>
+          <button id="profile-button" type="button">Get profile</button>
+          <button id="refresh-button" type="button">Refresh token</button>
+          <button id="logout-button" type="button" class="warn">Logout</button>
+        </div>
+      </section>
+
+      <section class="card-grid">
+        <form id="register-form" class="panel form-card">
+          <h2>Register</h2>
+          <label class="field">
+            <span>Name</span>
+            <input name="name" type="text" placeholder="Aya Hassan" required />
+          </label>
+          <label class="field">
+            <span>Email</span>
+            <input
+              name="email"
+              type="email"
+              placeholder="aya@example.com"
+              required
+            />
+          </label>
+          <label class="field">
+            <span>Password</span>
+            <input
+              name="password"
+              type="password"
+              placeholder="Password1"
+              required
+            />
+          </label>
+          <label class="field">
+            <span>Confirm Password</span>
+            <input
+              name="confirmPassword"
+              type="password"
+              placeholder="Password1"
+              required
+            />
+          </label>
+          <button type="submit">Create account</button>
+        </form>
+
+        <form id="login-form" class="panel form-card">
+          <h2>Login</h2>
+          <label class="field">
+            <span>Email</span>
+            <input
+              name="email"
+              type="email"
+              placeholder="aya@example.com"
+              required
+            />
+          </label>
+          <label class="field">
+            <span>Password</span>
+            <input
+              name="password"
+              type="password"
+              placeholder="Password1"
+              required
+            />
+          </label>
+          <button type="submit">Login</button>
+        </form>
+
+        <form id="forgot-form" class="panel form-card">
+          <h2>Forgot Password</h2>
+          <label class="field">
+            <span>Email</span>
+            <input
+              name="email"
+              type="email"
+              placeholder="aya@example.com"
+              required
+            />
+          </label>
+          <p class="hint">
+            In development, the reset token from the response will be copied into
+            the reset form below.
+          </p>
+          <button type="submit">Request reset token</button>
+        </form>
+
+        <form id="reset-form" class="panel form-card">
+          <h2>Reset Password</h2>
+          <label class="field">
+            <span>Reset Token</span>
+            <input
+              id="reset-token"
+              name="token"
+              type="text"
+              placeholder="Paste reset token"
+              required
+            />
+          </label>
+          <label class="field">
+            <span>New Password</span>
+            <input
+              name="password"
+              type="password"
+              placeholder="NewPassword1"
+              required
+            />
+          </label>
+          <label class="field">
+            <span>Confirm Password</span>
+            <input
+              name="confirmPassword"
+              type="password"
+              placeholder="NewPassword1"
+              required
+            />
+          </label>
+          <button type="submit">Reset password</button>
+        </form>
+      </section>
+
+      <section class="panel response-panel">
+        <div class="response-head">
+          <div>
+            <p class="eyebrow">Live Response</p>
+            <h2>API output</h2>
+          </div>
+          <span id="status-pill" class="status-pill" data-state="idle">Idle</span>
+        </div>
+        <pre id="response-output">No requests yet.</pre>
+      </section>
+    </main>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>
