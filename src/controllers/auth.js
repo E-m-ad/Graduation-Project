@@ -1,5 +1,5 @@
 import db from "../database/db.js";
-import z from "../utils/zod.js";
+import z from "../utils/auth.zod.js";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import crypto from "crypto";

@@ -3,170 +3,340 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Auth Test Console</title>
+    <title>User API Test Page</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
-    <main class="shell">
-      <section class="hero">
-        <p class="eyebrow">Authentication Sandbox</p>
-        <h1>Test your auth flow from one page.</h1>
-        <p class="lede">
-          Register, log in, refresh, inspect the current profile, and run the
-          forgot/reset password flow without leaving the browser.
-        </p>
-      </section>
-
-      <section class="panel token-panel">
+    <main class="page">
+      <section class="hero panel">
         <div>
-          <h2>Access Token</h2>
-          <p class="panel-copy">
-            The page stores the current access token in local storage so you can
-            refresh and retry protected requests quickly.
+          <p class="eyebrow">User Endpoint Tester</p>
+          <h1>Simple login page with user API actions</h1>
+          <p class="lede">
+            Use this page to register or log in, keep the access token in the
+            browser, test the authenticated user routes, and inspect public user
+            profile, products, and reviews from the same place.
           </p>
         </div>
 
-        <label class="field">
-          <span>Current token</span>
-          <textarea
-            id="access-token"
-            rows="5"
-            placeholder="Login or paste a token here"
-          ></textarea>
-        </label>
-
-        <div class="button-row">
-          <button id="save-token" type="button" class="ghost">Save token</button>
-          <button id="clear-token" type="button" class="ghost">
-            Clear token
+        <div class="hero-actions">
+          <button id="profile-button" type="button">Load my profile</button>
+          <button id="refresh-button" type="button" class="ghost">
+            Refresh token
           </button>
-          <button id="profile-button" type="button">Get profile</button>
-          <button id="refresh-button" type="button">Refresh token</button>
           <button id="logout-button" type="button" class="warn">Logout</button>
         </div>
       </section>
 
-      <section class="card-grid">
-        <form id="register-form" class="panel form-card">
-          <h2>Register</h2>
-          <label class="field">
-            <span>Name</span>
-            <input name="name" type="text" placeholder="Aya Hassan" required />
-          </label>
-          <label class="field">
-            <span>Email</span>
-            <input
-              name="email"
-              type="email"
-              placeholder="aya@example.com"
-              required
-            />
-          </label>
-          <label class="field">
-            <span>Password</span>
-            <input
-              name="password"
-              type="password"
-              placeholder="Password1"
-              required
-            />
-          </label>
-          <label class="field">
-            <span>Confirm Password</span>
-            <input
-              name="confirmPassword"
-              type="password"
-              placeholder="Password1"
-              required
-            />
-          </label>
-          <button type="submit">Create account</button>
-        </form>
+      <section class="layout">
+        <div class="column">
+          <section class="panel">
+            <div class="section-head">
+              <div>
+                <p class="eyebrow">Access</p>
+                <h2>Register and login</h2>
+              </div>
+            </div>
 
-        <form id="login-form" class="panel form-card">
-          <h2>Login</h2>
-          <label class="field">
-            <span>Email</span>
-            <input
-              name="email"
-              type="email"
-              placeholder="aya@example.com"
-              required
-            />
-          </label>
-          <label class="field">
-            <span>Password</span>
-            <input
-              name="password"
-              type="password"
-              placeholder="Password1"
-              required
-            />
-          </label>
-          <button type="submit">Login</button>
-        </form>
+            <div class="form-grid">
+              <form id="register-form" class="stack">
+                <h3>Create account</h3>
+                <label class="field">
+                  <span>Name</span>
+                  <input name="name" type="text" placeholder="Aya Hassan" required />
+                </label>
+                <label class="field">
+                  <span>Email</span>
+                  <input
+                    name="email"
+                    type="email"
+                    placeholder="aya@example.com"
+                    required
+                  />
+                </label>
+                <label class="field">
+                  <span>Password</span>
+                  <input
+                    name="password"
+                    type="password"
+                    placeholder="Password1"
+                    required
+                  />
+                </label>
+                <label class="field">
+                  <span>Confirm Password</span>
+                  <input
+                    name="confirmPassword"
+                    type="password"
+                    placeholder="Password1"
+                    required
+                  />
+                </label>
+                <button type="submit">Register</button>
+              </form>
 
-        <form id="forgot-form" class="panel form-card">
-          <h2>Forgot Password</h2>
-          <label class="field">
-            <span>Email</span>
-            <input
-              name="email"
-              type="email"
-              placeholder="aya@example.com"
-              required
-            />
-          </label>
-          <p class="hint">
-            In development, the reset token from the response will be copied into
-            the reset form below.
-          </p>
-          <button type="submit">Request reset token</button>
-        </form>
+              <form id="login-form" class="stack">
+                <h3>Login</h3>
+                <label class="field">
+                  <span>Email</span>
+                  <input
+                    id="login-email"
+                    name="email"
+                    type="email"
+                    placeholder="aya@example.com"
+                    required
+                  />
+                </label>
+                <label class="field">
+                  <span>Password</span>
+                  <input
+                    name="password"
+                    type="password"
+                    placeholder="Password1"
+                    required
+                  />
+                </label>
+                <button type="submit">Login</button>
+              </form>
+            </div>
+          </section>
 
-        <form id="reset-form" class="panel form-card">
-          <h2>Reset Password</h2>
-          <label class="field">
-            <span>Reset Token</span>
-            <input
-              id="reset-token"
-              name="token"
-              type="text"
-              placeholder="Paste reset token"
-              required
-            />
-          </label>
-          <label class="field">
-            <span>New Password</span>
-            <input
-              name="password"
-              type="password"
-              placeholder="NewPassword1"
-              required
-            />
-          </label>
-          <label class="field">
-            <span>Confirm Password</span>
-            <input
-              name="confirmPassword"
-              type="password"
-              placeholder="NewPassword1"
-              required
-            />
-          </label>
-          <button type="submit">Reset password</button>
-        </form>
-      </section>
+          <section class="panel">
+            <div class="section-head">
+              <div>
+                <p class="eyebrow">Authenticated User</p>
+                <h2>Profile management</h2>
+              </div>
+            </div>
 
-      <section class="panel response-panel">
-        <div class="response-head">
-          <div>
-            <p class="eyebrow">Live Response</p>
-            <h2>API output</h2>
-          </div>
-          <span id="status-pill" class="status-pill" data-state="idle">Idle</span>
+            <div class="form-grid">
+              <form id="update-profile-form" class="stack">
+                <h3>Update profile</h3>
+                <label class="field">
+                  <span>Name</span>
+                  <input name="name" type="text" placeholder="Aya Hassan" />
+                </label>
+                <label class="field">
+                  <span>Phone</span>
+                  <input name="phone" type="text" placeholder="01012345678" />
+                </label>
+                <label class="field">
+                  <span>City</span>
+                  <input name="city" type="text" placeholder="Cairo, Egypt" />
+                </label>
+                <label class="field">
+                  <span>Address</span>
+                  <input
+                    name="address"
+                    type="text"
+                    placeholder="12 Street Name, Cairo"
+                  />
+                </label>
+                <label class="field">
+                  <span>Bio</span>
+                  <textarea
+                    name="bio"
+                    rows="4"
+                    placeholder="Short profile summary"
+                  ></textarea>
+                </label>
+                <button type="submit">Save profile</button>
+              </form>
+
+              <form id="change-password-form" class="stack">
+                <h3>Change password</h3>
+                <label class="field">
+                  <span>Current Password</span>
+                  <input
+                    name="currentPassword"
+                    type="password"
+                    placeholder="Current password"
+                    required
+                  />
+                </label>
+                <label class="field">
+                  <span>New Password</span>
+                  <input
+                    name="newPassword"
+                    type="password"
+                    placeholder="NewPassword1"
+                    required
+                  />
+                </label>
+                <label class="field">
+                  <span>Confirm New Password</span>
+                  <input
+                    name="confirmNewPassword"
+                    type="password"
+                    placeholder="NewPassword1"
+                    required
+                  />
+                </label>
+                <button type="submit">Update password</button>
+              </form>
+            </div>
+
+            <form id="upload-avatar-form" class="stack narrow">
+              <h3>Upload avatar</h3>
+              <label class="field">
+                <span>Avatar image</span>
+                <input name="avatar" type="file" accept="image/*" required />
+              </label>
+              <button type="submit">Upload avatar</button>
+            </form>
+          </section>
+
+          <section class="panel">
+            <div class="section-head">
+              <div>
+                <p class="eyebrow">Recovery</p>
+                <h2>Forgot and reset password</h2>
+              </div>
+            </div>
+
+            <div class="form-grid">
+              <form id="forgot-form" class="stack">
+                <h3>Forgot password</h3>
+                <label class="field">
+                  <span>Email</span>
+                  <input
+                    name="email"
+                    type="email"
+                    placeholder="aya@example.com"
+                    required
+                  />
+                </label>
+                <p class="hint">
+                  In development, the reset token is returned by the API and
+                  copied into the reset form below.
+                </p>
+                <button type="submit">Request reset token</button>
+              </form>
+
+              <form id="reset-form" class="stack">
+                <h3>Reset password</h3>
+                <label class="field">
+                  <span>Reset Token</span>
+                  <input
+                    id="reset-token"
+                    name="token"
+                    type="text"
+                    placeholder="Paste reset token"
+                    required
+                  />
+                </label>
+                <label class="field">
+                  <span>New Password</span>
+                  <input
+                    name="password"
+                    type="password"
+                    placeholder="NewPassword1"
+                    required
+                  />
+                </label>
+                <label class="field">
+                  <span>Confirm Password</span>
+                  <input
+                    name="confirmPassword"
+                    type="password"
+                    placeholder="NewPassword1"
+                    required
+                  />
+                </label>
+                <button type="submit">Reset password</button>
+              </form>
+            </div>
+          </section>
         </div>
-        <pre id="response-output">No requests yet.</pre>
+
+        <div class="column">
+          <section class="panel">
+            <div class="section-head">
+              <div>
+                <p class="eyebrow">Session</p>
+                <h2>Current token and user</h2>
+              </div>
+            </div>
+
+            <div class="profile-card">
+              <img
+                id="current-user-avatar"
+                class="avatar"
+                src=""
+                alt="Current user avatar"
+                hidden
+              />
+              <div>
+                <p id="current-user-name" class="profile-name">No user loaded</p>
+                <p id="current-user-email" class="profile-copy">
+                  Log in and load the profile to see your details.
+                </p>
+                <p id="current-user-meta" class="profile-copy">
+                  Role and verification state will appear here.
+                </p>
+              </div>
+            </div>
+
+            <label class="field">
+              <span>Access token</span>
+              <textarea
+                id="access-token"
+                rows="7"
+                placeholder="Login to fill this automatically"
+              ></textarea>
+            </label>
+
+            <div class="button-row">
+              <button id="save-token" type="button" class="ghost">
+                Save token
+              </button>
+              <button id="clear-token" type="button" class="ghost">
+                Clear token
+              </button>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="section-head">
+              <div>
+                <p class="eyebrow">Public User</p>
+                <h2>Inspect public endpoints</h2>
+              </div>
+            </div>
+
+            <label class="field">
+              <span>User ID</span>
+              <input
+                id="public-user-id"
+                type="text"
+                placeholder="Paste a user UUID or load your profile first"
+              />
+            </label>
+
+            <div class="button-row">
+              <button id="public-profile-button" type="button">
+                Get public profile
+              </button>
+              <button id="public-products-button" type="button" class="ghost">
+                Get products
+              </button>
+              <button id="public-reviews-button" type="button" class="ghost">
+                Get reviews
+              </button>
+            </div>
+          </section>
+
+          <section class="panel response-panel">
+            <div class="response-head">
+              <div>
+                <p class="eyebrow">Live Response</p>
+                <h2>API output</h2>
+              </div>
+              <span id="status-pill" class="status-pill" data-state="idle">Idle</span>
+            </div>
+            <pre id="response-output">No requests yet.</pre>
+          </section>
+        </div>
       </section>
     </main>
 

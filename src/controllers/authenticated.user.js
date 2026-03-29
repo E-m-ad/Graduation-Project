@@ -1,9 +1,37 @@
-import z from "../utils/zod.js";
+import z from "../utils/user.zod.js";
 import bcrypt from "bcrypt";
 import db from "../database/db.js";
+
+const userProfileSelect = {
+  id: true,
+  name: true,
+  email: true,
+  phone: true,
+  avatarUrl: true,
+  role: true,
+  address: true,
+  city: true,
+  bio: true,
+  isActive: true,
+  isVerified: true,
+  createdAt: true,
+  updatedAt: true,
+};
+
 async function getProfile(req, res) {
   try {
-    return res.status(200).json({ success: true, data: req.user });
+    const user = await db.user.findUnique({
+      where: { id: req.user.id },
+      select: userProfileSelect,
+    });
+
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+
+    return res.status(200).json({ success: true, data: user });
   } catch (error) {
     console.error(error);
     return res
@@ -17,7 +45,7 @@ async function updateProfile(req, res) {
   if (!data.success) {
     return res
       .status(400)
-      .json({ success: false, message: data.error.errors[0].message });
+      .json({ success: false, message: data.error.issues[0].message });
   }
   const { name, phone, address, city, bio } = data.data;
   const updateData = {};
@@ -31,6 +59,7 @@ async function updateProfile(req, res) {
     const user = await db.user.update({
       where: { id: req.user.id },
       data: updateData,
+      select: userProfileSelect,
     });
     return res.status(200).json({
       success: true,
@@ -51,7 +80,7 @@ async function changePassword(req, res) {
   if (!data.success) {
     return res
       .status(400)
-      .json({ success: false, message: data.error.errors[0].message });
+      .json({ success: false, message: data.error.issues[0].message });
   }
   const { currentPassword, newPassword } = data.data;
   try {
@@ -90,4 +119,40 @@ async function changePassword(req, res) {
   }
 }
 
-export default { getProfile, updateProfile, changePassword };
+async function uploadAvatar(req, res) {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "Avatar image is required",
+      });
+    }
+
+    const avatarUrl = `/uploads/avatars/${req.file.filename}`;
+    const user = await db.user.update({
+      where: { id: req.user.id },
+      data: { avatarUrl },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        avatarUrl: true,
+        updatedAt: true,
+      },
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Avatar updated successfully",
+      data: user,
+    });
+  } catch (error) {
+    console.error("uploadAvatar error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+}
+
+export default { getProfile, updateProfile, changePassword, uploadAvatar };
