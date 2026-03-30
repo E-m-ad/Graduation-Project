@@ -21,7 +21,6 @@ function getRefreshCookieOptions() {
 }
 
 async function register(req, res) {
-  console.log(req.body);
   const data = z.registerSchema.safeParse(req.body);
   if (!data.success) {
     return res.status(400).json({

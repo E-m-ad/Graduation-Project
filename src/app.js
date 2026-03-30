@@ -9,6 +9,7 @@ import authMiddleWare from "./middlewares/auth.js";
 import auth from "./routes/auth.js";
 import user from "./routes/authenticated.user.js";
 import publicUser from "./routes/public.user.js";
+import product from "./routes/product.js";
 
 const app = express();
 const uploadsDir = fileURLToPath(new URL("../uploads", import.meta.url));
@@ -32,6 +33,7 @@ app.use(
 app.use("/api/v1/auth", auth);
 app.use("/api/v1/users", authMiddleWare.auth, user);
 app.use("/api/v1/public/users", publicUser);
+app.use("/api/v1/products", product);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
