@@ -6,8 +6,23 @@ const router = express.Router();
 
 router.get("/", category.getCategories);
 router.get("/:id", category.getCategoryDetails);
-router.post("/", authMiddleWare.auth, category.createCategory);
-router.put("/:id", authMiddleWare.auth, category.updateCategory);
-router.delete("/:id", authMiddleWare.auth, category.deleteCategory);
+router.post(
+  "/",
+  authMiddleWare.auth,
+  authMiddleWare.adminOnly,
+  category.createCategory,
+);
+router.put(
+  "/:id",
+  authMiddleWare.auth,
+  authMiddleWare.adminOnly,
+  category.updateCategory,
+);
+router.delete(
+  "/:id",
+  authMiddleWare.auth,
+  authMiddleWare.adminOnly,
+  category.deleteCategory,
+);
 
 export default router;

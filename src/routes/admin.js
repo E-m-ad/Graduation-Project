@@ -5,6 +5,7 @@ import admin from "../controllers/admin.js";
 const router = express.Router();
 
 router.use(authMiddleWare.auth);
+router.use(authMiddleWare.adminOnly);
 
 router.get("/dashboard", admin.getDashboard);
 router.get("/users", admin.getUsers);

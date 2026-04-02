@@ -3,342 +3,739 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>User API Test Page</title>
+    <title>AI Rent Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Space+Grotesk:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
-    <main class="page">
-      <section class="hero panel">
-        <div>
-          <p class="eyebrow">User Endpoint Tester</p>
-          <h1>Simple login page with user API actions</h1>
+    <div class="ambient ambient-one"></div>
+    <div class="ambient ambient-two"></div>
+
+    <main class="admin-app">
+      <section id="auth-screen" class="auth-shell">
+        <div class="auth-panel auth-hero">
+          <p class="eyebrow">AI Rent Control Center</p>
+          <h1>Admin dashboard for marketplace operations at full clarity.</h1>
           <p class="lede">
-            Use this page to register or log in, keep the access token in the
-            browser, test the authenticated user routes, and inspect public user
-            profile, products, and reviews from the same place.
+            Review rentals, moderate listings, manage users, and monitor platform
+            health from one responsive workspace designed for fast decisions.
           </p>
+
+          <div class="hero-metrics">
+            <article class="hero-metric">
+              <span>Moderation</span>
+              <strong>Listings, users, rentals</strong>
+            </article>
+            <article class="hero-metric">
+              <span>Security</span>
+              <strong>Admin-only protected access</strong>
+            </article>
+            <article class="hero-metric">
+              <span>Insights</span>
+              <strong>KPIs, trends, reports</strong>
+            </article>
+          </div>
         </div>
 
-        <div class="hero-actions">
-          <button id="profile-button" type="button">Load my profile</button>
-          <button id="refresh-button" type="button" class="ghost">
-            Refresh token
-          </button>
-          <button id="logout-button" type="button" class="warn">Logout</button>
-        </div>
+        <section class="auth-panel auth-card">
+          <div class="section-intro">
+            <p class="eyebrow">Secure Access</p>
+            <h2>Sign in as an administrator</h2>
+            <p class="section-copy">
+              Only users with the <code>admin</code> role can enter the control
+              center.
+            </p>
+          </div>
+
+          <form id="login-form" class="stack-form">
+            <label class="field">
+              <span>Email</span>
+              <input
+                id="login-email"
+                name="email"
+                type="email"
+                autocomplete="username"
+                placeholder="admin@airent.com"
+                required
+              />
+            </label>
+
+            <label class="field">
+              <span>Password</span>
+              <input
+                name="password"
+                type="password"
+                autocomplete="current-password"
+                placeholder="Password1"
+                required
+              />
+            </label>
+
+            <div class="inline-actions">
+              <button id="login-submit" type="submit">Enter dashboard</button>
+              <button id="refresh-session-button" type="button" class="ghost">
+                Restore session
+              </button>
+            </div>
+          </form>
+
+          <div class="session-note">
+            <span class="signal"></span>
+            <p id="auth-message">
+              Sign in to load live admin analytics and moderation tools.
+            </p>
+          </div>
+        </section>
       </section>
 
-      <section class="layout">
-        <div class="column">
-          <section class="panel">
-            <div class="section-head">
-              <div>
-                <p class="eyebrow">Access</p>
-                <h2>Register and login</h2>
-              </div>
+      <section id="access-screen" class="state-shell" hidden>
+        <article class="state-card">
+          <p class="eyebrow">Restricted</p>
+          <h2>Administrator access required</h2>
+          <p id="access-copy" class="section-copy">
+            This account is authenticated, but it does not have permission to
+            open the admin dashboard.
+          </p>
+          <div id="access-user-summary" class="access-summary"></div>
+          <div class="inline-actions">
+            <button id="access-logout-button" type="button">Sign out</button>
+            <button id="access-return-button" type="button" class="ghost">
+              Back to login
+            </button>
+          </div>
+        </article>
+      </section>
+
+      <section id="dashboard-shell" class="dashboard-shell" hidden>
+        <aside class="sidebar" id="sidebar">
+          <div class="brand-block">
+            <span class="brand-mark">AR</span>
+            <div>
+              <p class="brand-kicker">AI Rent</p>
+              <h2>Admin Console</h2>
             </div>
+          </div>
 
-            <div class="form-grid">
-              <form id="register-form" class="stack">
-                <h3>Create account</h3>
-                <label class="field">
-                  <span>Name</span>
-                  <input name="name" type="text" placeholder="Aya Hassan" required />
-                </label>
-                <label class="field">
-                  <span>Email</span>
-                  <input
-                    name="email"
-                    type="email"
-                    placeholder="aya@example.com"
-                    required
-                  />
-                </label>
-                <label class="field">
-                  <span>Password</span>
-                  <input
-                    name="password"
-                    type="password"
-                    placeholder="Password1"
-                    required
-                  />
-                </label>
-                <label class="field">
-                  <span>Confirm Password</span>
-                  <input
-                    name="confirmPassword"
-                    type="password"
-                    placeholder="Password1"
-                    required
-                  />
-                </label>
-                <button type="submit">Register</button>
-              </form>
+          <nav class="nav-stack">
+            <button class="nav-item active" type="button" data-panel="overview">
+              <span>Overview</span>
+              <small>Live operations</small>
+            </button>
+            <button class="nav-item" type="button" data-panel="users">
+              <span>Users</span>
+              <small>Access & status</small>
+            </button>
+            <button class="nav-item" type="button" data-panel="categories">
+              <span>Categories</span>
+              <small>Catalog structure</small>
+            </button>
+            <button class="nav-item" type="button" data-panel="products">
+              <span>Products</span>
+              <small>Moderation queue</small>
+            </button>
+            <button class="nav-item" type="button" data-panel="rentals">
+              <span>Rentals</span>
+              <small>Operational oversight</small>
+            </button>
+            <button class="nav-item" type="button" data-panel="reports">
+              <span>Reports</span>
+              <small>Health & trends</small>
+            </button>
+          </nav>
 
-              <form id="login-form" class="stack">
-                <h3>Login</h3>
-                <label class="field">
-                  <span>Email</span>
-                  <input
-                    id="login-email"
-                    name="email"
-                    type="email"
-                    placeholder="aya@example.com"
-                    required
-                  />
-                </label>
-                <label class="field">
-                  <span>Password</span>
-                  <input
-                    name="password"
-                    type="password"
-                    placeholder="Password1"
-                    required
-                  />
-                </label>
-                <button type="submit">Login</button>
-              </form>
+          <section class="sidebar-card">
+            <p class="sidebar-title">Current admin</p>
+            <div class="mini-user">
+              <img id="sidebar-avatar" alt="Admin avatar" hidden />
+              <div>
+                <strong id="sidebar-name">Not loaded</strong>
+                <span id="sidebar-role">Admin session</span>
+              </div>
             </div>
           </section>
+        </aside>
 
-          <section class="panel">
-            <div class="section-head">
+        <div class="shell-main">
+          <header class="topbar">
+            <div class="topbar-left">
+              <button id="sidebar-toggle" class="icon-button" type="button">
+                <span></span>
+                <span></span>
+                <span></span>
+              </button>
+
               <div>
-                <p class="eyebrow">Authenticated User</p>
-                <h2>Profile management</h2>
+                <p id="panel-kicker" class="eyebrow">Operations</p>
+                <h1 id="panel-title" class="topbar-title">Overview</h1>
               </div>
             </div>
 
-            <div class="form-grid">
-              <form id="update-profile-form" class="stack">
-                <h3>Update profile</h3>
-                <label class="field">
-                  <span>Name</span>
-                  <input name="name" type="text" placeholder="Aya Hassan" />
-                </label>
-                <label class="field">
-                  <span>Phone</span>
-                  <input name="phone" type="text" placeholder="01012345678" />
-                </label>
-                <label class="field">
-                  <span>City</span>
-                  <input name="city" type="text" placeholder="Cairo, Egypt" />
-                </label>
-                <label class="field">
-                  <span>Address</span>
-                  <input
-                    name="address"
-                    type="text"
-                    placeholder="12 Street Name, Cairo"
-                  />
-                </label>
-                <label class="field">
-                  <span>Bio</span>
-                  <textarea
-                    name="bio"
-                    rows="4"
-                    placeholder="Short profile summary"
-                  ></textarea>
-                </label>
-                <button type="submit">Save profile</button>
+            <div class="topbar-actions">
+              <form id="global-search-form" class="global-search">
+                <input
+                  id="global-search-input"
+                  type="search"
+                  placeholder="Search users, categories, products, rentals"
+                />
               </form>
 
-              <form id="change-password-form" class="stack">
-                <h3>Change password</h3>
-                <label class="field">
-                  <span>Current Password</span>
-                  <input
-                    name="currentPassword"
-                    type="password"
-                    placeholder="Current password"
-                    required
-                  />
-                </label>
-                <label class="field">
-                  <span>New Password</span>
-                  <input
-                    name="newPassword"
-                    type="password"
-                    placeholder="NewPassword1"
-                    required
-                  />
-                </label>
-                <label class="field">
-                  <span>Confirm New Password</span>
-                  <input
-                    name="confirmNewPassword"
-                    type="password"
-                    placeholder="NewPassword1"
-                    required
-                  />
-                </label>
-                <button type="submit">Update password</button>
-              </form>
-            </div>
-
-            <form id="upload-avatar-form" class="stack narrow">
-              <h3>Upload avatar</h3>
-              <label class="field">
-                <span>Avatar image</span>
-                <input name="avatar" type="file" accept="image/*" required />
-              </label>
-              <button type="submit">Upload avatar</button>
-            </form>
-          </section>
-
-          <section class="panel">
-            <div class="section-head">
-              <div>
-                <p class="eyebrow">Recovery</p>
-                <h2>Forgot and reset password</h2>
-              </div>
-            </div>
-
-            <div class="form-grid">
-              <form id="forgot-form" class="stack">
-                <h3>Forgot password</h3>
-                <label class="field">
-                  <span>Email</span>
-                  <input
-                    name="email"
-                    type="email"
-                    placeholder="aya@example.com"
-                    required
-                  />
-                </label>
-                <p class="hint">
-                  In development, the reset token is returned by the API and
-                  copied into the reset form below.
-                </p>
-                <button type="submit">Request reset token</button>
-              </form>
-
-              <form id="reset-form" class="stack">
-                <h3>Reset password</h3>
-                <label class="field">
-                  <span>Reset Token</span>
-                  <input
-                    id="reset-token"
-                    name="token"
-                    type="text"
-                    placeholder="Paste reset token"
-                    required
-                  />
-                </label>
-                <label class="field">
-                  <span>New Password</span>
-                  <input
-                    name="password"
-                    type="password"
-                    placeholder="NewPassword1"
-                    required
-                  />
-                </label>
-                <label class="field">
-                  <span>Confirm Password</span>
-                  <input
-                    name="confirmPassword"
-                    type="password"
-                    placeholder="NewPassword1"
-                    required
-                  />
-                </label>
-                <button type="submit">Reset password</button>
-              </form>
-            </div>
-          </section>
-        </div>
-
-        <div class="column">
-          <section class="panel">
-            <div class="section-head">
-              <div>
-                <p class="eyebrow">Session</p>
-                <h2>Current token and user</h2>
-              </div>
-            </div>
-
-            <div class="profile-card">
-              <img
-                id="current-user-avatar"
-                class="avatar"
-                src=""
-                alt="Current user avatar"
-                hidden
-              />
-              <div>
-                <p id="current-user-name" class="profile-name">No user loaded</p>
-                <p id="current-user-email" class="profile-copy">
-                  Log in and load the profile to see your details.
-                </p>
-                <p id="current-user-meta" class="profile-copy">
-                  Role and verification state will appear here.
-                </p>
-              </div>
-            </div>
-
-            <label class="field">
-              <span>Access token</span>
-              <textarea
-                id="access-token"
-                rows="7"
-                placeholder="Login to fill this automatically"
-              ></textarea>
-            </label>
-
-            <div class="button-row">
-              <button id="save-token" type="button" class="ghost">
-                Save token
+              <button id="topbar-refresh" class="ghost topbar-button" type="button">
+                Refresh
               </button>
-              <button id="clear-token" type="button" class="ghost">
-                Clear token
+
+              <div class="notification-chip">
+                <span class="notification-dot"></span>
+                <div>
+                  <strong id="notification-count">0</strong>
+                  <small>Unread</small>
+                </div>
+              </div>
+
+              <div class="profile-chip">
+                <div>
+                  <strong id="topbar-name">Admin</strong>
+                  <small id="topbar-email">No active session</small>
+                </div>
+              </div>
+
+              <button id="logout-button" class="warn topbar-button" type="button">
+                Logout
               </button>
             </div>
-          </section>
+          </header>
 
-          <section class="panel">
-            <div class="section-head">
-              <div>
-                <p class="eyebrow">Public User</p>
-                <h2>Inspect public endpoints</h2>
-              </div>
-            </div>
-
-            <label class="field">
-              <span>User ID</span>
-              <input
-                id="public-user-id"
-                type="text"
-                placeholder="Paste a user UUID or load your profile first"
-              />
-            </label>
-
-            <div class="button-row">
-              <button id="public-profile-button" type="button">
-                Get public profile
-              </button>
-              <button id="public-products-button" type="button" class="ghost">
-                Get products
-              </button>
-              <button id="public-reviews-button" type="button" class="ghost">
-                Get reviews
-              </button>
-            </div>
-          </section>
-
-          <section class="panel response-panel">
-            <div class="response-head">
-              <div>
-                <p class="eyebrow">Live Response</p>
-                <h2>API output</h2>
-              </div>
+          <section class="status-strip">
+            <div>
               <span id="status-pill" class="status-pill" data-state="idle">Idle</span>
+              <span id="status-message" class="status-message">
+                Waiting for an admin action.
+              </span>
             </div>
-            <pre id="response-output">No requests yet.</pre>
+            <small id="last-sync">No data loaded yet</small>
           </section>
+
+          <main class="content-shell">
+            <section id="overview-panel" class="panel-view active">
+              <div class="overview-grid">
+                <article class="hero-card">
+                  <div>
+                    <p class="eyebrow">Marketplace pulse</p>
+                    <h2 id="overview-headline">Control the platform from one calm surface.</h2>
+                    <p id="overview-copy" class="section-copy">
+                      Review growth, catch moderation bottlenecks, and move fast on
+                      high-signal items.
+                    </p>
+                  </div>
+                  <div class="hero-card-meta">
+                    <div>
+                      <span>Period</span>
+                      <strong id="overview-period">Last 30 days</strong>
+                    </div>
+                    <div>
+                      <span>Focus</span>
+                      <strong id="overview-focus">Pending reviews</strong>
+                    </div>
+                  </div>
+                </article>
+
+                <section class="panel-card">
+                  <div class="section-head compact">
+                    <div>
+                      <p class="eyebrow">Notifications</p>
+                      <h3>Admin inbox</h3>
+                    </div>
+                  </div>
+                  <div id="notifications-list" class="notification-list"></div>
+                </section>
+              </div>
+
+              <section class="stats-grid" id="stats-grid"></section>
+
+              <section class="split-grid">
+                <article class="panel-card">
+                  <div class="section-head compact">
+                    <div>
+                      <p class="eyebrow">Growth</p>
+                      <h3>Recent momentum</h3>
+                    </div>
+                  </div>
+                  <div id="growth-grid" class="insight-grid"></div>
+                </article>
+
+                <article class="panel-card">
+                  <div class="section-head compact">
+                    <div>
+                      <p class="eyebrow">Financial</p>
+                      <h3>Booked value & fees</h3>
+                    </div>
+                  </div>
+                  <div id="financial-grid" class="insight-grid"></div>
+                </article>
+              </section>
+
+              <section class="split-grid">
+                <article class="panel-card">
+                  <div class="section-head compact">
+                    <div>
+                      <p class="eyebrow">Recent users</p>
+                      <h3>Newest accounts</h3>
+                    </div>
+                  </div>
+                  <div id="recent-users-list" class="stack-list"></div>
+                </article>
+
+                <article class="panel-card">
+                  <div class="section-head compact">
+                    <div>
+                      <p class="eyebrow">Moderation queue</p>
+                      <h3>Pending products</h3>
+                    </div>
+                  </div>
+                  <div id="pending-products-list" class="stack-list"></div>
+                </article>
+              </section>
+
+              <section class="panel-card">
+                <div class="section-head">
+                  <div>
+                    <p class="eyebrow">Recent rentals</p>
+                    <h3>Latest booking activity</h3>
+                  </div>
+                </div>
+                <div class="table-wrap">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th>Rental</th>
+                        <th>Product</th>
+                        <th>Renter</th>
+                        <th>Owner</th>
+                        <th>Created</th>
+                        <th>Status</th>
+                        <th>Value</th>
+                      </tr>
+                    </thead>
+                    <tbody id="recent-rentals-body"></tbody>
+                  </table>
+                </div>
+              </section>
+            </section>
+
+            <section id="users-panel" class="panel-view">
+              <section class="panel-card">
+                <form id="users-filter-form" class="filters-row">
+                  <label class="field">
+                    <span>Search</span>
+                    <input name="search" type="search" placeholder="Name, email, phone, city" />
+                  </label>
+                  <label class="field small-field">
+                    <span>Role</span>
+                    <select name="role">
+                      <option value="">All</option>
+                      <option value="renter">Renter</option>
+                      <option value="owner">Owner</option>
+                      <option value="both">Both</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                  </label>
+                  <label class="field small-field">
+                    <span>Status</span>
+                    <select name="isActive">
+                      <option value="">All</option>
+                      <option value="true">Active</option>
+                      <option value="false">Suspended</option>
+                    </select>
+                  </label>
+                  <div class="filter-actions">
+                    <button type="submit">Apply</button>
+                    <button id="users-reset" type="button" class="ghost">Reset</button>
+                  </div>
+                </form>
+              </section>
+
+              <section class="panel-card">
+                <div class="section-head compact">
+                  <div>
+                    <p class="eyebrow">Users</p>
+                    <h3>User management</h3>
+                  </div>
+                  <div class="pagination-inline">
+                    <button id="users-prev" class="ghost" type="button">Previous</button>
+                    <span id="users-page-meta">Page 1</span>
+                    <button id="users-next" class="ghost" type="button">Next</button>
+                  </div>
+                </div>
+                <div id="users-list" class="entity-list"></div>
+              </section>
+            </section>
+
+            <section id="products-panel" class="panel-view">
+              <section class="panel-card">
+                <form id="products-filter-form" class="filters-row">
+                  <label class="field">
+                    <span>Search</span>
+                    <input name="search" type="search" placeholder="Title, owner, email, city" />
+                  </label>
+                  <label class="field small-field">
+                    <span>Status</span>
+                    <select name="status">
+                      <option value="">All</option>
+                      <option value="available">Available</option>
+                      <option value="rented">Rented</option>
+                      <option value="unavailable">Unavailable</option>
+                      <option value="under_review">Under review</option>
+                      <option value="suspended">Suspended</option>
+                    </select>
+                  </label>
+                  <label class="field small-field">
+                    <span>Approval</span>
+                    <select name="isApproved">
+                      <option value="">All</option>
+                      <option value="true">Approved</option>
+                      <option value="false">Unapproved</option>
+                    </select>
+                  </label>
+                  <label class="field small-field">
+                    <span>City</span>
+                    <input name="city" type="text" placeholder="Cairo" />
+                  </label>
+                  <div class="filter-actions">
+                    <button type="submit">Apply</button>
+                    <button id="products-reset" type="button" class="ghost">Reset</button>
+                  </div>
+                </form>
+              </section>
+
+              <section class="panel-card">
+                <div class="section-head compact">
+                  <div>
+                    <p class="eyebrow">Listings</p>
+                    <h3>Products moderation</h3>
+                  </div>
+                  <div class="pagination-inline">
+                    <button id="products-prev" class="ghost" type="button">Previous</button>
+                    <span id="products-page-meta">Page 1</span>
+                    <button id="products-next" class="ghost" type="button">Next</button>
+                  </div>
+                </div>
+                <div id="products-list" class="entity-list product-list"></div>
+              </section>
+            </section>
+
+            <section id="categories-panel" class="panel-view">
+              <div class="split-grid categories-grid">
+                <section class="panel-card">
+                  <div class="section-head compact">
+                    <div>
+                      <p id="category-form-mode" class="eyebrow">Category studio</p>
+                      <h3 id="category-form-title">Create category</h3>
+                      <p id="category-form-copy" class="section-copy">
+                        Add marketplace categories, subcategories, icons, and sort
+                        priority from one admin workspace.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div id="categories-summary" class="metric-grid"></div>
+
+                  <form id="category-form" class="stack-form">
+                    <label class="field">
+                      <span>Name</span>
+                      <input
+                        name="name"
+                        type="text"
+                        placeholder="Photography"
+                        minlength="2"
+                        maxlength="100"
+                        required
+                      />
+                    </label>
+
+                    <label class="field">
+                      <span>Description</span>
+                      <textarea
+                        name="description"
+                        rows="5"
+                        placeholder="Short guidance for owners and renters browsing this category."
+                      ></textarea>
+                    </label>
+
+                    <label class="field">
+                      <span>Icon URL</span>
+                      <input
+                        name="iconUrl"
+                        type="url"
+                        placeholder="https://example.com/category-icon.png"
+                      />
+                    </label>
+
+                    <div class="split-grid form-split">
+                      <label class="field">
+                        <span>Parent category</span>
+                        <select name="parentId" id="category-parent-id">
+                          <option value="">No parent (top-level)</option>
+                        </select>
+                      </label>
+
+                      <label class="field">
+                        <span>Sort order</span>
+                        <input
+                          name="sortOrder"
+                          type="number"
+                          min="0"
+                          step="1"
+                          placeholder="0"
+                        />
+                      </label>
+                    </div>
+
+                    <label class="field small-field">
+                      <span>Status</span>
+                      <select name="isActive">
+                        <option value="true">Active</option>
+                        <option value="false">Inactive</option>
+                      </select>
+                    </label>
+
+                    <div class="inline-actions">
+                      <button id="category-submit" type="submit">Create category</button>
+                      <button
+                        id="category-cancel"
+                        type="button"
+                        class="ghost"
+                        hidden
+                      >
+                        Cancel edit
+                      </button>
+                    </div>
+                  </form>
+                </section>
+
+                <div class="categories-stack">
+                  <section class="panel-card">
+                    <form id="categories-filter-form" class="filters-row">
+                      <label class="field">
+                        <span>Search</span>
+                        <input
+                          name="search"
+                          type="search"
+                          placeholder="Category name, description, parent"
+                        />
+                      </label>
+                      <label class="field small-field">
+                        <span>Status</span>
+                        <select name="isActive">
+                          <option value="">All</option>
+                          <option value="true">Active</option>
+                          <option value="false">Inactive</option>
+                        </select>
+                      </label>
+                      <label class="field small-field">
+                        <span>Level</span>
+                        <select name="level">
+                          <option value="">All</option>
+                          <option value="root">Top-level</option>
+                          <option value="child">Subcategory</option>
+                        </select>
+                      </label>
+                      <div class="filter-actions">
+                        <button type="submit">Apply</button>
+                        <button id="categories-reset" type="button" class="ghost">
+                          Reset
+                        </button>
+                      </div>
+                    </form>
+                  </section>
+
+                  <section class="panel-card">
+                    <div class="section-head compact">
+                      <div>
+                        <p class="eyebrow">Catalog</p>
+                        <h3>Category library</h3>
+                      </div>
+                      <span id="categories-page-meta" class="pill">0 categories</span>
+                    </div>
+                    <div id="categories-list" class="entity-list"></div>
+                  </section>
+                </div>
+              </div>
+            </section>
+
+            <section id="rentals-panel" class="panel-view">
+              <section class="panel-card">
+                <form id="rentals-filter-form" class="filters-row">
+                  <label class="field">
+                    <span>Search</span>
+                    <input name="search" type="search" placeholder="Product, renter, owner, email" />
+                  </label>
+                  <label class="field small-field">
+                    <span>Status</span>
+                    <select name="status">
+                      <option value="">All</option>
+                      <option value="pending">Pending</option>
+                      <option value="approved">Approved</option>
+                      <option value="rejected">Rejected</option>
+                      <option value="active">Active</option>
+                      <option value="completed">Completed</option>
+                      <option value="cancelled">Cancelled</option>
+                      <option value="overdue">Overdue</option>
+                    </select>
+                  </label>
+                  <div class="filter-actions">
+                    <button type="submit">Apply</button>
+                    <button id="rentals-reset" type="button" class="ghost">Reset</button>
+                  </div>
+                </form>
+              </section>
+
+              <section class="panel-card">
+                <div class="section-head compact">
+                  <div>
+                    <p class="eyebrow">Rentals</p>
+                    <h3>Booking oversight</h3>
+                  </div>
+                  <div class="pagination-inline">
+                    <button id="rentals-prev" class="ghost" type="button">Previous</button>
+                    <span id="rentals-page-meta">Page 1</span>
+                    <button id="rentals-next" class="ghost" type="button">Next</button>
+                  </div>
+                </div>
+                <div id="rentals-list" class="entity-list"></div>
+              </section>
+            </section>
+
+            <section id="reports-panel" class="panel-view">
+              <section class="panel-card">
+                <form id="reports-filter-form" class="filters-row compact-filters">
+                  <label class="field small-field">
+                    <span>Days</span>
+                    <select name="days">
+                      <option value="30">30</option>
+                      <option value="60">60</option>
+                      <option value="90">90</option>
+                      <option value="180">180</option>
+                    </select>
+                  </label>
+                  <label class="field small-field">
+                    <span>Months</span>
+                    <select name="months">
+                      <option value="6">6</option>
+                      <option value="12">12</option>
+                      <option value="18">18</option>
+                      <option value="24">24</option>
+                    </select>
+                  </label>
+                  <div class="filter-actions">
+                    <button type="submit">Refresh report</button>
+                  </div>
+                </form>
+              </section>
+
+              <section id="reports-summary" class="stats-grid"></section>
+
+              <section class="split-grid">
+                <article class="panel-card">
+                  <div class="section-head compact">
+                    <div>
+                      <p class="eyebrow">Distributions</p>
+                      <h3>Platform composition</h3>
+                    </div>
+                  </div>
+                  <div id="report-distributions" class="distribution-grid"></div>
+                </article>
+
+                <article class="panel-card">
+                  <div class="section-head compact">
+                    <div>
+                      <p class="eyebrow">Trends</p>
+                      <h3>Growth curves</h3>
+                    </div>
+                  </div>
+                  <div id="report-trends" class="trend-grid"></div>
+                </article>
+              </section>
+
+              <section class="split-grid">
+                <article class="panel-card">
+                  <div class="section-head compact">
+                    <div>
+                      <p class="eyebrow">Categories</p>
+                      <h3>Top listing categories</h3>
+                    </div>
+                  </div>
+                  <div id="report-categories" class="leaderboard-list"></div>
+                </article>
+
+                <article class="panel-card">
+                  <div class="section-head compact">
+                    <div>
+                      <p class="eyebrow">Top products</p>
+                      <h3>Most rented listings</h3>
+                    </div>
+                  </div>
+                  <div id="report-products" class="leaderboard-list"></div>
+                </article>
+              </section>
+            </section>
+          </main>
         </div>
       </section>
     </main>
+
+    <dialog id="action-dialog" class="modal">
+      <form id="action-form" class="modal-card" method="dialog">
+        <div class="modal-head">
+          <div>
+            <p id="action-kicker" class="eyebrow">Confirm action</p>
+            <h3 id="action-title">Review action</h3>
+          </div>
+          <button type="button" id="action-close" class="icon-button close-button">
+            <span></span>
+            <span></span>
+          </button>
+        </div>
+
+        <p id="action-description" class="section-copy">
+          Add context for this moderation action.
+        </p>
+
+        <label class="field" id="action-reason-field">
+          <span id="action-reason-label">Reason</span>
+          <textarea
+            id="action-reason"
+            rows="5"
+            placeholder="Optional moderation note"
+          ></textarea>
+        </label>
+
+        <div class="inline-actions">
+          <button id="action-cancel" type="button" class="ghost">Cancel</button>
+          <button id="action-confirm" type="submit">Confirm</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="detail-dialog" class="modal wide-modal">
+      <article class="modal-card">
+        <div class="modal-head">
+          <div>
+            <p id="detail-kicker" class="eyebrow">Details</p>
+            <h3 id="detail-title">Entity details</h3>
+          </div>
+          <button type="button" id="detail-close" class="icon-button close-button">
+            <span></span>
+            <span></span>
+          </button>
+        </div>
+
+        <div id="detail-content" class="detail-content"></div>
+      </article>
+    </dialog>
 
     <script type="module" src="/app.js"></script>
   </body>
