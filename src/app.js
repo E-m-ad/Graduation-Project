@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express from "express";
+import path from "node:path";
 import { fileURLToPath } from "node:url";
 import morgan from "morgan";
 import cookieParser from "cookie-parser";
@@ -9,33 +10,68 @@ import authMiddleWare from "./middlewares/auth.js";
 import auth from "./routes/auth.js";
 import user from "./routes/authenticated.user.js";
 import publicUser from "./routes/public.user.js";
+import category from "./routes/category.js";
 import product from "./routes/product.js";
+import rental from "./routes/rental.js";
+import review from "./routes/review.js";
+import wishlist from "./routes/wishlist.js";
+import recommendation from "./routes/recommendation.js";
+import behavior from "./routes/behavior.js";
+import notification from "./routes/notification.js";
+import admin from "./routes/admin.js";
+import docs from "./routes/docs.js";
 
-const app = express();
-const uploadsDir = fileURLToPath(new URL("../uploads", import.meta.url));
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const publicDir = path.resolve(__dirname, "../public");
+const uploadsDir = path.resolve(__dirname, "../uploads");
 
-app.use(helmet());
-app.use(cors({ origin: true, credentials: true }));
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
-app.use(cookieParser());
-app.use(morgan("dev"));
-app.use(express.static("public"));
-app.use(
-  "/uploads",
-  express.static(uploadsDir, {
-    setHeaders: (res) => {
-      res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
-    },
-  }),
-);
+export function createApp() {
+  const app = express();
 
-app.use("/api/v1/auth", auth);
-app.use("/api/v1/users", authMiddleWare.auth, user);
-app.use("/api/v1/public/users", publicUser);
-app.use("/api/v1/products", product);
+  app.use(helmet());
+  app.use(cors({ origin: true, credentials: true }));
+  app.use(express.urlencoded({ extended: true }));
+  app.use(express.json());
+  app.use(cookieParser());
+  app.use(morgan("dev"));
+  app.use(express.static(publicDir));
+  app.use(
+    "/uploads",
+    express.static(uploadsDir, {
+      setHeaders: (res) => {
+        res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+      },
+    }),
+  );
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+  app.use("/api/v1/docs", docs);
+  app.use("/api/v1/auth", auth);
+  app.use("/api/v1/users", authMiddleWare.auth, user);
+  app.use("/api/v1/public/users", publicUser);
+  app.use("/api/v1/categories", category);
+  app.use("/api/v1/products", product);
+  app.use("/api/v1/rentals", rental);
+  app.use("/api/v1/reviews", review);
+  app.use("/api/v1/wishlists", wishlist);
+  app.use("/api/v1/recommendations", recommendation);
+  app.use("/api/v1/behavior", behavior);
+  app.use("/api/v1/notifications", notification);
+  app.use("/api/v1/admin", admin);
+
+  return app;
+}
+
+export function startServer(port = Number(process.env.PORT || 3000)) {
+  const app = createApp();
+
+  return app.listen(port, () => {
+    console.log(`Server is running on port ${port}`);
+  });
+}
+
+if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
+  startServer();
+}
+
+export default createApp;

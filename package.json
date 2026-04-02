@@ -6,6 +6,11 @@
   "scripts": {
     "dev": "nodemon src/app.js",
     "start": "node src/app.js",
+    "test": "npm run test:unit && npm run test:integration && npm run test:system",
+    "test:unit": "node scripts/unit-test.mjs",
+    "test:integration": "node scripts/integration-test.mjs",
+    "test:system": "node scripts/system-smoke-test.mjs",
+    "test:smoke": "npm run test:system",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio"
   },
@@ -28,6 +33,7 @@
     "multer": "^2.1.1",
     "path": "^0.12.7",
     "pg": "^8.18.0",
+    "swagger-ui-express": "^5.0.1",
     "zod": "^4.3.6"
   },
   "devDependencies": {

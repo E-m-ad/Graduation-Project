@@ -1,5 +1,0 @@
-[dotenv@17.3.1] injecting env (0) from .env -- tip: ⚙️  enable debug logging with { debug: true }
-✅ Connected to the database
-Server is running on port 3000
-[0mPOST /api/v1/auth/register [32m201[0m 175.452 ms - 57[0m
-[0mPOST /api/v1/auth/login [32m200[0m 71.632 ms - 275[0m

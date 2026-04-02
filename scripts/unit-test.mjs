@@ -1,0 +1,206 @@
+import authSchema from "../src/utils/auth.zod.js";
+import productSchema from "../src/utils/product.zod.js";
+import rentalSchema from "../src/utils/rental.zod.js";
+
+const VALID_ID = "11111111-1111-4111-8111-111111111111";
+
+function assert(condition, message, payload) {
+  if (!condition) {
+    throw new Error(
+      payload === undefined
+        ? message
+        : `${message}\n${JSON.stringify(payload, null, 2)}`,
+    );
+  }
+}
+
+function log(message) {
+  console.log(`[unit] ${message}`);
+}
+
+async function run() {
+  log("Running isolated schema checks");
+
+  const registerPayload = authSchema.registerSchema.parse({
+    name: "Valid User",
+    email: "valid.user@example.com",
+    password: "Password1",
+    confirmPassword: "Password1",
+  });
+  assert(
+    registerPayload.email === "valid.user@example.com",
+    "Register schema should accept a valid payload",
+    registerPayload,
+  );
+
+  const mismatchedPasswords = authSchema.registerSchema.safeParse({
+    name: "Mismatch User",
+    email: "mismatch.user@example.com",
+    password: "Password1",
+    confirmPassword: "Password2",
+  });
+  assert(
+    mismatchedPasswords.success === false,
+    "Register schema should reject mismatched passwords",
+  );
+  assert(
+    mismatchedPasswords.error.issues.some(
+      (issue) =>
+        issue.path.join(".") === "confirmPassword" &&
+        issue.message === "Passwords do not match",
+    ),
+    "Register schema should report the confirmPassword mismatch",
+    mismatchedPasswords.error.issues,
+  );
+
+  const productPayload = productSchema.createProductSchema.parse({
+    categoryId: VALID_ID,
+    title: "Canon Lens",
+    description: "Well maintained rental lens for focused unit validation.",
+    pricePerDay: "250",
+    securityDeposit: "100",
+    city: " Cairo ",
+    locationAddress: " 15 Example Street ",
+    minRentalPeriod: "1",
+    maxRentalPeriod: "7",
+    tags: "camera, lens, qa",
+  });
+  assert(
+    productPayload.pricePerDay === 250,
+    "Create product schema should coerce numeric strings",
+    productPayload,
+  );
+  assert(
+    productPayload.securityDeposit === 100,
+    "Security deposit should be converted to a number",
+    productPayload,
+  );
+  assert(productPayload.city === "Cairo", "City should be trimmed", productPayload);
+  assert(
+    Array.isArray(productPayload.tags) && productPayload.tags.length === 3,
+    "Comma-separated tags should be normalized into an array",
+    productPayload,
+  );
+
+  const missingPrice = productSchema.createProductSchema.safeParse({
+    categoryId: VALID_ID,
+    title: "Tripod Stand",
+    description: "Detailed product description without a rental price set.",
+  });
+  assert(
+    missingPrice.success === false,
+    "Create product schema should require at least one rental price",
+  );
+  assert(
+    missingPrice.error.issues.some(
+      (issue) =>
+        issue.path.join(".") === "pricePerDay" &&
+        issue.message === "At least one rental price must be provided",
+    ),
+    "Missing price validation should target pricePerDay",
+    missingPrice.error.issues,
+  );
+
+  const updatePayload = productSchema.updateProductSchema.parse({
+    city: " ",
+    locationAddress: "",
+    pricePerDay: "450",
+    tags: "updated, qa",
+  });
+  assert(
+    updatePayload.city === null,
+    "Blank city should normalize to null on updates",
+    updatePayload,
+  );
+  assert(
+    updatePayload.locationAddress === null,
+    "Blank address should normalize to null on updates",
+    updatePayload,
+  );
+  assert(
+    updatePayload.pricePerDay === 450,
+    "Update schema should coerce price strings",
+    updatePayload,
+  );
+  assert(
+    Array.isArray(updatePayload.tags) && updatePayload.tags[0] === "updated",
+    "Update schema should normalize string tags into an array",
+    updatePayload,
+  );
+
+  const createRentalPayload = rentalSchema.createRentalSchema.parse({
+    productId: VALID_ID,
+    startDate: "2026-05-01T10:00:00.000Z",
+    endDate: "2026-05-03T10:00:00.000Z",
+    rentalPeriodType: "daily",
+    quantity: "1",
+    renterNotes: "  Need the charger too.  ",
+  });
+  assert(
+    createRentalPayload.startDate instanceof Date &&
+      createRentalPayload.endDate instanceof Date,
+    "Rental schema should coerce ISO strings into Date objects",
+    createRentalPayload,
+  );
+  assert(
+    createRentalPayload.quantity === 1,
+    "Rental quantity should be coerced into a number",
+    createRentalPayload,
+  );
+  assert(
+    createRentalPayload.renterNotes === "Need the charger too.",
+    "Renter notes should be trimmed",
+    createRentalPayload,
+  );
+
+  const invalidRentalWindow = rentalSchema.createRentalSchema.safeParse({
+    productId: VALID_ID,
+    startDate: "2026-05-03T10:00:00.000Z",
+    endDate: "2026-05-01T10:00:00.000Z",
+    rentalPeriodType: "daily",
+  });
+  assert(
+    invalidRentalWindow.success === false,
+    "Rental schema should reject an end date before the start date",
+  );
+  assert(
+    invalidRentalWindow.error.issues.some(
+      (issue) =>
+        issue.path.join(".") === "endDate" &&
+        issue.message === "Rental end date must be after the start date",
+    ),
+    "Invalid rental windows should raise an endDate validation issue",
+    invalidRentalWindow.error.issues,
+  );
+
+  const availabilityQuery = rentalSchema.availabilityQuerySchema.parse({
+    startDate: "2026-06-10T08:00:00.000Z",
+    endDate: "2026-06-11T08:00:00.000Z",
+    rentalPeriodType: " daily ",
+    quantity: "1",
+  });
+  assert(
+    availabilityQuery.rentalPeriodType === "daily",
+    "Availability query schema should trim enum values",
+    availabilityQuery,
+  );
+  assert(
+    availabilityQuery.quantity === 1,
+    "Availability query schema should coerce quantity",
+    availabilityQuery,
+  );
+
+  log("Unit test suite completed successfully");
+}
+
+let exitCode = 0;
+
+try {
+  await run();
+} catch (error) {
+  exitCode = 1;
+  console.error("[unit] FAILURE");
+  console.error(error);
+}
+
+process.exit(exitCode);

@@ -1,0 +1,891 @@
+import {
+  PASSWORDS,
+  assert,
+  createTestContext,
+  expectStatus,
+  withTestServer,
+  makeImageForm,
+  db,
+} from "./testing/test-harness.mjs";
+import {
+  approveProduct,
+  createCategory,
+  createDefaultActors,
+  createProduct,
+  createRentalWindow,
+  uploadProductImages,
+} from "./testing/scenario-helpers.mjs";
+
+async function runAuthAndProfileTests(context, actors) {
+  context.log("Running auth and profile integration checks");
+
+  const invalidRegister = await actors.guest.request("POST", "/auth/register", {
+    json: {
+      name: "A",
+      email: "not-an-email",
+      password: "short",
+      confirmPassword: "different",
+    },
+    useCookies: false,
+    useAccessToken: false,
+  });
+  expectStatus(invalidRegister, 400, "Reject invalid register payload");
+
+  const refreshResult = await actors.authUser.request("POST", "/auth/refresh-token", {
+    useAccessToken: false,
+  });
+  expectStatus(refreshResult, 200, "Refresh access token");
+  assert(
+    refreshResult.body?.accessToken,
+    "Refresh token response must include an access token",
+    refreshResult.body,
+  );
+  actors.authUser.setAccessToken(refreshResult.body.accessToken);
+
+  const revokedCookieHeader = actors.authUser.getCookieHeader();
+  const logoutResult = await actors.authUser.request("POST", "/auth/logout", {
+    useAccessToken: false,
+  });
+  expectStatus(logoutResult, 200, "Logout");
+
+  const revokedRefreshResult = await actors.authUser.request("POST", "/auth/refresh-token", {
+    useAccessToken: false,
+    useCookies: false,
+    cookieHeader: revokedCookieHeader,
+  });
+  assert(
+    [400, 401].includes(revokedRefreshResult.response.status),
+    "Refresh with a revoked cookie should fail",
+    revokedRefreshResult.body,
+  );
+
+  const reloginResult = await actors.authUser.request("POST", "/auth/login", {
+    json: {
+      email: actors.authEmail,
+      password: PASSWORDS.primary,
+    },
+    useCookies: true,
+    useAccessToken: false,
+  });
+  expectStatus(reloginResult, 200, "Login auth-user after logout");
+  actors.authUser.setAccessToken(reloginResult.body?.accessToken);
+
+  const meResult = await actors.authUser.request("GET", "/users/me");
+  expectStatus(meResult, 200, "Get own profile");
+
+  const updateProfileResult = await actors.authUser.request("PUT", "/users/me", {
+    json: {
+      name: `${context.runPrefix} Profile Updated`,
+      phone: "01012345678",
+      city: "Nasr City Cairo",
+      address: "123 Example Street, Cairo",
+      bio: "QA user profile for integration coverage",
+    },
+  });
+  expectStatus(updateProfileResult, 200, "Update profile");
+  assert(
+    updateProfileResult.body?.data?.name?.includes("Profile Updated"),
+    "Profile update should persist the new name",
+    updateProfileResult.body,
+  );
+
+  const changePasswordResult = await actors.authUser.request(
+    "PUT",
+    "/users/change-password",
+    {
+      json: {
+        currentPassword: PASSWORDS.primary,
+        newPassword: PASSWORDS.secondary,
+        confirmNewPassword: PASSWORDS.secondary,
+      },
+    },
+  );
+  expectStatus(changePasswordResult, 200, "Change password");
+
+  const oldPasswordLogin = await actors.guest.request("POST", "/auth/login", {
+    json: {
+      email: actors.authEmail,
+      password: PASSWORDS.primary,
+    },
+    useCookies: false,
+    useAccessToken: false,
+  });
+  expectStatus(oldPasswordLogin, 401, "Login with old password should fail");
+
+  const newPasswordLogin = await actors.authUser.request("POST", "/auth/login", {
+    json: {
+      email: actors.authEmail,
+      password: PASSWORDS.secondary,
+    },
+    useCookies: true,
+    useAccessToken: false,
+  });
+  expectStatus(newPasswordLogin, 200, "Login with updated password");
+  actors.authUser.setAccessToken(newPasswordLogin.body?.accessToken);
+
+  const uploadAvatarResult = await actors.authUser.request("POST", "/users/upload-avatar", {
+    form: makeImageForm("avatar", `${context.runPrefix}-avatar.png`),
+  });
+  expectStatus(uploadAvatarResult, 200, "Upload avatar");
+  assert(
+    uploadAvatarResult.body?.data?.avatarUrl,
+    "Avatar upload should return an avatar URL",
+    uploadAvatarResult.body,
+  );
+
+  const forgotPasswordResult = await actors.guest.request("POST", "/auth/forgot-password", {
+    json: { email: actors.authEmail },
+    useCookies: false,
+    useAccessToken: false,
+  });
+  expectStatus(forgotPasswordResult, 200, "Forgot password");
+  assert(
+    forgotPasswordResult.body?.resetToken,
+    "Development forgot-password should return a reset token",
+    forgotPasswordResult.body,
+  );
+
+  const resetPasswordResult = await actors.guest.request("POST", "/auth/reset-password", {
+    json: {
+      token: forgotPasswordResult.body.resetToken,
+      password: PASSWORDS.reset,
+      confirmPassword: PASSWORDS.reset,
+    },
+    useCookies: false,
+    useAccessToken: false,
+  });
+  expectStatus(resetPasswordResult, 200, "Reset password");
+
+  const resetPasswordLogin = await actors.authUser.request("POST", "/auth/login", {
+    json: {
+      email: actors.authEmail,
+      password: PASSWORDS.reset,
+    },
+    useCookies: true,
+    useAccessToken: false,
+  });
+  expectStatus(resetPasswordLogin, 200, "Login with reset password");
+  actors.authUser.setAccessToken(resetPasswordLogin.body?.accessToken);
+
+  return {
+    authUserId: meResult.body?.data?.id,
+  };
+}
+
+async function runCatalogAndModerationTests(context, actors) {
+  context.log("Running catalog and moderation integration checks");
+
+  const categoriesResult = await actors.guest.request("GET", "/categories", {
+    useCookies: false,
+    useAccessToken: false,
+  });
+  expectStatus(categoriesResult, 200, "List categories");
+  assert(
+    Array.isArray(categoriesResult.body?.data?.categories),
+    "Categories endpoint should return a categories array",
+    categoriesResult.body,
+  );
+
+  const usedCategory = await createCategory(
+    actors.adminUser,
+    {
+      name: `${context.runPrefix} Used Category`,
+      description: "Category used for product and rental integration tests",
+      iconUrl: "https://example.com/icon-used.png",
+      sortOrder: 1,
+      isActive: true,
+    },
+    "Create used category",
+  );
+
+  const tempCategory = await createCategory(
+    actors.adminUser,
+    {
+      name: `${context.runPrefix} Temp Category`,
+      description: "Category that should be updated then deleted",
+      iconUrl: "https://example.com/icon-temp.png",
+      sortOrder: 2,
+      isActive: true,
+    },
+    "Create temporary category",
+  );
+
+  const tempCategoryDetails = await actors.guest.request("GET", `/categories/${tempCategory.id}`, {
+    useCookies: false,
+    useAccessToken: false,
+  });
+  expectStatus(tempCategoryDetails, 200, "Get category details");
+
+  const updateCategoryResult = await actors.adminUser.request("PUT", `/categories/${tempCategory.id}`, {
+    json: {
+      description: "Updated temporary category description for QA",
+      sortOrder: 5,
+    },
+  });
+  expectStatus(updateCategoryResult, 200, "Update category");
+
+  const deleteTempCategory = await actors.adminUser.request(
+    "DELETE",
+    `/categories/${tempCategory.id}`,
+  );
+  expectStatus(deleteTempCategory, 200, "Delete temporary category");
+
+  const flowProduct = await createProduct(
+    actors.ownerUser,
+    {
+      categoryId: usedCategory.id,
+      title: `${context.runPrefix} Flow Product`,
+      description: "QA flow product for broad integration coverage",
+      pricePerDay: 250,
+      securityDeposit: 300,
+      city: "Cairo",
+      locationAddress: "45 QA Street, Cairo",
+      condition: "excellent",
+      minRentalPeriod: 1,
+      maxRentalPeriod: 30,
+      termsConditions: "Return the item in the same condition.",
+      tags: ["qa", "camera", "integration"],
+    },
+    "Create flow product",
+  );
+
+  const ownerRecord = await db.user.findUnique({
+    where: { email: actors.ownerEmail },
+    select: { id: true, role: true },
+  });
+  assert(
+    ownerRecord?.role === "both",
+    "Owner should be promoted to both after creating a listing",
+    ownerRecord,
+  );
+
+  const myListingsResult = await actors.ownerUser.request("GET", "/products/my-listings");
+  expectStatus(myListingsResult, 200, "Get my listings");
+  assert(
+    myListingsResult.body?.data?.products?.some((product) => product.id === flowProduct.id),
+    "My listings should include the created product",
+    myListingsResult.body,
+  );
+
+  const flowProductUpdate = await actors.ownerUser.request("PUT", `/products/${flowProduct.id}`, {
+    json: {
+      title: `${context.runPrefix} Flow Product Updated`,
+      description:
+        "Updated QA flow product description for the integration lifecycle",
+      city: "New Cairo",
+      pricePerDay: 275,
+      tags: ["qa", "updated", "integration"],
+    },
+  });
+  expectStatus(flowProductUpdate, 200, "Update flow product");
+
+  const uploadedImages = await uploadProductImages(
+    actors.ownerUser,
+    flowProduct.id,
+    [
+      `${context.runPrefix}-product-1.png`,
+      `${context.runPrefix}-product-2.png`,
+    ],
+    "Upload product images",
+  );
+
+  const deleteImageResult = await actors.ownerUser.request(
+    "DELETE",
+    `/products/${flowProduct.id}/images/${uploadedImages.images[0].id}`,
+  );
+  expectStatus(deleteImageResult, 200, "Delete product image");
+
+  const rejectProduct = await createProduct(
+    actors.ownerUser,
+    {
+      categoryId: usedCategory.id,
+      title: `${context.runPrefix} Reject Product`,
+      description: "QA product that will be rejected by admin moderation",
+      pricePerDay: 150,
+      securityDeposit: 100,
+      city: "Giza",
+      locationAddress: "55 Rejection Street, Giza",
+      condition: "good",
+      minRentalPeriod: 1,
+      maxRentalPeriod: 10,
+      tags: ["qa", "reject"],
+    },
+    "Create reject product",
+  );
+
+  const deleteProduct = await createProduct(
+    actors.ownerUser,
+    {
+      categoryId: usedCategory.id,
+      title: `${context.runPrefix} Delete Product`,
+      description: "QA product that should be deleted after validation",
+      pricePerDay: 95,
+      securityDeposit: 50,
+      city: "Giza",
+      locationAddress: "21 Delete Street, Giza",
+      condition: "good",
+      minRentalPeriod: 1,
+      maxRentalPeriod: 7,
+      tags: ["qa", "delete"],
+    },
+    "Create delete product",
+  );
+
+  const approvedProduct = await approveProduct(
+    actors.adminUser,
+    flowProduct.id,
+    "QA approval for integration workflow",
+  );
+  assert(
+    approvedProduct?.isApproved === true,
+    "Approved product should be marked approved",
+    approvedProduct,
+  );
+
+  const adminRejectResult = await actors.adminUser.request(
+    "PUT",
+    `/admin/products/${rejectProduct.id}/reject`,
+    {
+      json: {
+        reason: "QA rejection path verification",
+      },
+    },
+  );
+  expectStatus(adminRejectResult, 200, "Reject product");
+  assert(
+    adminRejectResult.body?.data?.status === "suspended",
+    "Rejected product should be suspended",
+    adminRejectResult.body,
+  );
+
+  const ownerSetUnavailable = await actors.ownerUser.request(
+    "PUT",
+    `/products/${flowProduct.id}/status`,
+    {
+      json: { status: "unavailable" },
+    },
+  );
+  expectStatus(ownerSetUnavailable, 200, "Set product unavailable");
+
+  const ownerSetAvailable = await actors.ownerUser.request(
+    "PUT",
+    `/products/${flowProduct.id}/status`,
+    {
+      json: { status: "available" },
+    },
+  );
+  expectStatus(ownerSetAvailable, 200, "Set product available");
+
+  const publicProducts = await actors.guest.request("GET", "/products", {
+    useCookies: false,
+    useAccessToken: false,
+  });
+  expectStatus(publicProducts, 200, "List public products");
+  assert(
+    publicProducts.body?.data?.products?.some((product) => product.id === flowProduct.id),
+    "Public products should include the approved flow product",
+    publicProducts.body,
+  );
+
+  const publicProductDetail = await actors.guest.request("GET", `/products/${flowProduct.id}`, {
+    useCookies: false,
+    useAccessToken: false,
+  });
+  expectStatus(publicProductDetail, 200, "Get public product detail");
+
+  const rejectedPublicDetail = await actors.guest.request("GET", `/products/${rejectProduct.id}`, {
+    useCookies: false,
+    useAccessToken: false,
+  });
+  expectStatus(rejectedPublicDetail, 404, "Rejected product should be hidden publicly");
+
+  const ownerPublicProfile = await actors.guest.request("GET", `/public/users/${ownerRecord.id}`, {
+    useCookies: false,
+    useAccessToken: false,
+  });
+  expectStatus(ownerPublicProfile, 200, "Get public owner profile");
+
+  const ownerPublicProducts = await actors.guest.request(
+    "GET",
+    `/public/users/${ownerRecord.id}/products`,
+    {
+      useCookies: false,
+      useAccessToken: false,
+    },
+  );
+  expectStatus(ownerPublicProducts, 200, "Get public owner products");
+
+  return {
+    usedCategoryId: usedCategory.id,
+    flowProductId: flowProduct.id,
+    rejectProductId: rejectProduct.id,
+    deleteProductId: deleteProduct.id,
+    ownerId: ownerRecord.id,
+  };
+}
+
+async function runTransactionalFeatureTests(context, actors, fixtures) {
+  context.log("Running transactional feature integration checks");
+
+  const availabilityWindow = createRentalWindow(10, 12);
+  const availabilityResult = await actors.guest.request(
+    "GET",
+    `/rentals/${fixtures.flowProductId}/availability?startDate=${encodeURIComponent(
+      availabilityWindow.startDate.toISOString(),
+    )}&endDate=${encodeURIComponent(
+      availabilityWindow.endDate.toISOString(),
+    )}&rentalPeriodType=daily&quantity=1`,
+    {
+      useCookies: false,
+      useAccessToken: false,
+    },
+  );
+  expectStatus(availabilityResult, 200, "Check rental availability");
+  assert(
+    availabilityResult.body?.data?.isAvailable === true,
+    "Approved product should be available for the initial booking dates",
+    availabilityResult.body,
+  );
+
+  const createRental1 = await actors.renterUser.request("POST", "/rentals", {
+    json: {
+      productId: fixtures.flowProductId,
+      startDate: availabilityWindow.startDate.toISOString(),
+      endDate: availabilityWindow.endDate.toISOString(),
+      rentalPeriodType: "daily",
+      quantity: 1,
+      renterNotes: "QA rental request for approval/start/complete flow",
+    },
+  });
+  expectStatus(createRental1, 201, "Create rental request");
+  const rental1Id = createRental1.body?.data?.id;
+
+  const myBookingsResult = await actors.renterUser.request("GET", "/rentals/my-bookings");
+  expectStatus(myBookingsResult, 200, "Get my bookings");
+  assert(
+    myBookingsResult.body?.data?.rentals?.some((rental) => rental.id === rental1Id),
+    "Bookings should include the created rental request",
+    myBookingsResult.body,
+  );
+
+  const myRequestsResult = await actors.ownerUser.request("GET", "/rentals/my-requests");
+  expectStatus(myRequestsResult, 200, "Get owner rental requests");
+  assert(
+    myRequestsResult.body?.data?.rentals?.some((rental) => rental.id === rental1Id),
+    "Owner requests should include the created rental",
+    myRequestsResult.body,
+  );
+
+  const rentalDetailOwner = await actors.ownerUser.request("GET", `/rentals/${rental1Id}`);
+  expectStatus(rentalDetailOwner, 200, "Get rental details as owner");
+
+  const approveRental1 = await actors.ownerUser.request("PUT", `/rentals/${rental1Id}/approve`);
+  expectStatus(approveRental1, 200, "Approve rental");
+
+  await db.rental.update({
+    where: { id: rental1Id },
+    data: {
+      startDate: new Date(Date.now() - 2 * 60 * 60 * 1000),
+      endDate: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    },
+  });
+
+  const startRental1 = await actors.ownerUser.request("PUT", `/rentals/${rental1Id}/start`);
+  expectStatus(startRental1, 200, "Start rental");
+
+  const completeRental1 = await actors.ownerUser.request("PUT", `/rentals/${rental1Id}/complete`);
+  expectStatus(completeRental1, 200, "Complete rental");
+
+  const rental1DetailRenter = await actors.renterUser.request("GET", `/rentals/${rental1Id}`);
+  expectStatus(rental1DetailRenter, 200, "Get completed rental details");
+  assert(
+    rental1DetailRenter.body?.data?.status === "completed",
+    "Completed rental should be returned with completed status",
+    rental1DetailRenter.body,
+  );
+
+  const rejectWindow = createRentalWindow(20, 22);
+  const createRental2 = await actors.renterUser.request("POST", "/rentals", {
+    json: {
+      productId: fixtures.flowProductId,
+      startDate: rejectWindow.startDate.toISOString(),
+      endDate: rejectWindow.endDate.toISOString(),
+      rentalPeriodType: "daily",
+      renterNotes: "QA rental request for rejection flow",
+    },
+  });
+  expectStatus(createRental2, 201, "Create rental to reject");
+  const rental2Id = createRental2.body?.data?.id;
+
+  const rejectRental2 = await actors.ownerUser.request("PUT", `/rentals/${rental2Id}/reject`, {
+    json: {
+      reason: "QA rejection verification",
+    },
+  });
+  expectStatus(rejectRental2, 200, "Reject rental");
+
+  const cancelWindow = createRentalWindow(30, 32);
+  const createRental3 = await actors.renterUser.request("POST", "/rentals", {
+    json: {
+      productId: fixtures.flowProductId,
+      startDate: cancelWindow.startDate.toISOString(),
+      endDate: cancelWindow.endDate.toISOString(),
+      rentalPeriodType: "daily",
+      renterNotes: "QA rental request for cancellation flow",
+    },
+  });
+  expectStatus(createRental3, 201, "Create rental to cancel");
+  const rental3Id = createRental3.body?.data?.id;
+
+  const cancelRental3 = await actors.renterUser.request("PUT", `/rentals/${rental3Id}/cancel`, {
+    json: {
+      reason: "QA renter cancellation verification",
+    },
+  });
+  expectStatus(cancelRental3, 200, "Cancel rental");
+
+  const createReviewResult = await actors.renterUser.request("POST", "/reviews", {
+    json: {
+      rentalId: rental1Id,
+      rating: 5,
+      comment: "Great rental experience from the QA integration suite",
+    },
+  });
+  expectStatus(createReviewResult, 201, "Create review");
+  const reviewId = createReviewResult.body?.data?.id;
+
+  const productAfterReview = await actors.guest.request("GET", `/products/${fixtures.flowProductId}`, {
+    useCookies: false,
+    useAccessToken: false,
+  });
+  expectStatus(productAfterReview, 200, "Get product after review");
+  assert(
+    productAfterReview.body?.data?.totalReviews === 1,
+    "Product totalReviews should increment after review creation",
+    productAfterReview.body,
+  );
+
+  const productReviewsResult = await actors.guest.request(
+    "GET",
+    `/reviews/product/${fixtures.flowProductId}`,
+    {
+      useCookies: false,
+      useAccessToken: false,
+    },
+  );
+  expectStatus(productReviewsResult, 200, "Get product reviews");
+  assert(
+    productReviewsResult.body?.data?.reviews?.some((review) => review.id === reviewId),
+    "Product reviews should include the new review",
+    productReviewsResult.body,
+  );
+
+  const updateReviewResult = await actors.renterUser.request("PUT", `/reviews/${reviewId}`, {
+    json: {
+      rating: 4,
+      comment: "Updated QA review after completing the integration flow",
+    },
+  });
+  expectStatus(updateReviewResult, 200, "Update review");
+
+  const replyReviewResult = await actors.ownerUser.request(
+    "PUT",
+    `/reviews/${reviewId}/reply`,
+    {
+      json: {
+        ownerReply: "Thanks for the detailed QA feedback.",
+      },
+    },
+  );
+  expectStatus(replyReviewResult, 200, "Reply to review");
+
+  const ownerPublicReviews = await actors.guest.request(
+    "GET",
+    `/public/users/${fixtures.ownerId}/reviews`,
+    {
+      useCookies: false,
+      useAccessToken: false,
+    },
+  );
+  expectStatus(ownerPublicReviews, 200, "Get owner public reviews");
+  assert(
+    ownerPublicReviews.body?.data?.reviews?.some((review) => review.id === reviewId),
+    "Owner public reviews should include the new review",
+    ownerPublicReviews.body,
+  );
+
+  const addWishlistResult = await actors.renterUser.request(
+    "POST",
+    `/wishlists/${fixtures.flowProductId}`,
+  );
+  expectStatus(addWishlistResult, 201, "Add wishlist item");
+
+  const getWishlistResult = await actors.renterUser.request("GET", "/wishlists");
+  expectStatus(getWishlistResult, 200, "Get wishlist");
+  assert(
+    getWishlistResult.body?.data?.wishlists?.some(
+      (wishlist) => wishlist.productId === fixtures.flowProductId,
+    ),
+    "Wishlist should include the approved product",
+    getWishlistResult.body,
+  );
+
+  const flowProductRecord = await db.product.findUnique({
+    where: { id: fixtures.flowProductId },
+    select: { categoryId: true, viewCount: true },
+  });
+
+  const searchBehavior = await actors.renterUser.request("POST", "/behavior/track", {
+    json: {
+      actionType: "search",
+      searchQuery: "camera qa integration",
+      sessionId: `${context.runPrefix}-session`,
+      deviceInfo: "node-integration-suite",
+    },
+  });
+  expectStatus(searchBehavior, 201, "Track search behavior");
+
+  const viewBehavior = await actors.renterUser.request("POST", "/behavior/track", {
+    json: {
+      actionType: "view",
+      productId: fixtures.flowProductId,
+      categoryId: flowProductRecord.categoryId,
+    },
+  });
+  expectStatus(viewBehavior, 201, "Track view behavior");
+
+  const clickBehavior = await actors.renterUser.request("POST", "/behavior/track", {
+    json: {
+      actionType: "click_recommendation",
+      productId: fixtures.flowProductId,
+      categoryId: flowProductRecord.categoryId,
+      metadata: {
+        placement: "home_feed",
+      },
+    },
+  });
+  expectStatus(clickBehavior, 201, "Track recommendation click behavior");
+
+  const updatedViewCount = await db.product.findUnique({
+    where: { id: fixtures.flowProductId },
+    select: { viewCount: true },
+  });
+  assert(
+    updatedViewCount.viewCount === flowProductRecord.viewCount + 1,
+    "View tracking should increment product viewCount",
+    updatedViewCount,
+  );
+
+  const recommendationsResult = await actors.renterUser.request(
+    "GET",
+    "/recommendations?limit=5",
+  );
+  expectStatus(recommendationsResult, 200, "Get personalized recommendations");
+  assert(
+    Array.isArray(recommendationsResult.body?.data?.recommendations),
+    "Recommendations response should contain an array",
+    recommendationsResult.body,
+  );
+
+  const similarProductsResult = await actors.guest.request(
+    "GET",
+    `/recommendations/similar/${fixtures.flowProductId}?limit=5`,
+    {
+      useCookies: false,
+      useAccessToken: false,
+    },
+  );
+  expectStatus(similarProductsResult, 200, "Get similar products");
+
+  const ownerNotifications = await actors.ownerUser.request("GET", "/notifications");
+  expectStatus(ownerNotifications, 200, "Get owner notifications");
+  const firstOwnerNotification = ownerNotifications.body?.data?.notifications?.[0];
+  assert(firstOwnerNotification, "Owner should have at least one notification");
+
+  const ownerUnreadCount = await actors.ownerUser.request("GET", "/notifications/unread-count");
+  expectStatus(ownerUnreadCount, 200, "Get owner unread count");
+  assert(
+    ownerUnreadCount.body?.data?.unreadCount >= 1,
+    "Owner unread count should be at least one before marking notifications read",
+    ownerUnreadCount.body,
+  );
+
+  const markOneNotification = await actors.ownerUser.request(
+    "PUT",
+    `/notifications/${firstOwnerNotification.id}/read`,
+  );
+  expectStatus(markOneNotification, 200, "Mark notification as read");
+
+  const markAllNotifications = await actors.ownerUser.request(
+    "PUT",
+    "/notifications/read-all",
+  );
+  expectStatus(markAllNotifications, 200, "Mark all notifications as read");
+
+  const unreadAfterReadAll = await actors.ownerUser.request(
+    "GET",
+    "/notifications/unread-count",
+  );
+  expectStatus(unreadAfterReadAll, 200, "Unread count after read-all");
+  assert(
+    unreadAfterReadAll.body?.data?.unreadCount === 0,
+    "Unread notification count should be zero after read-all",
+    unreadAfterReadAll.body,
+  );
+
+  return {
+    rental1Id,
+    reviewId,
+  };
+}
+
+async function runAdminGovernanceTests(context, actors, fixtures, flowState) {
+  context.log("Running admin integration checks");
+
+  const adminDashboard = await actors.adminUser.request("GET", "/admin/dashboard");
+  expectStatus(adminDashboard, 200, "Admin dashboard");
+
+  const adminUsers = await actors.adminUser.request("GET", "/admin/users");
+  expectStatus(adminUsers, 200, "Admin list users");
+  assert(
+    adminUsers.body?.data?.users?.some((user) => user.email === actors.authEmail),
+    "Admin users list should include the QA auth user",
+    adminUsers.body,
+  );
+
+  const adminProducts = await actors.adminUser.request("GET", "/admin/products");
+  expectStatus(adminProducts, 200, "Admin list products");
+  assert(
+    adminProducts.body?.data?.products?.some((product) => product.id === fixtures.rejectProductId),
+    "Admin products list should include rejected products",
+    adminProducts.body,
+  );
+
+  const adminRentals = await actors.adminUser.request("GET", "/admin/rentals");
+  expectStatus(adminRentals, 200, "Admin list rentals");
+  assert(
+    adminRentals.body?.data?.rentals?.some((rental) => rental.id === flowState.rental1Id),
+    "Admin rentals list should include integration rentals",
+    adminRentals.body,
+  );
+
+  const adminReports = await actors.adminUser.request("GET", "/admin/reports");
+  expectStatus(adminReports, 200, "Admin reports");
+
+  const suspendAuthUser = await actors.adminUser.request(
+    "PUT",
+    `/admin/users/${flowState.authUserId}/status`,
+    {
+      json: {
+        status: "suspended",
+        reason: "QA suspension verification",
+      },
+    },
+  );
+  expectStatus(suspendAuthUser, 200, "Suspend user");
+
+  const suspendedUserAccess = await actors.authUser.request("GET", "/users/me");
+  expectStatus(suspendedUserAccess, 403, "Suspended user should be blocked");
+
+  const reactivateAuthUser = await actors.adminUser.request(
+    "PUT",
+    `/admin/users/${flowState.authUserId}/status`,
+    {
+      json: {
+        isActive: true,
+        reason: "QA reactivation verification",
+      },
+    },
+  );
+  expectStatus(reactivateAuthUser, 200, "Reactivate user");
+
+  const reloginResult = await actors.authUser.request("POST", "/auth/login", {
+    json: {
+      email: actors.authEmail,
+      password: PASSWORDS.reset,
+    },
+    useCookies: true,
+    useAccessToken: false,
+  });
+  expectStatus(reloginResult, 200, "Login reactivated user");
+  actors.authUser.setAccessToken(reloginResult.body?.accessToken);
+
+  const usedCategoryDeleteAttempt = await actors.adminUser.request(
+    "DELETE",
+    `/categories/${fixtures.usedCategoryId}`,
+  );
+  expectStatus(
+    usedCategoryDeleteAttempt,
+    409,
+    "Deleting a used category should fail",
+  );
+
+  const deleteWishlistResult = await actors.renterUser.request(
+    "DELETE",
+    `/wishlists/${fixtures.flowProductId}`,
+  );
+  expectStatus(deleteWishlistResult, 200, "Remove wishlist item");
+
+  const deleteReviewResult = await actors.renterUser.request(
+    "DELETE",
+    `/reviews/${flowState.reviewId}`,
+  );
+  expectStatus(deleteReviewResult, 200, "Delete review");
+
+  const productAfterReviewDelete = await actors.guest.request(
+    "GET",
+    `/products/${fixtures.flowProductId}`,
+    {
+      useCookies: false,
+      useAccessToken: false,
+    },
+  );
+  expectStatus(productAfterReviewDelete, 200, "Get product after review delete");
+  assert(
+    productAfterReviewDelete.body?.data?.totalReviews === 0,
+    "Deleting the review should recalculate totalReviews",
+    productAfterReviewDelete.body,
+  );
+
+  const deleteProductResult = await actors.ownerUser.request(
+    "DELETE",
+    `/products/${fixtures.deleteProductId}`,
+  );
+  expectStatus(deleteProductResult, 200, "Delete product without rentals");
+}
+
+async function run() {
+  const context = createTestContext("integration");
+
+  await withTestServer(context, async (runtime) => {
+    const actors = await createDefaultActors(runtime);
+    const authState = await runAuthAndProfileTests(runtime, actors);
+    const fixtures = await runCatalogAndModerationTests(runtime, actors);
+    const transactionalState = await runTransactionalFeatureTests(
+      runtime,
+      actors,
+      fixtures,
+    );
+
+    await runAdminGovernanceTests(runtime, actors, fixtures, {
+      ...authState,
+      ...transactionalState,
+    });
+
+    runtime.log("Integration suite completed successfully");
+  });
+}
+
+let exitCode = 0;
+
+try {
+  await run();
+} catch (error) {
+  exitCode = 1;
+  console.error("[integration] FAILURE");
+  console.error(error);
+} finally {
+  await db.$disconnect();
+}
+
+process.exit(exitCode);
