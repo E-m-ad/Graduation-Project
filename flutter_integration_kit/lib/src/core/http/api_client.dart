@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:cookie_jar/cookie_jar.dart';
 import 'package:dio/dio.dart';
 import 'package:dio_cookie_manager/dio_cookie_manager.dart';
+import 'package:dio_web_adapter/dio_web_adapter.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../config/app_config.dart';
 import '../storage/session_store.dart';
@@ -25,7 +27,13 @@ class ApiClient {
             },
           ),
         ) {
-    _dio.interceptors.add(CookieManager(cookieJar));
+    if (kIsWeb) {
+      _dio.httpClientAdapter = BrowserHttpClientAdapter(
+        withCredentials: true,
+      );
+    } else {
+      _dio.interceptors.add(CookieManager(cookieJar));
+    }
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
@@ -85,7 +93,7 @@ class ApiClient {
 
   final AppConfig config;
   final SessionStore sessionStore;
-  final PersistCookieJar cookieJar;
+  final CookieJar cookieJar;
   final Dio _dio;
   Completer<String?>? _refreshCompleter;
 
@@ -264,7 +272,7 @@ class ApiClient {
 
   Map<String, dynamic> _cleanQueryParameters(Map<String, dynamic>? source) {
     if (source == null || source.isEmpty) {
-      return const {};
+      return <String, dynamic>{};
     }
 
     final cleaned = <String, dynamic>{};

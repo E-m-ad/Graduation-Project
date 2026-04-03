@@ -8,14 +8,14 @@ class AuthRepository {
   AuthRepository({
     required ApiClient apiClient,
     required SessionStore sessionStore,
-    required PersistCookieJar cookieJar,
+    required CookieJar cookieJar,
   })  : _apiClient = apiClient,
         _sessionStore = sessionStore,
         _cookieJar = cookieJar;
 
   final ApiClient _apiClient;
   final SessionStore _sessionStore;
-  final PersistCookieJar _cookieJar;
+  final CookieJar _cookieJar;
 
   Future<Map<String, dynamic>> register({
     required String name,

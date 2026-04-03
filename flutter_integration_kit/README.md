@@ -1,12 +1,12 @@
-# Flutter Integration Kit
+# AI Rent Mobile
 
-This starter package connects a Flutter application to the AI Rent backend in this repository.
+This Flutter app is a full mobile client for the AI Rent backend in this repository.
 
 It is organized by concern:
 
 - `lib/src/config`: environment and dependency bootstrapping
 - `lib/src/core`: HTTP client, error handling, and secure session storage
-- `lib/src/features`: one repository per backend module
+- `lib/src/features`: feature modules for auth, explore, wishlist, rentals, notifications, profile, owner tools, and admin
 
 The backend contract used here matches the routes in:
 
@@ -29,7 +29,19 @@ Recommended development base URLs:
 - iOS simulator: `http://127.0.0.1:3000/api/v1`
 - Real device: `http://<your-lan-ip>:3000/api/v1`
 
-Start the example shell:
+Main user-facing flows included:
+
+- guest browsing and search
+- sign in and registration
+- personalized recommendations
+- wishlist management
+- rental request and availability flow
+- notifications inbox
+- profile editing and avatar upload
+- owner listing creation and management
+- admin dashboard moderation
+
+Start the app:
 
 ```bash
 flutter pub get

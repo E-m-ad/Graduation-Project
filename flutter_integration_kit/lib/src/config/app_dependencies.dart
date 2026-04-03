@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:cookie_jar/cookie_jar.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -55,11 +56,16 @@ class AppDependencies {
   }) async {
     final resolvedConfig = config ?? AppConfig.fromEnvironment();
     final sessionStore = SessionStore();
-    final documentsDirectory = await getApplicationDocumentsDirectory();
-    final cookieJar = PersistCookieJar(
-      ignoreExpires: false,
-      storage: FileStorage(p.join(documentsDirectory.path, 'cookies')),
-    );
+    final CookieJar cookieJar;
+    if (kIsWeb) {
+      cookieJar = CookieJar();
+    } else {
+      final documentsDirectory = await getApplicationDocumentsDirectory();
+      cookieJar = PersistCookieJar(
+        ignoreExpires: false,
+        storage: FileStorage(p.join(documentsDirectory.path, 'cookies')),
+      );
+    }
     final apiClient = ApiClient(
       config: resolvedConfig,
       sessionStore: sessionStore,
