@@ -1,0 +1,24 @@
+name: flutter_integration_kit
+description: Starter Flutter integration layer for the AI Rent backend.
+publish_to: "none"
+
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cookie_jar: ^4.0.8
+  dio: ^5.8.0+1
+  dio_cookie_manager: ^3.2.0
+  flutter_secure_storage: ^9.2.4
+  path: ^1.9.1
+  path_provider: ^2.1.5
+
+dev_dependencies:
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true

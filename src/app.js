@@ -28,7 +28,7 @@ const uploadsDir = path.resolve(__dirname, "../uploads");
 
 export function createApp() {
   const app = express();
-
+  app.use(morgan("dev"));
   app.use(helmet());
   app.use(cors({ origin: true, credentials: true }));
   app.use(express.urlencoded({ extended: true }));

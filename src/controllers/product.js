@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import db from "../database/db.js";
 import { maxProductImageCount } from "../middlewares/product.upload.js";
+import { createAdminNotifications } from "../utils/notification.helpers.js";
 import z from "../utils/product.zod.js";
 
 const PUBLIC_PRODUCT_STATUSES = ["available", "rented", "unavailable"];
@@ -491,10 +492,24 @@ async function createProduct(req, res) {
         });
       }
 
-      return tx.product.create({
+      const nextProduct = await tx.product.create({
         data: buildCreateProductData(req.user.id, payload),
         select: MANAGE_PRODUCT_SELECT,
       });
+
+      await createAdminNotifications(tx, {
+        title: "New listing submitted",
+        message: `${req.user.name} submitted "${nextProduct.title}" for review`,
+        data: {
+          action: "product_submitted_for_review",
+          productId: nextProduct.id,
+          productTitle: nextProduct.title,
+          ownerId: req.user.id,
+          categoryId: nextProduct.category?.id ?? payload.categoryId,
+        },
+      });
+
+      return nextProduct;
     });
 
     return res.status(201).json({

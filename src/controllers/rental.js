@@ -1,4 +1,5 @@
 import db from "../database/db.js";
+import { createAdminNotifications } from "../utils/notification.helpers.js";
 import z from "../utils/rental.zod.js";
 
 const DEFAULT_PAGE = 1;
@@ -613,6 +614,19 @@ async function createRental(req, res) {
           data: {
             productId: product.id,
             renterId: req.user.id,
+          },
+        }),
+        createAdminNotifications(tx, {
+          rentalId: createdRental.id,
+          title: "New rental request",
+          message: `${req.user.name} requested to rent ${product.title}`,
+          data: {
+            action: "admin_rental_request",
+            rentalId: createdRental.id,
+            productId: product.id,
+            productTitle: product.title,
+            renterId: req.user.id,
+            ownerId: product.ownerId,
           },
         }),
       ]);

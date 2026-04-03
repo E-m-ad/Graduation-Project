@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -22,8 +22,9 @@
           <p class="eyebrow">AI Rent Control Center</p>
           <h1>Admin dashboard for marketplace operations at full clarity.</h1>
           <p class="lede">
-            Review rentals, moderate listings, manage users, and monitor platform
-            health from one responsive workspace designed for fast decisions.
+            Review rentals, moderate listings, manage users, and monitor
+            platform health from one responsive workspace designed for fast
+            decisions.
           </p>
 
           <div class="hero-metrics">
@@ -114,10 +115,9 @@
       <section id="dashboard-shell" class="dashboard-shell" hidden>
         <aside class="sidebar" id="sidebar">
           <div class="brand-block">
-            <span class="brand-mark">AR</span>
             <div>
               <p class="brand-kicker">AI Rent</p>
-              <h2>Admin Console</h2>
+              <h2>Admin</h2>
             </div>
           </div>
 
@@ -125,6 +125,10 @@
             <button class="nav-item active" type="button" data-panel="overview">
               <span>Overview</span>
               <small>Live operations</small>
+            </button>
+            <button class="nav-item" type="button" data-panel="notifications">
+              <span>Notifications</span>
+              <small>Inbox & follow-up</small>
             </button>
             <button class="nav-item" type="button" data-panel="users">
               <span>Users</span>
@@ -163,12 +167,6 @@
         <div class="shell-main">
           <header class="topbar">
             <div class="topbar-left">
-              <button id="sidebar-toggle" class="icon-button" type="button">
-                <span></span>
-                <span></span>
-                <span></span>
-              </button>
-
               <div>
                 <p id="panel-kicker" class="eyebrow">Operations</p>
                 <h1 id="panel-title" class="topbar-title">Overview</h1>
@@ -184,17 +182,25 @@
                 />
               </form>
 
-              <button id="topbar-refresh" class="ghost topbar-button" type="button">
+              <button
+                id="topbar-refresh"
+                class="ghost topbar-button"
+                type="button"
+              >
                 Refresh
               </button>
 
-              <div class="notification-chip">
+              <button
+                id="notification-chip"
+                class="ghost notification-chip notification-chip-button"
+                type="button"
+              >
                 <span class="notification-dot"></span>
                 <div>
                   <strong id="notification-count">0</strong>
                   <small>Unread</small>
                 </div>
-              </div>
+              </button>
 
               <div class="profile-chip">
                 <div>
@@ -203,7 +209,11 @@
                 </div>
               </div>
 
-              <button id="logout-button" class="warn topbar-button" type="button">
+              <button
+                id="logout-button"
+                class="warn topbar-button"
+                type="button"
+              >
                 Logout
               </button>
             </div>
@@ -211,7 +221,9 @@
 
           <section class="status-strip">
             <div>
-              <span id="status-pill" class="status-pill" data-state="idle">Idle</span>
+              <span id="status-pill" class="status-pill" data-state="idle"
+                >Idle</span
+              >
               <span id="status-message" class="status-message">
                 Waiting for an admin action.
               </span>
@@ -225,21 +237,13 @@
                 <article class="hero-card">
                   <div>
                     <p class="eyebrow">Marketplace pulse</p>
-                    <h2 id="overview-headline">Control the platform from one calm surface.</h2>
+                    <h2 id="overview-headline">
+                      Control the platform from one calm surface.
+                    </h2>
                     <p id="overview-copy" class="section-copy">
-                      Review growth, catch moderation bottlenecks, and move fast on
-                      high-signal items.
+                      Review growth, catch moderation bottlenecks, and move fast
+                      on high-signal items.
                     </p>
-                  </div>
-                  <div class="hero-card-meta">
-                    <div>
-                      <span>Period</span>
-                      <strong id="overview-period">Last 30 days</strong>
-                    </div>
-                    <div>
-                      <span>Focus</span>
-                      <strong id="overview-focus">Pending reviews</strong>
-                    </div>
                   </div>
                 </article>
 
@@ -248,6 +252,22 @@
                     <div>
                       <p class="eyebrow">Notifications</p>
                       <h3>Admin inbox</h3>
+                    </div>
+                    <div class="section-actions">
+                      <button
+                        type="button"
+                        class="ghost"
+                        data-action="mark-all-notifications-read"
+                      >
+                        Mark all read
+                      </button>
+                      <button
+                        type="button"
+                        class="ghost"
+                        data-action="open-notifications"
+                      >
+                        View all
+                      </button>
                     </div>
                   </div>
                   <div id="notifications-list" class="notification-list"></div>
@@ -326,12 +346,108 @@
               </section>
             </section>
 
+            <section id="notifications-panel" class="panel-view">
+              <section class="panel-card">
+                <form id="notifications-filter-form" class="filters-row">
+                  <label class="field small-field">
+                    <span>Status</span>
+                    <select name="isRead">
+                      <option value="">All</option>
+                      <option value="false">Unread</option>
+                      <option value="true">Read</option>
+                    </select>
+                  </label>
+                  <label class="field">
+                    <span>Type</span>
+                    <select name="type">
+                      <option value="">All</option>
+                      <option value="system">System</option>
+                      <option value="rental_request">Rental request</option>
+                      <option value="rental_approved">Rental approved</option>
+                      <option value="rental_rejected">Rental rejected</option>
+                      <option value="rental_started">Rental started</option>
+                      <option value="rental_ending_soon">
+                        Rental ending soon
+                      </option>
+                      <option value="rental_completed">
+                        Rental completed
+                      </option>
+                      <option value="rental_cancelled">
+                        Rental cancelled
+                      </option>
+                      <option value="new_review">New review</option>
+                      <option value="review_reply">Review reply</option>
+                      <option value="recommendation">Recommendation</option>
+                    </select>
+                  </label>
+                  <label class="field small-field">
+                    <span>Per page</span>
+                    <select name="limit">
+                      <option value="10">10</option>
+                      <option value="20">20</option>
+                      <option value="50">50</option>
+                    </select>
+                  </label>
+                  <div class="filter-actions">
+                    <button type="submit">Apply</button>
+                    <button
+                      id="notifications-reset"
+                      type="button"
+                      class="ghost"
+                    >
+                      Reset
+                    </button>
+                  </div>
+                </form>
+              </section>
+
+              <section class="panel-card">
+                <div class="section-head compact">
+                  <div>
+                    <p class="eyebrow">Inbox</p>
+                    <h3>Admin notifications</h3>
+                  </div>
+                  <div class="section-actions">
+                    <button
+                      id="notifications-mark-all"
+                      type="button"
+                      class="ghost"
+                    >
+                      Mark all read
+                    </button>
+                    <div class="pagination-inline">
+                      <button
+                        id="notifications-prev"
+                        class="ghost"
+                        type="button"
+                      >
+                        Previous
+                      </button>
+                      <span id="notifications-page-meta">Page 1</span>
+                      <button
+                        id="notifications-next"
+                        class="ghost"
+                        type="button"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div id="notifications-feed" class="notification-list"></div>
+              </section>
+            </section>
+
             <section id="users-panel" class="panel-view">
               <section class="panel-card">
                 <form id="users-filter-form" class="filters-row">
                   <label class="field">
                     <span>Search</span>
-                    <input name="search" type="search" placeholder="Name, email, phone, city" />
+                    <input
+                      name="search"
+                      type="search"
+                      placeholder="Name, email, phone, city"
+                    />
                   </label>
                   <label class="field small-field">
                     <span>Role</span>
@@ -353,7 +469,9 @@
                   </label>
                   <div class="filter-actions">
                     <button type="submit">Apply</button>
-                    <button id="users-reset" type="button" class="ghost">Reset</button>
+                    <button id="users-reset" type="button" class="ghost">
+                      Reset
+                    </button>
                   </div>
                 </form>
               </section>
@@ -365,9 +483,13 @@
                     <h3>User management</h3>
                   </div>
                   <div class="pagination-inline">
-                    <button id="users-prev" class="ghost" type="button">Previous</button>
+                    <button id="users-prev" class="ghost" type="button">
+                      Previous
+                    </button>
                     <span id="users-page-meta">Page 1</span>
-                    <button id="users-next" class="ghost" type="button">Next</button>
+                    <button id="users-next" class="ghost" type="button">
+                      Next
+                    </button>
                   </div>
                 </div>
                 <div id="users-list" class="entity-list"></div>
@@ -379,7 +501,11 @@
                 <form id="products-filter-form" class="filters-row">
                   <label class="field">
                     <span>Search</span>
-                    <input name="search" type="search" placeholder="Title, owner, email, city" />
+                    <input
+                      name="search"
+                      type="search"
+                      placeholder="Title, owner, email, city"
+                    />
                   </label>
                   <label class="field small-field">
                     <span>Status</span>
@@ -406,7 +532,9 @@
                   </label>
                   <div class="filter-actions">
                     <button type="submit">Apply</button>
-                    <button id="products-reset" type="button" class="ghost">Reset</button>
+                    <button id="products-reset" type="button" class="ghost">
+                      Reset
+                    </button>
                   </div>
                 </form>
               </section>
@@ -418,9 +546,13 @@
                     <h3>Products moderation</h3>
                   </div>
                   <div class="pagination-inline">
-                    <button id="products-prev" class="ghost" type="button">Previous</button>
+                    <button id="products-prev" class="ghost" type="button">
+                      Previous
+                    </button>
                     <span id="products-page-meta">Page 1</span>
-                    <button id="products-next" class="ghost" type="button">Next</button>
+                    <button id="products-next" class="ghost" type="button">
+                      Next
+                    </button>
                   </div>
                 </div>
                 <div id="products-list" class="entity-list product-list"></div>
@@ -432,11 +564,13 @@
                 <section class="panel-card">
                   <div class="section-head compact">
                     <div>
-                      <p id="category-form-mode" class="eyebrow">Category studio</p>
+                      <p id="category-form-mode" class="eyebrow">
+                        Category studio
+                      </p>
                       <h3 id="category-form-title">Create category</h3>
                       <p id="category-form-copy" class="section-copy">
-                        Add marketplace categories, subcategories, icons, and sort
-                        priority from one admin workspace.
+                        Add marketplace categories, subcategories, icons, and
+                        sort priority from one admin workspace.
                       </p>
                     </div>
                   </div>
@@ -503,7 +637,9 @@
                     </label>
 
                     <div class="inline-actions">
-                      <button id="category-submit" type="submit">Create category</button>
+                      <button id="category-submit" type="submit">
+                        Create category
+                      </button>
                       <button
                         id="category-cancel"
                         type="button"
@@ -545,7 +681,11 @@
                       </label>
                       <div class="filter-actions">
                         <button type="submit">Apply</button>
-                        <button id="categories-reset" type="button" class="ghost">
+                        <button
+                          id="categories-reset"
+                          type="button"
+                          class="ghost"
+                        >
                           Reset
                         </button>
                       </div>
@@ -558,7 +698,9 @@
                         <p class="eyebrow">Catalog</p>
                         <h3>Category library</h3>
                       </div>
-                      <span id="categories-page-meta" class="pill">0 categories</span>
+                      <span id="categories-page-meta" class="pill"
+                        >0 categories</span
+                      >
                     </div>
                     <div id="categories-list" class="entity-list"></div>
                   </section>
@@ -571,7 +713,11 @@
                 <form id="rentals-filter-form" class="filters-row">
                   <label class="field">
                     <span>Search</span>
-                    <input name="search" type="search" placeholder="Product, renter, owner, email" />
+                    <input
+                      name="search"
+                      type="search"
+                      placeholder="Product, renter, owner, email"
+                    />
                   </label>
                   <label class="field small-field">
                     <span>Status</span>
@@ -588,7 +734,9 @@
                   </label>
                   <div class="filter-actions">
                     <button type="submit">Apply</button>
-                    <button id="rentals-reset" type="button" class="ghost">Reset</button>
+                    <button id="rentals-reset" type="button" class="ghost">
+                      Reset
+                    </button>
                   </div>
                 </form>
               </section>
@@ -600,9 +748,13 @@
                     <h3>Booking oversight</h3>
                   </div>
                   <div class="pagination-inline">
-                    <button id="rentals-prev" class="ghost" type="button">Previous</button>
+                    <button id="rentals-prev" class="ghost" type="button">
+                      Previous
+                    </button>
                     <span id="rentals-page-meta">Page 1</span>
-                    <button id="rentals-next" class="ghost" type="button">Next</button>
+                    <button id="rentals-next" class="ghost" type="button">
+                      Next
+                    </button>
                   </div>
                 </div>
                 <div id="rentals-list" class="entity-list"></div>
@@ -611,7 +763,10 @@
 
             <section id="reports-panel" class="panel-view">
               <section class="panel-card">
-                <form id="reports-filter-form" class="filters-row compact-filters">
+                <form
+                  id="reports-filter-form"
+                  class="filters-row compact-filters"
+                >
                   <label class="field small-field">
                     <span>Days</span>
                     <select name="days">
@@ -646,7 +801,10 @@
                       <h3>Platform composition</h3>
                     </div>
                   </div>
-                  <div id="report-distributions" class="distribution-grid"></div>
+                  <div
+                    id="report-distributions"
+                    class="distribution-grid"
+                  ></div>
                 </article>
 
                 <article class="panel-card">
@@ -694,7 +852,11 @@
             <p id="action-kicker" class="eyebrow">Confirm action</p>
             <h3 id="action-title">Review action</h3>
           </div>
-          <button type="button" id="action-close" class="icon-button close-button">
+          <button
+            type="button"
+            id="action-close"
+            class="icon-button close-button"
+          >
             <span></span>
             <span></span>
           </button>
@@ -727,7 +889,11 @@
             <p id="detail-kicker" class="eyebrow">Details</p>
             <h3 id="detail-title">Entity details</h3>
           </div>
-          <button type="button" id="detail-close" class="icon-button close-button">
+          <button
+            type="button"
+            id="detail-close"
+            class="icon-button close-button"
+          >
             <span></span>
             <span></span>
           </button>

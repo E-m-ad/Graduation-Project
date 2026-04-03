@@ -598,6 +598,14 @@ h3 {
   font-size: 1rem;
 }
 
+.notification-chip-button {
+  padding: 10px 14px;
+}
+
+.notification-chip-button:hover {
+  transform: translateY(-1px);
+}
+
 .notification-chip small,
 .profile-chip small {
   display: block;
@@ -731,6 +739,13 @@ h3 {
 
 .section-head.compact {
   margin-bottom: 14px;
+}
+
+.section-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
 }
 
 .stats-grid,
@@ -1067,6 +1082,21 @@ h3 {
   color: var(--accent-strong);
 }
 
+.status-badge.system,
+.status-badge.recommendation,
+.status-badge.rental_request,
+.status-badge.rental_approved,
+.status-badge.rental_rejected,
+.status-badge.rental_started,
+.status-badge.rental_ending_soon,
+.status-badge.rental_completed,
+.status-badge.rental_cancelled,
+.status-badge.new_review,
+.status-badge.review_reply {
+  background: rgba(20, 108, 102, 0.12);
+  color: var(--accent-strong);
+}
+
 .status-badge.owner,
 .status-badge.both,
 .status-badge.renter {
@@ -1119,10 +1149,53 @@ h3 {
   border: 1px solid var(--border);
 }
 
+.notification-row.unread {
+  border-color: rgba(193, 140, 66, 0.34);
+  box-shadow: inset 0 0 0 1px rgba(193, 140, 66, 0.14);
+}
+
 .notification-row-head {
   display: flex;
   justify-content: space-between;
   gap: 12px;
+}
+
+.notification-row-body {
+  display: grid;
+  gap: 12px;
+}
+
+.notification-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.notification-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-soft);
+  font-size: 0.92rem;
+  cursor: pointer;
+}
+
+.notification-check input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.notification-check input:disabled {
+  cursor: not-allowed;
+}
+
+.notification-check.is-read {
+  cursor: default;
 }
 
 .modal {
@@ -1340,6 +1413,10 @@ h3 {
 
   .pagination-inline {
     margin-left: 0;
+  }
+
+  .section-actions {
+    width: 100%;
   }
 
   .hero-card {

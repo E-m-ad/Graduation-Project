@@ -1,4 +1,5 @@
 import db from "../database/db.js";
+import { createAdminNotifications } from "../utils/notification.helpers.js";
 import z from "../utils/review.zod.js";
 
 const DEFAULT_PAGE = 1;
@@ -303,6 +304,20 @@ async function createReview(req, res) {
             reviewId: createdReview.id,
             productId: rental.productId,
             reviewerId: req.user.id,
+          },
+        }),
+        createAdminNotifications(tx, {
+          rentalId: rental.id,
+          title: "New review submitted",
+          message: `${req.user.name} reviewed ${rental.product.title}`,
+          data: {
+            action: "admin_new_review",
+            reviewId: createdReview.id,
+            rentalId: rental.id,
+            productId: rental.productId,
+            productTitle: rental.product.title,
+            reviewerId: req.user.id,
+            ownerId: rental.ownerId,
           },
         }),
         syncProductReviewStats(tx, rental.productId),
