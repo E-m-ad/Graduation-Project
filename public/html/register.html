@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Register | AI Rent</title>
+    <link rel="stylesheet" href="/css/common.css" />
+    <link rel="stylesheet" href="/css/login.css" />
+  </head>
+  <body data-page="register">
+    <header class="site-header">
+      <a class="brand" href="/">AI Rent</a>
+      <nav class="site-nav">
+        <a href="/" data-nav="home" data-non-admin-only>Home</a>
+        <a href="/html/products.html" data-nav="products" data-non-admin-only>
+          Browse
+        </a>
+        <a href="/html/login.html" data-guest-only>Login</a>
+      </nav>
+    </header>
+
+    <main class="page-shell auth-page">
+      <section class="auth-layout">
+        <article class="auth-intro">
+          <p class="eyebrow">Create your account</p>
+          <h1>Join the marketplace and start renting smarter.</h1>
+          <p>
+            Keep the first version simple: register once, then browse listings,
+            request rentals, or add your own products for review.
+          </p>
+          <ul class="auth-points">
+            <li>List electronics, tools, vehicles, and more.</li>
+            <li>Manage bookings and owner requests.</li>
+            <li>Keep the front-end aligned with the current project structure.</li>
+          </ul>
+        </article>
+
+        <section class="auth-card">
+          <div class="auth-card__header">
+            <h2>Register</h2>
+            <p>Create a new account with a strong password.</p>
+          </div>
+
+          <form id="registerForm" class="stack-form" novalidate>
+            <div class="field">
+              <label for="name">Full name</label>
+              <input
+                id="name"
+                name="name"
+                type="text"
+                class="input"
+                placeholder="Your full name"
+              />
+              <p class="field-error" id="nameError"></p>
+            </div>
+
+            <div class="field">
+              <label for="registerEmail">Email</label>
+              <input
+                id="registerEmail"
+                name="email"
+                type="email"
+                class="input"
+                placeholder="name@example.com"
+              />
+              <p class="field-error" id="emailError"></p>
+            </div>
+
+            <div class="field">
+              <label for="registerPassword">Password</label>
+              <input
+                id="registerPassword"
+                name="password"
+                type="password"
+                class="input"
+                placeholder="At least 6 characters, 1 number, 1 uppercase"
+              />
+              <p class="field-error" id="passwordError"></p>
+            </div>
+
+            <div class="field">
+              <label for="confirmPassword">Confirm password</label>
+              <input
+                id="confirmPassword"
+                name="confirmPassword"
+                type="password"
+                class="input"
+                placeholder="Repeat your password"
+              />
+              <p class="field-error" id="confirmPasswordError"></p>
+            </div>
+
+            <button
+              type="submit"
+              class="btn btn--primary btn--full"
+              id="registerBtn"
+            >
+              Create Account
+            </button>
+            <p class="message" id="formMessage"></p>
+          </form>
+
+          <p class="auth-footer">
+            Already registered?
+            <a href="/html/login.html">Login here</a>
+          </p>
+        </section>
+      </section>
+    </main>
+
+    <script src="/js/common.js"></script>
+    <script src="/js/register.js"></script>
+  </body>
+</html>

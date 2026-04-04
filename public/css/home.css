@@ -1,0 +1,14 @@
+.hero {
+  min-height: 420px;
+}
+.rent {
+  color: #1d4ed8;
+}
+
+.hero__content {
+  justify-content: center;
+}
+
+.hero__panel {
+  align-self: stretch;
+}

@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Product Details | AI Rent</title>
+    <link rel="stylesheet" href="/css/common.css" />
+    <link rel="stylesheet" href="/css/product-details.css" />
+  </head>
+  <body data-page="product-details">
+    <header class="site-header">
+      <a class="brand" href="/">AI Rent</a>
+      <nav class="site-nav">
+        <a href="/" data-nav="home" data-non-admin-only>Home</a>
+        <a href="/html/products.html" data-nav="products" data-non-admin-only>
+          Browse
+        </a>
+        <a href="/html/admin-dashboard.html" data-nav="admin" data-admin-only hidden>
+          Admin Dashboard
+        </a>
+        <a href="/html/my-listings.html" data-nav="my-listings" data-user-only hidden>
+          My Listings
+        </a>
+        <a href="/html/profile.html" data-nav="profile" data-user-only hidden>
+          Profile
+        </a>
+        <a href="/html/login.html" data-guest-only>Login</a>
+        <a href="/html/register.html" data-guest-only>Register</a>
+        <button type="button" class="btn btn--ghost" data-logout-button hidden>
+          Logout
+        </button>
+      </nav>
+    </header>
+
+    <main class="page-shell">
+      <p class="message" id="pageMessage"></p>
+
+      <section class="detail-layout" id="productView" hidden>
+        <article class="surface-panel detail-gallery">
+          <img id="productMainImage" class="detail-gallery__main" src="" alt="" />
+          <div class="detail-gallery__thumbs" id="productThumbs"></div>
+        </article>
+
+        <article class="surface-panel detail-summary">
+          <div class="detail-summary__meta">
+            <span class="tag" id="productCategory">Category</span>
+            <span class="tag tag--light" id="productStatus">Status</span>
+          </div>
+
+          <h1 id="productTitle">Loading...</h1>
+          <p class="detail-price" id="productPrice">Price</p>
+          <p class="detail-description" id="productDescription"></p>
+
+          <div class="detail-facts" id="productFacts"></div>
+
+          <div class="detail-actions">
+            <button type="button" class="btn btn--secondary" id="wishlistBtn">
+              Save to Wishlist
+            </button>
+            <a class="btn btn--ghost" id="ownerProfileLink" href="#">
+              View Owner
+            </a>
+          </div>
+        </article>
+
+        <aside class="surface-panel booking-panel">
+          <div class="section-heading section-heading--compact">
+            <div>
+              <p class="eyebrow">Check availability</p>
+              <h2>Request this listing</h2>
+            </div>
+          </div>
+
+          <form id="bookingForm" class="stack-form">
+            <div class="field">
+              <label for="startDate">Start date</label>
+              <input id="startDate" name="startDate" type="datetime-local" class="input" />
+            </div>
+
+            <div class="field">
+              <label for="endDate">End date</label>
+              <input id="endDate" name="endDate" type="datetime-local" class="input" />
+            </div>
+
+            <div class="field">
+              <label for="rentalPeriodType">Rental period</label>
+              <select id="rentalPeriodType" name="rentalPeriodType" class="input">
+                <option value="daily">Daily</option>
+                <option value="hourly">Hourly</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="renterNotes">Notes</label>
+              <textarea
+                id="renterNotes"
+                name="renterNotes"
+                class="textarea"
+                rows="4"
+                placeholder="Optional message to the owner"
+              ></textarea>
+            </div>
+
+            <div class="detail-actions detail-actions--stacked">
+              <button type="button" class="btn btn--secondary" id="checkAvailabilityBtn">
+                Check Availability
+              </button>
+              <button type="submit" class="btn btn--primary" id="requestRentalBtn">
+                Send Rental Request
+              </button>
+            </div>
+
+            <div class="booking-preview" id="pricingPreview"></div>
+            <p class="message" id="bookingMessage"></p>
+          </form>
+        </aside>
+      </section>
+
+      <section class="section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Similar options</p>
+            <h2>More listings like this</h2>
+          </div>
+        </div>
+        <div class="card-grid" id="similarProducts"></div>
+      </section>
+    </main>
+
+    <script src="/js/common.js"></script>
+    <script src="/js/product-details.js"></script>
+  </body>
+</html>

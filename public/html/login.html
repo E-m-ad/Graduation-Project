@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login | AI Rent</title>
+    <link rel="stylesheet" href="/css/common.css" />
+    <link rel="stylesheet" href="/css/login.css" />
+  </head>
+  <body data-page="login">
+    <header class="site-header">
+      <a class="brand" href="/">AI Rent</a>
+      <nav class="site-nav">
+        <a href="/" data-nav="home" data-non-admin-only>Home</a>
+        <a href="/html/products.html" data-nav="products" data-non-admin-only>
+          Browse
+        </a>
+        <a href="/html/register.html" data-guest-only>Register</a>
+      </nav>
+    </header>
+
+    <main class="page-shell auth-page">
+      <section class="auth-layout">
+        <article class="auth-intro">
+          <p class="eyebrow">Welcome back</p>
+          <h1>Sign in to continue managing rentals.</h1>
+          <p>
+            Use your account to explore products, submit rental requests, and
+            manage your listings from the same simple dashboard.
+          </p>
+          <ul class="auth-points">
+            <li>Browse public listings and product details.</li>
+            <li>Save items to your wishlist.</li>
+            <li>Track your bookings, requests, and profile.</li>
+          </ul>
+        </article>
+
+        <section class="auth-card">
+          <div class="auth-card__header">
+            <h2>Login</h2>
+            <p>Enter your email and password.</p>
+          </div>
+
+          <form id="loginForm" class="stack-form" novalidate>
+            <div class="field">
+              <label for="email">Email</label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                class="input"
+                placeholder="name@example.com"
+              />
+              <p class="field-error" id="emailError"></p>
+            </div>
+
+            <div class="field">
+              <label for="password">Password</label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                class="input"
+                placeholder="Enter your password"
+              />
+              <p class="field-error" id="passwordError"></p>
+            </div>
+
+            <div class="auth-card__row">
+              <label class="checkbox">
+                <input type="checkbox" id="rememberMe" name="rememberMe" />
+                <span>Remember me</span>
+              </label>
+              <a href="/html/forgot-password.html">Forgot password?</a>
+            </div>
+
+            <button type="submit" class="btn btn--primary btn--full" id="loginBtn">
+              Login
+            </button>
+            <p class="message" id="formMessage"></p>
+          </form>
+
+          <p class="auth-footer">
+            New to AI Rent?
+            <a href="/html/register.html">Create an account</a>
+          </p>
+        </section>
+      </section>
+    </main>
+
+    <script src="/js/common.js"></script>
+    <script src="/js/login.js"></script>
+  </body>
+</html>

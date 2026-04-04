@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Profile | AI Rent</title>
+    <link rel="stylesheet" href="/css/common.css" />
+    <link rel="stylesheet" href="/css/profile.css" />
+  </head>
+  <body data-page="profile">
+    <header class="site-header">
+      <a class="brand" href="/">AI Rent</a>
+      <nav class="site-nav">
+        <a href="/" data-nav="home" data-non-admin-only>Home</a>
+        <a href="/html/products.html" data-nav="products" data-non-admin-only>
+          Browse
+        </a>
+        <a href="/html/admin-dashboard.html" data-nav="admin" data-admin-only hidden>
+          Admin Dashboard
+        </a>
+        <a href="/html/my-listings.html" data-nav="my-listings" data-user-only hidden>
+          My Listings
+        </a>
+        <a href="/html/profile.html" data-nav="profile" data-user-only hidden>
+          Profile
+        </a>
+        <button type="button" class="btn btn--ghost" data-logout-button hidden>
+          Logout
+        </button>
+      </nav>
+    </header>
+
+    <main class="page-shell">
+      <p class="message" id="profileMessage"></p>
+
+      <section class="profile-grid">
+        <aside class="surface-panel profile-card">
+          <img
+            id="avatarPreview"
+            class="profile-card__avatar"
+            src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'%3E%3Crect width='160' height='160' fill='%23e2e8f0'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%231e293b' font-family='Trebuchet MS%2C sans-serif' font-size='26'%3EUser%3C/text%3E%3C/svg%3E"
+            data-placeholder="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'%3E%3Crect width='160' height='160' fill='%23e2e8f0'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%231e293b' font-family='Trebuchet MS%2C sans-serif' font-size='26'%3EUser%3C/text%3E%3C/svg%3E"
+            alt="Profile avatar"
+          />
+          <h1 id="profileName">Your profile</h1>
+          <p id="profileRole">Role</p>
+          <div class="profile-card__meta" id="profileMeta"></div>
+
+          <form id="avatarForm" class="stack-form">
+            <div class="field">
+              <label for="avatarInput">Update avatar</label>
+              <input id="avatarInput" name="avatar" type="file" class="input" accept="image/*" />
+            </div>
+            <button type="submit" class="btn btn--secondary btn--full">Upload Avatar</button>
+          </form>
+        </aside>
+
+        <section class="profile-content">
+          <article class="surface-panel">
+            <div class="section-heading section-heading--compact">
+              <div>
+                <p class="eyebrow">Account details</p>
+                <h2>Edit profile</h2>
+              </div>
+            </div>
+
+            <form id="profileForm" class="form-grid">
+              <div class="field">
+                <label for="profileNameInput">Name</label>
+                <input id="profileNameInput" name="name" type="text" class="input" />
+              </div>
+
+              <div class="field">
+                <label for="profilePhoneInput">Phone</label>
+                <input id="profilePhoneInput" name="phone" type="text" class="input" />
+              </div>
+
+              <div class="field">
+                <label for="profileCityInput">City</label>
+                <input id="profileCityInput" name="city" type="text" class="input" />
+              </div>
+
+              <div class="field">
+                <label for="profileAddressInput">Address</label>
+                <input id="profileAddressInput" name="address" type="text" class="input" />
+              </div>
+
+              <div class="field field--full">
+                <label for="profileBioInput">Bio</label>
+                <textarea id="profileBioInput" name="bio" class="textarea" rows="4"></textarea>
+              </div>
+
+              <div class="field field--full">
+                <button type="submit" class="btn btn--primary">Save Profile</button>
+              </div>
+            </form>
+          </article>
+
+          <article class="surface-panel">
+            <div class="section-heading section-heading--compact">
+              <div>
+                <p class="eyebrow">Security</p>
+                <h2>Change password</h2>
+              </div>
+            </div>
+
+            <form id="passwordForm" class="form-grid">
+              <div class="field">
+                <label for="currentPassword">Current password</label>
+                <input
+                  id="currentPassword"
+                  name="currentPassword"
+                  type="password"
+                  class="input"
+                />
+              </div>
+
+              <div class="field">
+                <label for="newProfilePassword">New password</label>
+                <input
+                  id="newProfilePassword"
+                  name="newPassword"
+                  type="password"
+                  class="input"
+                />
+              </div>
+
+              <div class="field field--full">
+                <label for="confirmProfilePassword">Confirm new password</label>
+                <input
+                  id="confirmProfilePassword"
+                  name="confirmNewPassword"
+                  type="password"
+                  class="input"
+                />
+              </div>
+
+              <div class="field field--full">
+                <button type="submit" class="btn btn--secondary">Update Password</button>
+              </div>
+            </form>
+          </article>
+
+          <section class="profile-panels">
+            <article class="surface-panel">
+              <div class="section-heading section-heading--compact">
+                <div>
+                  <p class="eyebrow">Renter side</p>
+                  <h2>My bookings</h2>
+                </div>
+              </div>
+              <div class="list-stack" id="bookingsList"></div>
+            </article>
+
+            <article class="surface-panel">
+              <div class="section-heading section-heading--compact">
+                <div>
+                  <p class="eyebrow">Owner side</p>
+                  <h2>Incoming requests</h2>
+                </div>
+              </div>
+              <div class="list-stack" id="requestsList"></div>
+            </article>
+          </section>
+
+          <article class="surface-panel">
+            <div class="section-heading section-heading--compact">
+              <div>
+                <p class="eyebrow">Updates</p>
+                <h2>Recent notifications</h2>
+              </div>
+            </div>
+            <div class="list-stack" id="notificationsList"></div>
+          </article>
+        </section>
+      </section>
+    </main>
+
+    <script src="/js/common.js"></script>
+    <script src="/js/profile.js"></script>
+  </body>
+</html>

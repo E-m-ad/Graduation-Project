@@ -3,906 +3,123 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AI Rent Admin</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Space+Grotesk:wght@400;500;700&display=swap"
-      rel="stylesheet"
-    />
-    <link rel="stylesheet" href="/styles.css" />
+    <title>AI Rent</title>
+    <link rel="stylesheet" href="/css/common.css" />
+    <link rel="stylesheet" href="/css/home.css" />
   </head>
-  <body>
-    <div class="ambient ambient-one"></div>
-    <div class="ambient ambient-two"></div>
+  <body data-page="home">
+    <header class="site-header">
+      <a class="brand" href="/">AI <span class="rent">Rent</span></a>
+      <nav class="site-nav">
+        <a href="/" data-nav="home" data-non-admin-only>Home</a>
+        <a href="/html/products.html" data-nav="products" data-non-admin-only>
+          Browse
+        </a>
+        <a
+          href="/html/admin-dashboard.html"
+          data-nav="admin"
+          data-admin-only
+          hidden
+        >
+          Admin Dashboard
+        </a>
+        <a
+          href="/html/my-listings.html"
+          data-nav="my-listings"
+          data-user-only
+          hidden
+        >
+          My Listings
+        </a>
+        <a href="/html/profile.html" data-nav="profile" data-user-only hidden>
+          Profile
+        </a>
+        <a href="/html/login.html" data-guest-only>Login</a>
+        <a href="/html/register.html" data-guest-only>Register</a>
+        <button type="button" class="btn btn--ghost" data-logout-button hidden>
+          Logout
+        </button>
+      </nav>
+    </header>
 
-    <main class="admin-app">
-      <section id="auth-screen" class="auth-shell">
-        <div class="auth-panel auth-hero">
-          <p class="eyebrow">AI Rent Control Center</p>
-          <h1>Admin dashboard for marketplace operations at full clarity.</h1>
-          <p class="lede">
-            Review rentals, moderate listings, manage users, and monitor
-            platform health from one responsive workspace designed for fast
-            decisions.
+    <main class="page-shell">
+      <section class="hero">
+        <div class="hero__content">
+          <p class="eyebrow">Smart rental marketplace</p>
+          <h1>
+            <span class="rent">Rent</span> what you need. Share what you own.
+          </h1>
+          <p class="hero__text">
+            AI Rent keeps the experience simple: browse listings, manage your
+            items, and handle rental requests from one clean front-end.
           </p>
-
-          <div class="hero-metrics">
-            <article class="hero-metric">
-              <span>Moderation</span>
-              <strong>Listings, users, rentals</strong>
-            </article>
-            <article class="hero-metric">
-              <span>Security</span>
-              <strong>Admin-only protected access</strong>
-            </article>
-            <article class="hero-metric">
-              <span>Insights</span>
-              <strong>KPIs, trends, reports</strong>
-            </article>
+          <div class="hero__actions">
+            <a class="btn btn--primary" href="/html/products.html"
+              >Explore Listings</a
+            >
+            <a class="btn btn--secondary" href="/html/my-listings.html">
+              Start Listing
+            </a>
           </div>
         </div>
 
-        <section class="auth-panel auth-card">
-          <div class="section-intro">
-            <p class="eyebrow">Secure Access</p>
-            <h2>Sign in as an administrator</h2>
-            <p class="section-copy">
-              Only users with the <code>admin</code> role can enter the control
-              center.
-            </p>
+        <aside class="hero__panel">
+          <p class="panel-label">Marketplace snapshot</p>
+          <div class="stat-grid">
+            <article class="stat-card">
+              <span class="stat-card__value" id="homeProductCount">0</span>
+              <span class="stat-card__label">Live listings</span>
+            </article>
+            <article class="stat-card">
+              <span class="stat-card__value" id="homeCategoryCount">0</span>
+              <span class="stat-card__label">Categories</span>
+            </article>
+            <article class="stat-card">
+              <span class="stat-card__value" id="homeCityCount">0</span>
+              <span class="stat-card__label">Cities</span>
+            </article>
           </div>
-
-          <form id="login-form" class="stack-form">
-            <label class="field">
-              <span>Email</span>
-              <input
-                id="login-email"
-                name="email"
-                type="email"
-                autocomplete="username"
-                placeholder="admin@airent.com"
-                required
-              />
-            </label>
-
-            <label class="field">
-              <span>Password</span>
-              <input
-                name="password"
-                type="password"
-                autocomplete="current-password"
-                placeholder="Password1"
-                required
-              />
-            </label>
-
-            <div class="inline-actions">
-              <button id="login-submit" type="submit">Enter dashboard</button>
-              <button id="refresh-session-button" type="button" class="ghost">
-                Restore session
-              </button>
-            </div>
-          </form>
-
-          <div class="session-note">
-            <span class="signal"></span>
-            <p id="auth-message">
-              Sign in to load live admin analytics and moderation tools.
-            </p>
-          </div>
-        </section>
-      </section>
-
-      <section id="access-screen" class="state-shell" hidden>
-        <article class="state-card">
-          <p class="eyebrow">Restricted</p>
-          <h2>Administrator access required</h2>
-          <p id="access-copy" class="section-copy">
-            This account is authenticated, but it does not have permission to
-            open the admin dashboard.
+          <p class="hero__note" data-user-greeting>
+            Browse as a guest or sign in to manage listings and requests.
           </p>
-          <div id="access-user-summary" class="access-summary"></div>
-          <div class="inline-actions">
-            <button id="access-logout-button" type="button">Sign out</button>
-            <button id="access-return-button" type="button" class="ghost">
-              Back to login
-            </button>
-          </div>
-        </article>
-      </section>
-
-      <section id="dashboard-shell" class="dashboard-shell" hidden>
-        <aside class="sidebar" id="sidebar">
-          <div class="brand-block">
-            <div>
-              <p class="brand-kicker">AI Rent</p>
-              <h2>Admin</h2>
-            </div>
-          </div>
-
-          <nav class="nav-stack">
-            <button class="nav-item active" type="button" data-panel="overview">
-              <span>Overview</span>
-              <small>Live operations</small>
-            </button>
-            <button class="nav-item" type="button" data-panel="notifications">
-              <span>Notifications</span>
-              <small>Inbox & follow-up</small>
-            </button>
-            <button class="nav-item" type="button" data-panel="users">
-              <span>Users</span>
-              <small>Access & status</small>
-            </button>
-            <button class="nav-item" type="button" data-panel="categories">
-              <span>Categories</span>
-              <small>Catalog structure</small>
-            </button>
-            <button class="nav-item" type="button" data-panel="products">
-              <span>Products</span>
-              <small>Moderation queue</small>
-            </button>
-            <button class="nav-item" type="button" data-panel="rentals">
-              <span>Rentals</span>
-              <small>Operational oversight</small>
-            </button>
-            <button class="nav-item" type="button" data-panel="reports">
-              <span>Reports</span>
-              <small>Health & trends</small>
-            </button>
-          </nav>
-
-          <section class="sidebar-card">
-            <p class="sidebar-title">Current admin</p>
-            <div class="mini-user">
-              <img id="sidebar-avatar" alt="Admin avatar" hidden />
-              <div>
-                <strong id="sidebar-name">Not loaded</strong>
-                <span id="sidebar-role">Admin session</span>
-              </div>
-            </div>
-          </section>
         </aside>
+      </section>
 
-        <div class="shell-main">
-          <header class="topbar">
-            <div class="topbar-left">
-              <div>
-                <p id="panel-kicker" class="eyebrow">Operations</p>
-                <h1 id="panel-title" class="topbar-title">Overview</h1>
-              </div>
-            </div>
-
-            <div class="topbar-actions">
-              <form id="global-search-form" class="global-search">
-                <input
-                  id="global-search-input"
-                  type="search"
-                  placeholder="Search users, categories, products, rentals"
-                />
-              </form>
-
-              <button
-                id="topbar-refresh"
-                class="ghost topbar-button"
-                type="button"
-              >
-                Refresh
-              </button>
-
-              <button
-                id="notification-chip"
-                class="ghost notification-chip notification-chip-button"
-                type="button"
-              >
-                <span class="notification-dot"></span>
-                <div>
-                  <strong id="notification-count">0</strong>
-                  <small>Unread</small>
-                </div>
-              </button>
-
-              <div class="profile-chip">
-                <div>
-                  <strong id="topbar-name">Admin</strong>
-                  <small id="topbar-email">No active session</small>
-                </div>
-              </div>
-
-              <button
-                id="logout-button"
-                class="warn topbar-button"
-                type="button"
-              >
-                Logout
-              </button>
-            </div>
-          </header>
-
-          <section class="status-strip">
-            <div>
-              <span id="status-pill" class="status-pill" data-state="idle"
-                >Idle</span
-              >
-              <span id="status-message" class="status-message">
-                Waiting for an admin action.
-              </span>
-            </div>
-            <small id="last-sync">No data loaded yet</small>
-          </section>
-
-          <main class="content-shell">
-            <section id="overview-panel" class="panel-view active">
-              <div class="overview-grid">
-                <article class="hero-card">
-                  <div>
-                    <p class="eyebrow">Marketplace pulse</p>
-                    <h2 id="overview-headline">
-                      Control the platform from one calm surface.
-                    </h2>
-                    <p id="overview-copy" class="section-copy">
-                      Review growth, catch moderation bottlenecks, and move fast
-                      on high-signal items.
-                    </p>
-                  </div>
-                </article>
-
-                <section class="panel-card">
-                  <div class="section-head compact">
-                    <div>
-                      <p class="eyebrow">Notifications</p>
-                      <h3>Admin inbox</h3>
-                    </div>
-                    <div class="section-actions">
-                      <button
-                        type="button"
-                        class="ghost"
-                        data-action="mark-all-notifications-read"
-                      >
-                        Mark all read
-                      </button>
-                      <button
-                        type="button"
-                        class="ghost"
-                        data-action="open-notifications"
-                      >
-                        View all
-                      </button>
-                    </div>
-                  </div>
-                  <div id="notifications-list" class="notification-list"></div>
-                </section>
-              </div>
-
-              <section class="stats-grid" id="stats-grid"></section>
-
-              <section class="split-grid">
-                <article class="panel-card">
-                  <div class="section-head compact">
-                    <div>
-                      <p class="eyebrow">Growth</p>
-                      <h3>Recent momentum</h3>
-                    </div>
-                  </div>
-                  <div id="growth-grid" class="insight-grid"></div>
-                </article>
-
-                <article class="panel-card">
-                  <div class="section-head compact">
-                    <div>
-                      <p class="eyebrow">Financial</p>
-                      <h3>Booked value & fees</h3>
-                    </div>
-                  </div>
-                  <div id="financial-grid" class="insight-grid"></div>
-                </article>
-              </section>
-
-              <section class="split-grid">
-                <article class="panel-card">
-                  <div class="section-head compact">
-                    <div>
-                      <p class="eyebrow">Recent users</p>
-                      <h3>Newest accounts</h3>
-                    </div>
-                  </div>
-                  <div id="recent-users-list" class="stack-list"></div>
-                </article>
-
-                <article class="panel-card">
-                  <div class="section-head compact">
-                    <div>
-                      <p class="eyebrow">Moderation queue</p>
-                      <h3>Pending products</h3>
-                    </div>
-                  </div>
-                  <div id="pending-products-list" class="stack-list"></div>
-                </article>
-              </section>
-
-              <section class="panel-card">
-                <div class="section-head">
-                  <div>
-                    <p class="eyebrow">Recent rentals</p>
-                    <h3>Latest booking activity</h3>
-                  </div>
-                </div>
-                <div class="table-wrap">
-                  <table class="data-table">
-                    <thead>
-                      <tr>
-                        <th>Rental</th>
-                        <th>Product</th>
-                        <th>Renter</th>
-                        <th>Owner</th>
-                        <th>Created</th>
-                        <th>Status</th>
-                        <th>Value</th>
-                      </tr>
-                    </thead>
-                    <tbody id="recent-rentals-body"></tbody>
-                  </table>
-                </div>
-              </section>
-            </section>
-
-            <section id="notifications-panel" class="panel-view">
-              <section class="panel-card">
-                <form id="notifications-filter-form" class="filters-row">
-                  <label class="field small-field">
-                    <span>Status</span>
-                    <select name="isRead">
-                      <option value="">All</option>
-                      <option value="false">Unread</option>
-                      <option value="true">Read</option>
-                    </select>
-                  </label>
-                  <label class="field">
-                    <span>Type</span>
-                    <select name="type">
-                      <option value="">All</option>
-                      <option value="system">System</option>
-                      <option value="rental_request">Rental request</option>
-                      <option value="rental_approved">Rental approved</option>
-                      <option value="rental_rejected">Rental rejected</option>
-                      <option value="rental_started">Rental started</option>
-                      <option value="rental_ending_soon">
-                        Rental ending soon
-                      </option>
-                      <option value="rental_completed">
-                        Rental completed
-                      </option>
-                      <option value="rental_cancelled">
-                        Rental cancelled
-                      </option>
-                      <option value="new_review">New review</option>
-                      <option value="review_reply">Review reply</option>
-                      <option value="recommendation">Recommendation</option>
-                    </select>
-                  </label>
-                  <label class="field small-field">
-                    <span>Per page</span>
-                    <select name="limit">
-                      <option value="10">10</option>
-                      <option value="20">20</option>
-                      <option value="50">50</option>
-                    </select>
-                  </label>
-                  <div class="filter-actions">
-                    <button type="submit">Apply</button>
-                    <button
-                      id="notifications-reset"
-                      type="button"
-                      class="ghost"
-                    >
-                      Reset
-                    </button>
-                  </div>
-                </form>
-              </section>
-
-              <section class="panel-card">
-                <div class="section-head compact">
-                  <div>
-                    <p class="eyebrow">Inbox</p>
-                    <h3>Admin notifications</h3>
-                  </div>
-                  <div class="section-actions">
-                    <button
-                      id="notifications-mark-all"
-                      type="button"
-                      class="ghost"
-                    >
-                      Mark all read
-                    </button>
-                    <div class="pagination-inline">
-                      <button
-                        id="notifications-prev"
-                        class="ghost"
-                        type="button"
-                      >
-                        Previous
-                      </button>
-                      <span id="notifications-page-meta">Page 1</span>
-                      <button
-                        id="notifications-next"
-                        class="ghost"
-                        type="button"
-                      >
-                        Next
-                      </button>
-                    </div>
-                  </div>
-                </div>
-                <div id="notifications-feed" class="notification-list"></div>
-              </section>
-            </section>
-
-            <section id="users-panel" class="panel-view">
-              <section class="panel-card">
-                <form id="users-filter-form" class="filters-row">
-                  <label class="field">
-                    <span>Search</span>
-                    <input
-                      name="search"
-                      type="search"
-                      placeholder="Name, email, phone, city"
-                    />
-                  </label>
-                  <label class="field small-field">
-                    <span>Role</span>
-                    <select name="role">
-                      <option value="">All</option>
-                      <option value="renter">Renter</option>
-                      <option value="owner">Owner</option>
-                      <option value="both">Both</option>
-                      <option value="admin">Admin</option>
-                    </select>
-                  </label>
-                  <label class="field small-field">
-                    <span>Status</span>
-                    <select name="isActive">
-                      <option value="">All</option>
-                      <option value="true">Active</option>
-                      <option value="false">Suspended</option>
-                    </select>
-                  </label>
-                  <div class="filter-actions">
-                    <button type="submit">Apply</button>
-                    <button id="users-reset" type="button" class="ghost">
-                      Reset
-                    </button>
-                  </div>
-                </form>
-              </section>
-
-              <section class="panel-card">
-                <div class="section-head compact">
-                  <div>
-                    <p class="eyebrow">Users</p>
-                    <h3>User management</h3>
-                  </div>
-                  <div class="pagination-inline">
-                    <button id="users-prev" class="ghost" type="button">
-                      Previous
-                    </button>
-                    <span id="users-page-meta">Page 1</span>
-                    <button id="users-next" class="ghost" type="button">
-                      Next
-                    </button>
-                  </div>
-                </div>
-                <div id="users-list" class="entity-list"></div>
-              </section>
-            </section>
-
-            <section id="products-panel" class="panel-view">
-              <section class="panel-card">
-                <form id="products-filter-form" class="filters-row">
-                  <label class="field">
-                    <span>Search</span>
-                    <input
-                      name="search"
-                      type="search"
-                      placeholder="Title, owner, email, city"
-                    />
-                  </label>
-                  <label class="field small-field">
-                    <span>Status</span>
-                    <select name="status">
-                      <option value="">All</option>
-                      <option value="available">Available</option>
-                      <option value="rented">Rented</option>
-                      <option value="unavailable">Unavailable</option>
-                      <option value="under_review">Under review</option>
-                      <option value="suspended">Suspended</option>
-                    </select>
-                  </label>
-                  <label class="field small-field">
-                    <span>Approval</span>
-                    <select name="isApproved">
-                      <option value="">All</option>
-                      <option value="true">Approved</option>
-                      <option value="false">Unapproved</option>
-                    </select>
-                  </label>
-                  <label class="field small-field">
-                    <span>City</span>
-                    <input name="city" type="text" placeholder="Cairo" />
-                  </label>
-                  <div class="filter-actions">
-                    <button type="submit">Apply</button>
-                    <button id="products-reset" type="button" class="ghost">
-                      Reset
-                    </button>
-                  </div>
-                </form>
-              </section>
-
-              <section class="panel-card">
-                <div class="section-head compact">
-                  <div>
-                    <p class="eyebrow">Listings</p>
-                    <h3>Products moderation</h3>
-                  </div>
-                  <div class="pagination-inline">
-                    <button id="products-prev" class="ghost" type="button">
-                      Previous
-                    </button>
-                    <span id="products-page-meta">Page 1</span>
-                    <button id="products-next" class="ghost" type="button">
-                      Next
-                    </button>
-                  </div>
-                </div>
-                <div id="products-list" class="entity-list product-list"></div>
-              </section>
-            </section>
-
-            <section id="categories-panel" class="panel-view">
-              <div class="split-grid categories-grid">
-                <section class="panel-card">
-                  <div class="section-head compact">
-                    <div>
-                      <p id="category-form-mode" class="eyebrow">
-                        Category studio
-                      </p>
-                      <h3 id="category-form-title">Create category</h3>
-                      <p id="category-form-copy" class="section-copy">
-                        Add marketplace categories, subcategories, icons, and
-                        sort priority from one admin workspace.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div id="categories-summary" class="metric-grid"></div>
-
-                  <form id="category-form" class="stack-form">
-                    <label class="field">
-                      <span>Name</span>
-                      <input
-                        name="name"
-                        type="text"
-                        placeholder="Photography"
-                        minlength="2"
-                        maxlength="100"
-                        required
-                      />
-                    </label>
-
-                    <label class="field">
-                      <span>Description</span>
-                      <textarea
-                        name="description"
-                        rows="5"
-                        placeholder="Short guidance for owners and renters browsing this category."
-                      ></textarea>
-                    </label>
-
-                    <label class="field">
-                      <span>Icon URL</span>
-                      <input
-                        name="iconUrl"
-                        type="url"
-                        placeholder="https://example.com/category-icon.png"
-                      />
-                    </label>
-
-                    <div class="split-grid form-split">
-                      <label class="field">
-                        <span>Parent category</span>
-                        <select name="parentId" id="category-parent-id">
-                          <option value="">No parent (top-level)</option>
-                        </select>
-                      </label>
-
-                      <label class="field">
-                        <span>Sort order</span>
-                        <input
-                          name="sortOrder"
-                          type="number"
-                          min="0"
-                          step="1"
-                          placeholder="0"
-                        />
-                      </label>
-                    </div>
-
-                    <label class="field small-field">
-                      <span>Status</span>
-                      <select name="isActive">
-                        <option value="true">Active</option>
-                        <option value="false">Inactive</option>
-                      </select>
-                    </label>
-
-                    <div class="inline-actions">
-                      <button id="category-submit" type="submit">
-                        Create category
-                      </button>
-                      <button
-                        id="category-cancel"
-                        type="button"
-                        class="ghost"
-                        hidden
-                      >
-                        Cancel edit
-                      </button>
-                    </div>
-                  </form>
-                </section>
-
-                <div class="categories-stack">
-                  <section class="panel-card">
-                    <form id="categories-filter-form" class="filters-row">
-                      <label class="field">
-                        <span>Search</span>
-                        <input
-                          name="search"
-                          type="search"
-                          placeholder="Category name, description, parent"
-                        />
-                      </label>
-                      <label class="field small-field">
-                        <span>Status</span>
-                        <select name="isActive">
-                          <option value="">All</option>
-                          <option value="true">Active</option>
-                          <option value="false">Inactive</option>
-                        </select>
-                      </label>
-                      <label class="field small-field">
-                        <span>Level</span>
-                        <select name="level">
-                          <option value="">All</option>
-                          <option value="root">Top-level</option>
-                          <option value="child">Subcategory</option>
-                        </select>
-                      </label>
-                      <div class="filter-actions">
-                        <button type="submit">Apply</button>
-                        <button
-                          id="categories-reset"
-                          type="button"
-                          class="ghost"
-                        >
-                          Reset
-                        </button>
-                      </div>
-                    </form>
-                  </section>
-
-                  <section class="panel-card">
-                    <div class="section-head compact">
-                      <div>
-                        <p class="eyebrow">Catalog</p>
-                        <h3>Category library</h3>
-                      </div>
-                      <span id="categories-page-meta" class="pill"
-                        >0 categories</span
-                      >
-                    </div>
-                    <div id="categories-list" class="entity-list"></div>
-                  </section>
-                </div>
-              </div>
-            </section>
-
-            <section id="rentals-panel" class="panel-view">
-              <section class="panel-card">
-                <form id="rentals-filter-form" class="filters-row">
-                  <label class="field">
-                    <span>Search</span>
-                    <input
-                      name="search"
-                      type="search"
-                      placeholder="Product, renter, owner, email"
-                    />
-                  </label>
-                  <label class="field small-field">
-                    <span>Status</span>
-                    <select name="status">
-                      <option value="">All</option>
-                      <option value="pending">Pending</option>
-                      <option value="approved">Approved</option>
-                      <option value="rejected">Rejected</option>
-                      <option value="active">Active</option>
-                      <option value="completed">Completed</option>
-                      <option value="cancelled">Cancelled</option>
-                      <option value="overdue">Overdue</option>
-                    </select>
-                  </label>
-                  <div class="filter-actions">
-                    <button type="submit">Apply</button>
-                    <button id="rentals-reset" type="button" class="ghost">
-                      Reset
-                    </button>
-                  </div>
-                </form>
-              </section>
-
-              <section class="panel-card">
-                <div class="section-head compact">
-                  <div>
-                    <p class="eyebrow">Rentals</p>
-                    <h3>Booking oversight</h3>
-                  </div>
-                  <div class="pagination-inline">
-                    <button id="rentals-prev" class="ghost" type="button">
-                      Previous
-                    </button>
-                    <span id="rentals-page-meta">Page 1</span>
-                    <button id="rentals-next" class="ghost" type="button">
-                      Next
-                    </button>
-                  </div>
-                </div>
-                <div id="rentals-list" class="entity-list"></div>
-              </section>
-            </section>
-
-            <section id="reports-panel" class="panel-view">
-              <section class="panel-card">
-                <form
-                  id="reports-filter-form"
-                  class="filters-row compact-filters"
-                >
-                  <label class="field small-field">
-                    <span>Days</span>
-                    <select name="days">
-                      <option value="30">30</option>
-                      <option value="60">60</option>
-                      <option value="90">90</option>
-                      <option value="180">180</option>
-                    </select>
-                  </label>
-                  <label class="field small-field">
-                    <span>Months</span>
-                    <select name="months">
-                      <option value="6">6</option>
-                      <option value="12">12</option>
-                      <option value="18">18</option>
-                      <option value="24">24</option>
-                    </select>
-                  </label>
-                  <div class="filter-actions">
-                    <button type="submit">Refresh report</button>
-                  </div>
-                </form>
-              </section>
-
-              <section id="reports-summary" class="stats-grid"></section>
-
-              <section class="split-grid">
-                <article class="panel-card">
-                  <div class="section-head compact">
-                    <div>
-                      <p class="eyebrow">Distributions</p>
-                      <h3>Platform composition</h3>
-                    </div>
-                  </div>
-                  <div
-                    id="report-distributions"
-                    class="distribution-grid"
-                  ></div>
-                </article>
-
-                <article class="panel-card">
-                  <div class="section-head compact">
-                    <div>
-                      <p class="eyebrow">Trends</p>
-                      <h3>Growth curves</h3>
-                    </div>
-                  </div>
-                  <div id="report-trends" class="trend-grid"></div>
-                </article>
-              </section>
-
-              <section class="split-grid">
-                <article class="panel-card">
-                  <div class="section-head compact">
-                    <div>
-                      <p class="eyebrow">Categories</p>
-                      <h3>Top listing categories</h3>
-                    </div>
-                  </div>
-                  <div id="report-categories" class="leaderboard-list"></div>
-                </article>
-
-                <article class="panel-card">
-                  <div class="section-head compact">
-                    <div>
-                      <p class="eyebrow">Top products</p>
-                      <h3>Most rented listings</h3>
-                    </div>
-                  </div>
-                  <div id="report-products" class="leaderboard-list"></div>
-                </article>
-              </section>
-            </section>
-          </main>
+      <section class="section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Discover faster</p>
+            <h2>Popular categories</h2>
+          </div>
+          <a class="section-link" href="/html/products.html"
+            >See all listings</a
+          >
         </div>
+        <div class="category-grid" id="homeCategories"></div>
+      </section>
+
+      <section class="section" id="recommendationsSection" hidden>
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Made for you</p>
+            <h2>Recommended for your account</h2>
+          </div>
+        </div>
+        <div class="card-grid" id="recommendedProducts"></div>
+      </section>
+
+      <section class="section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Fresh on the platform</p>
+            <h2>Latest listings</h2>
+          </div>
+        </div>
+        <div class="card-grid" id="homeProducts"></div>
       </section>
     </main>
 
-    <dialog id="action-dialog" class="modal">
-      <form id="action-form" class="modal-card" method="dialog">
-        <div class="modal-head">
-          <div>
-            <p id="action-kicker" class="eyebrow">Confirm action</p>
-            <h3 id="action-title">Review action</h3>
-          </div>
-          <button
-            type="button"
-            id="action-close"
-            class="icon-button close-button"
-          >
-            <span></span>
-            <span></span>
-          </button>
-        </div>
-
-        <p id="action-description" class="section-copy">
-          Add context for this moderation action.
-        </p>
-
-        <label class="field" id="action-reason-field">
-          <span id="action-reason-label">Reason</span>
-          <textarea
-            id="action-reason"
-            rows="5"
-            placeholder="Optional moderation note"
-          ></textarea>
-        </label>
-
-        <div class="inline-actions">
-          <button id="action-cancel" type="button" class="ghost">Cancel</button>
-          <button id="action-confirm" type="submit">Confirm</button>
-        </div>
-      </form>
-    </dialog>
-
-    <dialog id="detail-dialog" class="modal wide-modal">
-      <article class="modal-card">
-        <div class="modal-head">
-          <div>
-            <p id="detail-kicker" class="eyebrow">Details</p>
-            <h3 id="detail-title">Entity details</h3>
-          </div>
-          <button
-            type="button"
-            id="detail-close"
-            class="icon-button close-button"
-          >
-            <span></span>
-            <span></span>
-          </button>
-        </div>
-
-        <div id="detail-content" class="detail-content"></div>
-      </article>
-    </dialog>
-
-    <script type="module" src="/app.js"></script>
+    <script src="/js/common.js"></script>
+    <script src="/js/home.js"></script>
   </body>
 </html>
