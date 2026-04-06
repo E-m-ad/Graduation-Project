@@ -1,0 +1,73 @@
+.listing-layout {
+  display: grid;
+  grid-template-columns: minmax(340px, 420px) minmax(0, 1fr);
+  gap: 22px;
+}
+
+.compact-filter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.listing-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.listing-card-grid {
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  align-items: start;
+}
+
+.owner-listing-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.owner-listing-card__media {
+  min-height: 240px;
+}
+
+.owner-listing-card__body {
+  flex: 1;
+}
+
+.owner-listing-card__status-row,
+.owner-listing-card__details {
+  display: grid;
+  gap: 10px;
+}
+
+.owner-listing-card__status-row {
+  grid-template-columns: repeat(2, max-content);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.owner-listing-card__actions {
+  margin-top: auto;
+  padding-top: 4px;
+}
+
+.listing-review-note {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(218, 41, 28, 0.12);
+  background: rgba(218, 41, 28, 0.05);
+}
+
+.listing-review-note--muted {
+  border-color: rgba(17, 104, 96, 0.14);
+  background: rgba(17, 104, 96, 0.06);
+}
+
+@media (max-width: 720px) {
+  .owner-listing-card__status-row {
+    grid-template-columns: 1fr;
+  }
+}

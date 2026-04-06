@@ -342,6 +342,45 @@ async function runCatalogAndModerationTests(context, actors) {
     approvedProduct,
   );
 
+  const adminUnlistResult = await actors.adminUser.request(
+    "PUT",
+    `/products/${flowProduct.id}/status`,
+    {
+      json: { status: "suspended" },
+    },
+  );
+  expectStatus(adminUnlistResult, 200, "Admin unlist approved product");
+  assert(
+    adminUnlistResult.body?.data?.status === "suspended",
+    "Admin unlist should suspend the product",
+    adminUnlistResult.body,
+  );
+  assert(
+    adminUnlistResult.body?.data?.isApproved === true,
+    "Admin unlist should keep approval state so it can be relisted",
+    adminUnlistResult.body,
+  );
+
+  const unlistedPublicDetail = await actors.guest.request("GET", `/products/${flowProduct.id}`, {
+    useCookies: false,
+    useAccessToken: false,
+  });
+  expectStatus(unlistedPublicDetail, 404, "Unlisted approved product should be hidden publicly");
+
+  const adminRelistResult = await actors.adminUser.request(
+    "PUT",
+    `/products/${flowProduct.id}/status`,
+    {
+      json: { status: "available" },
+    },
+  );
+  expectStatus(adminRelistResult, 200, "Admin relist approved product");
+  assert(
+    adminRelistResult.body?.data?.status === "available",
+    "Admin relist should restore availability",
+    adminRelistResult.body,
+  );
+
   const adminRejectResult = await actors.adminUser.request(
     "PUT",
     `/admin/products/${rejectProduct.id}/reject`,
@@ -356,6 +395,44 @@ async function runCatalogAndModerationTests(context, actors) {
     adminRejectResult.body?.data?.status === "suspended",
     "Rejected product should be suspended",
     adminRejectResult.body,
+  );
+  assert(
+    adminRejectResult.body?.data?.adminReviewNote === "QA rejection path verification",
+    "Rejected product should store the admin review note",
+    adminRejectResult.body,
+  );
+
+  const rejectedListingView = await actors.ownerUser.request(
+    "GET",
+    `/products/${rejectProduct.id}`,
+  );
+  expectStatus(rejectedListingView, 200, "Owner should be able to view rejected product");
+  assert(
+    rejectedListingView.body?.data?.adminReviewNote === "QA rejection path verification",
+    "Owner view should expose the admin review note",
+    rejectedListingView.body,
+  );
+
+  const ownerModerationReply = await actors.ownerUser.request(
+    "POST",
+    `/products/${rejectProduct.id}/moderation-reply`,
+    {
+      json: {
+        reply: "Updated the listing details and fixed the requested issues.",
+      },
+    },
+  );
+  expectStatus(ownerModerationReply, 200, "Owner moderation reply");
+  assert(
+    ownerModerationReply.body?.data?.status === "under_review",
+    "Owner moderation reply should return the listing to review",
+    ownerModerationReply.body,
+  );
+  assert(
+    ownerModerationReply.body?.data?.ownerReviewReply ===
+      "Updated the listing details and fixed the requested issues.",
+    "Owner moderation reply should be stored on the product",
+    ownerModerationReply.body,
   );
 
   const ownerSetUnavailable = await actors.ownerUser.request(

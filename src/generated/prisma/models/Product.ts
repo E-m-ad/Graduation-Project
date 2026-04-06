@@ -84,6 +84,10 @@ export type ProductMinAggregateOutputType = {
   viewCount: number | null
   isApproved: boolean | null
   isFeatured: boolean | null
+  adminReviewNote: string | null
+  ownerReviewReply: string | null
+  adminReviewedAt: Date | null
+  ownerRepliedAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -114,6 +118,10 @@ export type ProductMaxAggregateOutputType = {
   viewCount: number | null
   isApproved: boolean | null
   isFeatured: boolean | null
+  adminReviewNote: string | null
+  ownerReviewReply: string | null
+  adminReviewedAt: Date | null
+  ownerRepliedAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -145,6 +153,10 @@ export type ProductCountAggregateOutputType = {
   viewCount: number
   isApproved: number
   isFeatured: number
+  adminReviewNote: number
+  ownerReviewReply: number
+  adminReviewedAt: number
+  ownerRepliedAt: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -209,6 +221,10 @@ export type ProductMinAggregateInputType = {
   viewCount?: true
   isApproved?: true
   isFeatured?: true
+  adminReviewNote?: true
+  ownerReviewReply?: true
+  adminReviewedAt?: true
+  ownerRepliedAt?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -239,6 +255,10 @@ export type ProductMaxAggregateInputType = {
   viewCount?: true
   isApproved?: true
   isFeatured?: true
+  adminReviewNote?: true
+  ownerReviewReply?: true
+  adminReviewedAt?: true
+  ownerRepliedAt?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -270,6 +290,10 @@ export type ProductCountAggregateInputType = {
   viewCount?: true
   isApproved?: true
   isFeatured?: true
+  adminReviewNote?: true
+  ownerReviewReply?: true
+  adminReviewedAt?: true
+  ownerRepliedAt?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -388,6 +412,10 @@ export type ProductGroupByOutputType = {
   viewCount: number
   isApproved: boolean
   isFeatured: boolean
+  adminReviewNote: string | null
+  ownerReviewReply: string | null
+  adminReviewedAt: Date | null
+  ownerRepliedAt: Date | null
   createdAt: Date
   updatedAt: Date
   _count: ProductCountAggregateOutputType | null
@@ -442,6 +470,10 @@ export type ProductWhereInput = {
   viewCount?: Prisma.IntFilter<"Product"> | number
   isApproved?: Prisma.BoolFilter<"Product"> | boolean
   isFeatured?: Prisma.BoolFilter<"Product"> | boolean
+  adminReviewNote?: Prisma.StringNullableFilter<"Product"> | string | null
+  ownerReviewReply?: Prisma.StringNullableFilter<"Product"> | string | null
+  adminReviewedAt?: Prisma.DateTimeNullableFilter<"Product"> | Date | string | null
+  ownerRepliedAt?: Prisma.DateTimeNullableFilter<"Product"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Product"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Product"> | Date | string
   owner?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
@@ -481,6 +513,10 @@ export type ProductOrderByWithRelationInput = {
   viewCount?: Prisma.SortOrder
   isApproved?: Prisma.SortOrder
   isFeatured?: Prisma.SortOrder
+  adminReviewNote?: Prisma.SortOrderInput | Prisma.SortOrder
+  ownerReviewReply?: Prisma.SortOrderInput | Prisma.SortOrder
+  adminReviewedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  ownerRepliedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   owner?: Prisma.UserOrderByWithRelationInput
@@ -523,6 +559,10 @@ export type ProductWhereUniqueInput = Prisma.AtLeast<{
   viewCount?: Prisma.IntFilter<"Product"> | number
   isApproved?: Prisma.BoolFilter<"Product"> | boolean
   isFeatured?: Prisma.BoolFilter<"Product"> | boolean
+  adminReviewNote?: Prisma.StringNullableFilter<"Product"> | string | null
+  ownerReviewReply?: Prisma.StringNullableFilter<"Product"> | string | null
+  adminReviewedAt?: Prisma.DateTimeNullableFilter<"Product"> | Date | string | null
+  ownerRepliedAt?: Prisma.DateTimeNullableFilter<"Product"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Product"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Product"> | Date | string
   owner?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
@@ -562,6 +602,10 @@ export type ProductOrderByWithAggregationInput = {
   viewCount?: Prisma.SortOrder
   isApproved?: Prisma.SortOrder
   isFeatured?: Prisma.SortOrder
+  adminReviewNote?: Prisma.SortOrderInput | Prisma.SortOrder
+  ownerReviewReply?: Prisma.SortOrderInput | Prisma.SortOrder
+  adminReviewedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  ownerRepliedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.ProductCountOrderByAggregateInput
@@ -601,6 +645,10 @@ export type ProductScalarWhereWithAggregatesInput = {
   viewCount?: Prisma.IntWithAggregatesFilter<"Product"> | number
   isApproved?: Prisma.BoolWithAggregatesFilter<"Product"> | boolean
   isFeatured?: Prisma.BoolWithAggregatesFilter<"Product"> | boolean
+  adminReviewNote?: Prisma.StringNullableWithAggregatesFilter<"Product"> | string | null
+  ownerReviewReply?: Prisma.StringNullableWithAggregatesFilter<"Product"> | string | null
+  adminReviewedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Product"> | Date | string | null
+  ownerRepliedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Product"> | Date | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Product"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Product"> | Date | string
 }
@@ -630,6 +678,10 @@ export type ProductCreateInput = {
   viewCount?: number
   isApproved?: boolean
   isFeatured?: boolean
+  adminReviewNote?: string | null
+  ownerReviewReply?: string | null
+  adminReviewedAt?: Date | string | null
+  ownerRepliedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   owner: Prisma.UserCreateNestedOneWithoutProductsOwnedInput
@@ -669,6 +721,10 @@ export type ProductUncheckedCreateInput = {
   viewCount?: number
   isApproved?: boolean
   isFeatured?: boolean
+  adminReviewNote?: string | null
+  ownerReviewReply?: string | null
+  adminReviewedAt?: Date | string | null
+  ownerRepliedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   images?: Prisma.ProductImageUncheckedCreateNestedManyWithoutProductInput
@@ -704,6 +760,10 @@ export type ProductUpdateInput = {
   viewCount?: Prisma.IntFieldUpdateOperationsInput | number
   isApproved?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isFeatured?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  adminReviewNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ownerReviewReply?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adminReviewedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  ownerRepliedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   owner?: Prisma.UserUpdateOneRequiredWithoutProductsOwnedNestedInput
@@ -743,6 +803,10 @@ export type ProductUncheckedUpdateInput = {
   viewCount?: Prisma.IntFieldUpdateOperationsInput | number
   isApproved?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isFeatured?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  adminReviewNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ownerReviewReply?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adminReviewedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  ownerRepliedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   images?: Prisma.ProductImageUncheckedUpdateManyWithoutProductNestedInput
@@ -780,6 +844,10 @@ export type ProductCreateManyInput = {
   viewCount?: number
   isApproved?: boolean
   isFeatured?: boolean
+  adminReviewNote?: string | null
+  ownerReviewReply?: string | null
+  adminReviewedAt?: Date | string | null
+  ownerRepliedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -809,6 +877,10 @@ export type ProductUpdateManyMutationInput = {
   viewCount?: Prisma.IntFieldUpdateOperationsInput | number
   isApproved?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isFeatured?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  adminReviewNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ownerReviewReply?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adminReviewedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  ownerRepliedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -840,6 +912,10 @@ export type ProductUncheckedUpdateManyInput = {
   viewCount?: Prisma.IntFieldUpdateOperationsInput | number
   isApproved?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isFeatured?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  adminReviewNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ownerReviewReply?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adminReviewedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  ownerRepliedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -889,6 +965,10 @@ export type ProductCountOrderByAggregateInput = {
   viewCount?: Prisma.SortOrder
   isApproved?: Prisma.SortOrder
   isFeatured?: Prisma.SortOrder
+  adminReviewNote?: Prisma.SortOrder
+  ownerReviewReply?: Prisma.SortOrder
+  adminReviewedAt?: Prisma.SortOrder
+  ownerRepliedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -935,6 +1015,10 @@ export type ProductMaxOrderByAggregateInput = {
   viewCount?: Prisma.SortOrder
   isApproved?: Prisma.SortOrder
   isFeatured?: Prisma.SortOrder
+  adminReviewNote?: Prisma.SortOrder
+  ownerReviewReply?: Prisma.SortOrder
+  adminReviewedAt?: Prisma.SortOrder
+  ownerRepliedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -965,6 +1049,10 @@ export type ProductMinOrderByAggregateInput = {
   viewCount?: Prisma.SortOrder
   isApproved?: Prisma.SortOrder
   isFeatured?: Prisma.SortOrder
+  adminReviewNote?: Prisma.SortOrder
+  ownerReviewReply?: Prisma.SortOrder
+  adminReviewedAt?: Prisma.SortOrder
+  ownerRepliedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -1104,6 +1192,10 @@ export type ProductUpdatetagsInput = {
   push?: string | string[]
 }
 
+export type NullableDateTimeFieldUpdateOperationsInput = {
+  set?: Date | string | null
+}
+
 export type ProductCreateNestedOneWithoutImagesInput = {
   create?: Prisma.XOR<Prisma.ProductCreateWithoutImagesInput, Prisma.ProductUncheckedCreateWithoutImagesInput>
   connectOrCreate?: Prisma.ProductCreateOrConnectWithoutImagesInput
@@ -1215,6 +1307,10 @@ export type ProductCreateWithoutOwnerInput = {
   viewCount?: number
   isApproved?: boolean
   isFeatured?: boolean
+  adminReviewNote?: string | null
+  ownerReviewReply?: string | null
+  adminReviewedAt?: Date | string | null
+  ownerRepliedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   category: Prisma.CategoryCreateNestedOneWithoutProductsInput
@@ -1252,6 +1348,10 @@ export type ProductUncheckedCreateWithoutOwnerInput = {
   viewCount?: number
   isApproved?: boolean
   isFeatured?: boolean
+  adminReviewNote?: string | null
+  ownerReviewReply?: string | null
+  adminReviewedAt?: Date | string | null
+  ownerRepliedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   images?: Prisma.ProductImageUncheckedCreateNestedManyWithoutProductInput
@@ -1318,6 +1418,10 @@ export type ProductScalarWhereInput = {
   viewCount?: Prisma.IntFilter<"Product"> | number
   isApproved?: Prisma.BoolFilter<"Product"> | boolean
   isFeatured?: Prisma.BoolFilter<"Product"> | boolean
+  adminReviewNote?: Prisma.StringNullableFilter<"Product"> | string | null
+  ownerReviewReply?: Prisma.StringNullableFilter<"Product"> | string | null
+  adminReviewedAt?: Prisma.DateTimeNullableFilter<"Product"> | Date | string | null
+  ownerRepliedAt?: Prisma.DateTimeNullableFilter<"Product"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Product"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Product"> | Date | string
 }
@@ -1347,6 +1451,10 @@ export type ProductCreateWithoutCategoryInput = {
   viewCount?: number
   isApproved?: boolean
   isFeatured?: boolean
+  adminReviewNote?: string | null
+  ownerReviewReply?: string | null
+  adminReviewedAt?: Date | string | null
+  ownerRepliedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   owner: Prisma.UserCreateNestedOneWithoutProductsOwnedInput
@@ -1384,6 +1492,10 @@ export type ProductUncheckedCreateWithoutCategoryInput = {
   viewCount?: number
   isApproved?: boolean
   isFeatured?: boolean
+  adminReviewNote?: string | null
+  ownerReviewReply?: string | null
+  adminReviewedAt?: Date | string | null
+  ownerRepliedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   images?: Prisma.ProductImageUncheckedCreateNestedManyWithoutProductInput
@@ -1445,6 +1557,10 @@ export type ProductCreateWithoutImagesInput = {
   viewCount?: number
   isApproved?: boolean
   isFeatured?: boolean
+  adminReviewNote?: string | null
+  ownerReviewReply?: string | null
+  adminReviewedAt?: Date | string | null
+  ownerRepliedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   owner: Prisma.UserCreateNestedOneWithoutProductsOwnedInput
@@ -1483,6 +1599,10 @@ export type ProductUncheckedCreateWithoutImagesInput = {
   viewCount?: number
   isApproved?: boolean
   isFeatured?: boolean
+  adminReviewNote?: string | null
+  ownerReviewReply?: string | null
+  adminReviewedAt?: Date | string | null
+  ownerRepliedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   rentals?: Prisma.RentalUncheckedCreateNestedManyWithoutProductInput
@@ -1533,6 +1653,10 @@ export type ProductUpdateWithoutImagesInput = {
   viewCount?: Prisma.IntFieldUpdateOperationsInput | number
   isApproved?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isFeatured?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  adminReviewNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ownerReviewReply?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adminReviewedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  ownerRepliedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   owner?: Prisma.UserUpdateOneRequiredWithoutProductsOwnedNestedInput
@@ -1571,6 +1695,10 @@ export type ProductUncheckedUpdateWithoutImagesInput = {
   viewCount?: Prisma.IntFieldUpdateOperationsInput | number
   isApproved?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isFeatured?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  adminReviewNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ownerReviewReply?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adminReviewedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  ownerRepliedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   rentals?: Prisma.RentalUncheckedUpdateManyWithoutProductNestedInput
@@ -1605,6 +1733,10 @@ export type ProductCreateWithoutRentalsInput = {
   viewCount?: number
   isApproved?: boolean
   isFeatured?: boolean
+  adminReviewNote?: string | null
+  ownerReviewReply?: string | null
+  adminReviewedAt?: Date | string | null
+  ownerRepliedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   owner: Prisma.UserCreateNestedOneWithoutProductsOwnedInput
@@ -1643,6 +1775,10 @@ export type ProductUncheckedCreateWithoutRentalsInput = {
   viewCount?: number
   isApproved?: boolean
   isFeatured?: boolean
+  adminReviewNote?: string | null
+  ownerReviewReply?: string | null
+  adminReviewedAt?: Date | string | null
+  ownerRepliedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   images?: Prisma.ProductImageUncheckedCreateNestedManyWithoutProductInput
@@ -1693,6 +1829,10 @@ export type ProductUpdateWithoutRentalsInput = {
   viewCount?: Prisma.IntFieldUpdateOperationsInput | number
   isApproved?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isFeatured?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  adminReviewNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ownerReviewReply?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adminReviewedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  ownerRepliedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   owner?: Prisma.UserUpdateOneRequiredWithoutProductsOwnedNestedInput
@@ -1731,6 +1871,10 @@ export type ProductUncheckedUpdateWithoutRentalsInput = {
   viewCount?: Prisma.IntFieldUpdateOperationsInput | number
   isApproved?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isFeatured?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  adminReviewNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ownerReviewReply?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adminReviewedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  ownerRepliedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   images?: Prisma.ProductImageUncheckedUpdateManyWithoutProductNestedInput
@@ -1765,6 +1909,10 @@ export type ProductCreateWithoutReviewsInput = {
   viewCount?: number
   isApproved?: boolean
   isFeatured?: boolean
+  adminReviewNote?: string | null
+  ownerReviewReply?: string | null
+  adminReviewedAt?: Date | string | null
+  ownerRepliedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   owner: Prisma.UserCreateNestedOneWithoutProductsOwnedInput
@@ -1803,6 +1951,10 @@ export type ProductUncheckedCreateWithoutReviewsInput = {
   viewCount?: number
   isApproved?: boolean
   isFeatured?: boolean
+  adminReviewNote?: string | null
+  ownerReviewReply?: string | null
+  adminReviewedAt?: Date | string | null
+  ownerRepliedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   images?: Prisma.ProductImageUncheckedCreateNestedManyWithoutProductInput
@@ -1853,6 +2005,10 @@ export type ProductUpdateWithoutReviewsInput = {
   viewCount?: Prisma.IntFieldUpdateOperationsInput | number
   isApproved?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isFeatured?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  adminReviewNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ownerReviewReply?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adminReviewedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  ownerRepliedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   owner?: Prisma.UserUpdateOneRequiredWithoutProductsOwnedNestedInput
@@ -1891,6 +2047,10 @@ export type ProductUncheckedUpdateWithoutReviewsInput = {
   viewCount?: Prisma.IntFieldUpdateOperationsInput | number
   isApproved?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isFeatured?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  adminReviewNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ownerReviewReply?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adminReviewedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  ownerRepliedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   images?: Prisma.ProductImageUncheckedUpdateManyWithoutProductNestedInput
@@ -1925,6 +2085,10 @@ export type ProductCreateWithoutWishlistsInput = {
   viewCount?: number
   isApproved?: boolean
   isFeatured?: boolean
+  adminReviewNote?: string | null
+  ownerReviewReply?: string | null
+  adminReviewedAt?: Date | string | null
+  ownerRepliedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   owner: Prisma.UserCreateNestedOneWithoutProductsOwnedInput
@@ -1963,6 +2127,10 @@ export type ProductUncheckedCreateWithoutWishlistsInput = {
   viewCount?: number
   isApproved?: boolean
   isFeatured?: boolean
+  adminReviewNote?: string | null
+  ownerReviewReply?: string | null
+  adminReviewedAt?: Date | string | null
+  ownerRepliedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   images?: Prisma.ProductImageUncheckedCreateNestedManyWithoutProductInput
@@ -2013,6 +2181,10 @@ export type ProductUpdateWithoutWishlistsInput = {
   viewCount?: Prisma.IntFieldUpdateOperationsInput | number
   isApproved?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isFeatured?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  adminReviewNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ownerReviewReply?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adminReviewedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  ownerRepliedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   owner?: Prisma.UserUpdateOneRequiredWithoutProductsOwnedNestedInput
@@ -2051,6 +2223,10 @@ export type ProductUncheckedUpdateWithoutWishlistsInput = {
   viewCount?: Prisma.IntFieldUpdateOperationsInput | number
   isApproved?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isFeatured?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  adminReviewNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ownerReviewReply?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adminReviewedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  ownerRepliedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   images?: Prisma.ProductImageUncheckedUpdateManyWithoutProductNestedInput
@@ -2085,6 +2261,10 @@ export type ProductCreateWithoutBehaviorsInput = {
   viewCount?: number
   isApproved?: boolean
   isFeatured?: boolean
+  adminReviewNote?: string | null
+  ownerReviewReply?: string | null
+  adminReviewedAt?: Date | string | null
+  ownerRepliedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   owner: Prisma.UserCreateNestedOneWithoutProductsOwnedInput
@@ -2123,6 +2303,10 @@ export type ProductUncheckedCreateWithoutBehaviorsInput = {
   viewCount?: number
   isApproved?: boolean
   isFeatured?: boolean
+  adminReviewNote?: string | null
+  ownerReviewReply?: string | null
+  adminReviewedAt?: Date | string | null
+  ownerRepliedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   images?: Prisma.ProductImageUncheckedCreateNestedManyWithoutProductInput
@@ -2173,6 +2357,10 @@ export type ProductUpdateWithoutBehaviorsInput = {
   viewCount?: Prisma.IntFieldUpdateOperationsInput | number
   isApproved?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isFeatured?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  adminReviewNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ownerReviewReply?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adminReviewedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  ownerRepliedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   owner?: Prisma.UserUpdateOneRequiredWithoutProductsOwnedNestedInput
@@ -2211,6 +2399,10 @@ export type ProductUncheckedUpdateWithoutBehaviorsInput = {
   viewCount?: Prisma.IntFieldUpdateOperationsInput | number
   isApproved?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isFeatured?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  adminReviewNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ownerReviewReply?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adminReviewedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  ownerRepliedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   images?: Prisma.ProductImageUncheckedUpdateManyWithoutProductNestedInput
@@ -2245,6 +2437,10 @@ export type ProductCreateWithoutAvailabilityInput = {
   viewCount?: number
   isApproved?: boolean
   isFeatured?: boolean
+  adminReviewNote?: string | null
+  ownerReviewReply?: string | null
+  adminReviewedAt?: Date | string | null
+  ownerRepliedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   owner: Prisma.UserCreateNestedOneWithoutProductsOwnedInput
@@ -2283,6 +2479,10 @@ export type ProductUncheckedCreateWithoutAvailabilityInput = {
   viewCount?: number
   isApproved?: boolean
   isFeatured?: boolean
+  adminReviewNote?: string | null
+  ownerReviewReply?: string | null
+  adminReviewedAt?: Date | string | null
+  ownerRepliedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   images?: Prisma.ProductImageUncheckedCreateNestedManyWithoutProductInput
@@ -2333,6 +2533,10 @@ export type ProductUpdateWithoutAvailabilityInput = {
   viewCount?: Prisma.IntFieldUpdateOperationsInput | number
   isApproved?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isFeatured?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  adminReviewNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ownerReviewReply?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adminReviewedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  ownerRepliedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   owner?: Prisma.UserUpdateOneRequiredWithoutProductsOwnedNestedInput
@@ -2371,6 +2575,10 @@ export type ProductUncheckedUpdateWithoutAvailabilityInput = {
   viewCount?: Prisma.IntFieldUpdateOperationsInput | number
   isApproved?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isFeatured?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  adminReviewNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ownerReviewReply?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adminReviewedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  ownerRepliedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   images?: Prisma.ProductImageUncheckedUpdateManyWithoutProductNestedInput
@@ -2406,6 +2614,10 @@ export type ProductCreateManyOwnerInput = {
   viewCount?: number
   isApproved?: boolean
   isFeatured?: boolean
+  adminReviewNote?: string | null
+  ownerReviewReply?: string | null
+  adminReviewedAt?: Date | string | null
+  ownerRepliedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -2435,6 +2647,10 @@ export type ProductUpdateWithoutOwnerInput = {
   viewCount?: Prisma.IntFieldUpdateOperationsInput | number
   isApproved?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isFeatured?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  adminReviewNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ownerReviewReply?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adminReviewedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  ownerRepliedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   category?: Prisma.CategoryUpdateOneRequiredWithoutProductsNestedInput
@@ -2472,6 +2688,10 @@ export type ProductUncheckedUpdateWithoutOwnerInput = {
   viewCount?: Prisma.IntFieldUpdateOperationsInput | number
   isApproved?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isFeatured?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  adminReviewNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ownerReviewReply?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adminReviewedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  ownerRepliedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   images?: Prisma.ProductImageUncheckedUpdateManyWithoutProductNestedInput
@@ -2508,6 +2728,10 @@ export type ProductUncheckedUpdateManyWithoutOwnerInput = {
   viewCount?: Prisma.IntFieldUpdateOperationsInput | number
   isApproved?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isFeatured?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  adminReviewNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ownerReviewReply?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adminReviewedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  ownerRepliedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -2538,6 +2762,10 @@ export type ProductCreateManyCategoryInput = {
   viewCount?: number
   isApproved?: boolean
   isFeatured?: boolean
+  adminReviewNote?: string | null
+  ownerReviewReply?: string | null
+  adminReviewedAt?: Date | string | null
+  ownerRepliedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -2567,6 +2795,10 @@ export type ProductUpdateWithoutCategoryInput = {
   viewCount?: Prisma.IntFieldUpdateOperationsInput | number
   isApproved?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isFeatured?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  adminReviewNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ownerReviewReply?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adminReviewedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  ownerRepliedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   owner?: Prisma.UserUpdateOneRequiredWithoutProductsOwnedNestedInput
@@ -2604,6 +2836,10 @@ export type ProductUncheckedUpdateWithoutCategoryInput = {
   viewCount?: Prisma.IntFieldUpdateOperationsInput | number
   isApproved?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isFeatured?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  adminReviewNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ownerReviewReply?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adminReviewedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  ownerRepliedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   images?: Prisma.ProductImageUncheckedUpdateManyWithoutProductNestedInput
@@ -2640,6 +2876,10 @@ export type ProductUncheckedUpdateManyWithoutCategoryInput = {
   viewCount?: Prisma.IntFieldUpdateOperationsInput | number
   isApproved?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isFeatured?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  adminReviewNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ownerReviewReply?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adminReviewedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  ownerRepliedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -2747,6 +2987,10 @@ export type ProductSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   viewCount?: boolean
   isApproved?: boolean
   isFeatured?: boolean
+  adminReviewNote?: boolean
+  ownerReviewReply?: boolean
+  adminReviewedAt?: boolean
+  ownerRepliedAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   owner?: boolean | Prisma.UserDefaultArgs<ExtArgs>
@@ -2787,6 +3031,10 @@ export type ProductSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exten
   viewCount?: boolean
   isApproved?: boolean
   isFeatured?: boolean
+  adminReviewNote?: boolean
+  ownerReviewReply?: boolean
+  adminReviewedAt?: boolean
+  ownerRepliedAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   owner?: boolean | Prisma.UserDefaultArgs<ExtArgs>
@@ -2820,6 +3068,10 @@ export type ProductSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exten
   viewCount?: boolean
   isApproved?: boolean
   isFeatured?: boolean
+  adminReviewNote?: boolean
+  ownerReviewReply?: boolean
+  adminReviewedAt?: boolean
+  ownerRepliedAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   owner?: boolean | Prisma.UserDefaultArgs<ExtArgs>
@@ -2853,11 +3105,15 @@ export type ProductSelectScalar = {
   viewCount?: boolean
   isApproved?: boolean
   isFeatured?: boolean
+  adminReviewNote?: boolean
+  ownerReviewReply?: boolean
+  adminReviewedAt?: boolean
+  ownerRepliedAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type ProductOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "ownerId" | "categoryId" | "title" | "description" | "pricePerHour" | "pricePerDay" | "pricePerWeek" | "pricePerMonth" | "securityDeposit" | "locationAddress" | "city" | "latitude" | "longitude" | "status" | "condition" | "minRentalPeriod" | "maxRentalPeriod" | "termsConditions" | "tags" | "avgRating" | "totalReviews" | "totalRentals" | "viewCount" | "isApproved" | "isFeatured" | "createdAt" | "updatedAt", ExtArgs["result"]["product"]>
+export type ProductOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "ownerId" | "categoryId" | "title" | "description" | "pricePerHour" | "pricePerDay" | "pricePerWeek" | "pricePerMonth" | "securityDeposit" | "locationAddress" | "city" | "latitude" | "longitude" | "status" | "condition" | "minRentalPeriod" | "maxRentalPeriod" | "termsConditions" | "tags" | "avgRating" | "totalReviews" | "totalRentals" | "viewCount" | "isApproved" | "isFeatured" | "adminReviewNote" | "ownerReviewReply" | "adminReviewedAt" | "ownerRepliedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["product"]>
 export type ProductInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   owner?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   category?: boolean | Prisma.CategoryDefaultArgs<ExtArgs>
@@ -2917,6 +3173,10 @@ export type $ProductPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     viewCount: number
     isApproved: boolean
     isFeatured: boolean
+    adminReviewNote: string | null
+    ownerReviewReply: string | null
+    adminReviewedAt: Date | null
+    ownerRepliedAt: Date | null
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["product"]>
@@ -3376,6 +3636,10 @@ export interface ProductFieldRefs {
   readonly viewCount: Prisma.FieldRef<"Product", 'Int'>
   readonly isApproved: Prisma.FieldRef<"Product", 'Boolean'>
   readonly isFeatured: Prisma.FieldRef<"Product", 'Boolean'>
+  readonly adminReviewNote: Prisma.FieldRef<"Product", 'String'>
+  readonly ownerReviewReply: Prisma.FieldRef<"Product", 'String'>
+  readonly adminReviewedAt: Prisma.FieldRef<"Product", 'DateTime'>
+  readonly ownerRepliedAt: Prisma.FieldRef<"Product", 'DateTime'>
   readonly createdAt: Prisma.FieldRef<"Product", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Product", 'DateTime'>
 }

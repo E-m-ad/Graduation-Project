@@ -8,6 +8,7 @@ router.get("/", product.getProducts);
 router.get("/my-listings", authMiddleWare.auth, product.getMyListings);
 router.post("/", authMiddleWare.auth, product.createProduct);
 router.put("/:id", authMiddleWare.auth, product.updateProduct);
+router.post("/:id/moderation-reply", authMiddleWare.auth, product.replyToModeration);
 router.put("/:id/status", authMiddleWare.auth, product.updateProductStatus);
 router.post(
   "/:id/images",
@@ -21,5 +22,5 @@ router.delete(
   product.deleteProductImage,
 );
 router.delete("/:id", authMiddleWare.auth, product.deleteProduct);
-router.get("/:id", product.getProductDetails);
+router.get("/:id", authMiddleWare.optionalAuth, product.getProductDetails);
 export default router;

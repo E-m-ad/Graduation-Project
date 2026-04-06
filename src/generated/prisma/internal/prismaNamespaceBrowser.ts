@@ -62,7 +62,8 @@ export const ModelName = {
   UserBehavior: 'UserBehavior',
   AvailabilityCalendar: 'AvailabilityCalendar',
   RefreshToken: 'RefreshToken',
-  PasswordResetToken: 'PasswordResetToken'
+  PasswordResetToken: 'PasswordResetToken',
+  EmailVerificationToken: 'EmailVerificationToken'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -145,6 +146,10 @@ export const ProductScalarFieldEnum = {
   viewCount: 'viewCount',
   isApproved: 'isApproved',
   isFeatured: 'isFeatured',
+  adminReviewNote: 'adminReviewNote',
+  ownerReviewReply: 'ownerReviewReply',
+  adminReviewedAt: 'adminReviewedAt',
+  ownerRepliedAt: 'ownerRepliedAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -286,6 +291,19 @@ export const PasswordResetTokenScalarFieldEnum = {
 } as const
 
 export type PasswordResetTokenScalarFieldEnum = (typeof PasswordResetTokenScalarFieldEnum)[keyof typeof PasswordResetTokenScalarFieldEnum]
+
+
+export const EmailVerificationTokenScalarFieldEnum = {
+  id: 'id',
+  token: 'token',
+  userId: 'userId',
+  expiresAt: 'expiresAt',
+  isUsed: 'isUsed',
+  usedAt: 'usedAt',
+  createdAt: 'createdAt'
+} as const
+
+export type EmailVerificationTokenScalarFieldEnum = (typeof EmailVerificationTokenScalarFieldEnum)[keyof typeof EmailVerificationTokenScalarFieldEnum]
 
 
 export const SortOrder = {

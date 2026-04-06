@@ -53,6 +53,10 @@ const ADMIN_PRODUCT_SELECT = {
   viewCount: true,
   isApproved: true,
   isFeatured: true,
+  adminReviewNote: true,
+  ownerReviewReply: true,
+  adminReviewedAt: true,
+  ownerRepliedAt: true,
   createdAt: true,
   updatedAt: true,
   owner: {
@@ -822,6 +826,10 @@ async function approveProduct(req, res) {
         data: {
           isApproved: true,
           status: nextStatus,
+          adminReviewNote: null,
+          ownerReviewReply: null,
+          adminReviewedAt: new Date(),
+          ownerRepliedAt: null,
         },
         select: ADMIN_PRODUCT_SELECT,
       });
@@ -875,6 +883,13 @@ async function rejectProduct(req, res) {
     });
   }
 
+  if (!bodyData.data.reason) {
+    return res.status(400).json({
+      success: false,
+      message: "Please include a note so the owner knows what to fix",
+    });
+  }
+
   try {
     const product = await db.product.findUnique({
       where: { id: paramsData.data.id },
@@ -913,14 +928,18 @@ async function rejectProduct(req, res) {
         data: {
           isApproved: false,
           status: "suspended",
+          adminReviewNote: bodyData.data.reason,
+          ownerReviewReply: null,
+          adminReviewedAt: new Date(),
+          ownerRepliedAt: null,
         },
         select: ADMIN_PRODUCT_SELECT,
       });
 
       await createSystemNotification(tx, {
         userId: product.ownerId,
-        title: "Listing rejected",
-        message: `Your listing "${product.title}" was rejected by the admin team`,
+        title: "Listing needs changes",
+        message: `Your listing "${product.title}" needs updates before it can be approved`,
         data: {
           productId: product.id,
           action: "rejected",

@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express from "express";
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import morgan from "morgan";
@@ -23,7 +24,9 @@ import docs from "./routes/docs.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const frontendDistDir = path.resolve(__dirname, "../frontend/dist");
 const publicDir = path.resolve(__dirname, "../public");
+const staticDir = fs.existsSync(frontendDistDir) ? frontendDistDir : publicDir;
 const uploadsDir = path.resolve(__dirname, "../uploads");
 
 export function createApp() {
@@ -35,7 +38,7 @@ export function createApp() {
   app.use(express.json());
   app.use(cookieParser());
   app.use(morgan("dev"));
-  app.use(express.static(publicDir));
+  app.use(express.static(staticDir));
   app.use(
     "/uploads",
     express.static(uploadsDir, {

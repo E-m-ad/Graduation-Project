@@ -6,7 +6,7 @@ const DEFAULT_LIMIT = 12;
 const MAX_LIMIT = 50;
 const PERSONALIZED_CANDIDATE_LIMIT = 120;
 const SIMILAR_CANDIDATE_LIMIT = 80;
-const PUBLIC_PRODUCT_STATUSES = ["available", "rented", "unavailable"];
+const PUBLIC_DISCOVERY_PRODUCT_STATUSES = ["available", "rented"];
 
 const PRODUCT_CARD_SELECT = {
   id: true,
@@ -200,7 +200,12 @@ async function fetchPublicProducts(where = {}, take = PERSONALIZED_CANDIDATE_LIM
     where: {
       isApproved: true,
       status: {
-        in: PUBLIC_PRODUCT_STATUSES,
+        in: PUBLIC_DISCOVERY_PRODUCT_STATUSES,
+      },
+      owner: {
+        is: {
+          isActive: true,
+        },
       },
       ...where,
     },
@@ -552,7 +557,12 @@ async function getSimilarProducts(req, res) {
         id: paramsData.data.productId,
         isApproved: true,
         status: {
-          in: PUBLIC_PRODUCT_STATUSES,
+          in: PUBLIC_DISCOVERY_PRODUCT_STATUSES,
+        },
+        owner: {
+          is: {
+            isActive: true,
+          },
         },
       },
       select: PRODUCT_CARD_SELECT,

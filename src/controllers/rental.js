@@ -1089,6 +1089,9 @@ async function startRental(req, res) {
         data: {
           productId: rental.productId,
           ownerId: rental.ownerId,
+          renterId: rental.renterId,
+          startDate: rental.startDate.toISOString(),
+          endDate: rental.endDate.toISOString(),
         },
       });
 
@@ -1130,6 +1133,7 @@ async function completeRental(req, res) {
         renterId: true,
         ownerId: true,
         status: true,
+        endDate: true,
         product: {
           select: {
             title: true,
@@ -1193,6 +1197,22 @@ async function completeRental(req, res) {
         data: {
           productId: rental.productId,
           ownerId: rental.ownerId,
+          renterId: rental.renterId,
+          endDate: rental.endDate.toISOString(),
+          actualReturnDate: actualReturnDate.toISOString(),
+        },
+      });
+
+      await createNotification(tx, {
+        userId: rental.ownerId,
+        rentalId: rental.id,
+        type: "rental_completed",
+        title: "Rental completed",
+        message: `You marked ${rental.product.title} as completed`,
+        data: {
+          productId: rental.productId,
+          renterId: rental.renterId,
+          endDate: rental.endDate.toISOString(),
           actualReturnDate: actualReturnDate.toISOString(),
         },
       });

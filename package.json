@@ -5,7 +5,10 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon src/app.js",
-    "start": "node src/app.js",
+    "start": "npm run client:build && node src/app.js",
+    "client:dev": "vite",
+    "client:build": "vite build",
+    "client:preview": "vite preview",
     "test": "npm run test:unit && npm run test:integration && npm run test:system",
     "test:unit": "node scripts/unit-test.mjs",
     "test:integration": "node scripts/integration-test.mjs",
@@ -31,13 +34,18 @@
     "jsonwebtoken": "^9.0.3",
     "morgan": "^1.10.1",
     "multer": "^2.1.1",
+    "nodemailer": "^8.0.4",
     "path": "^0.12.7",
     "pg": "^8.18.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
     "swagger-ui-express": "^5.0.1",
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@vitejs/plugin-react": "^6.0.1",
     "nodemon": "^3.1.11",
-    "prisma": "^7.4.1"
+    "prisma": "^7.4.1",
+    "vite": "^8.0.3"
   }
 }

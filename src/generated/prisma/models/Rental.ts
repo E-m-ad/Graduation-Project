@@ -869,10 +869,6 @@ export type RentalUncheckedUpdateManyWithoutProductNestedInput = {
   deleteMany?: Prisma.RentalScalarWhereInput | Prisma.RentalScalarWhereInput[]
 }
 
-export type NullableDateTimeFieldUpdateOperationsInput = {
-  set?: Date | string | null
-}
-
 export type EnumRentalPeriodTypeFieldUpdateOperationsInput = {
   set?: $Enums.RentalPeriodType
 }

@@ -45,6 +45,41 @@ async function auth(req, res, next) {
   }
 }
 
+async function optionalAuth(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return next();
+  }
+
+  const token = authHeader.split(" ")[1];
+  if (!token) {
+    return next();
+  }
+
+  try {
+    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await db.user.findUnique({
+      where: { id: payload.userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        isActive: true,
+        isVerified: true,
+      },
+    });
+
+    if (user?.isActive) {
+      req.user = user;
+    }
+  } catch (error) {
+    console.error(error);
+  }
+
+  return next();
+}
+
 function requireRole(...allowedRoles) {
   return (req, res, next) => {
     if (!req.user) {
@@ -70,5 +105,6 @@ const adminOnly = requireRole("admin");
 export default {
   adminOnly,
   auth,
+  optionalAuth,
   requireRole,
 };

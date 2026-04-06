@@ -199,6 +199,53 @@ async function markAllNotificationsAsRead(req, res) {
   }
 }
 
+async function deleteNotification(req, res) {
+  const data = z.notificationIdParamSchema.safeParse(req.params);
+  if (!data.success) {
+    return res.status(400).json({
+      success: false,
+      message: data.error.issues[0].message,
+    });
+  }
+
+  try {
+    const existingNotification = await db.notification.findFirst({
+      where: {
+        id: data.data.id,
+        userId: req.user.id,
+      },
+      select: NOTIFICATION_SELECT,
+    });
+
+    if (!existingNotification) {
+      return res.status(404).json({
+        success: false,
+        message: "Notification not found",
+      });
+    }
+
+    await db.notification.delete({
+      where: {
+        id: existingNotification.id,
+      },
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Notification deleted successfully",
+      data: {
+        id: existingNotification.id,
+      },
+    });
+  } catch (error) {
+    console.error("deleteNotification error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to delete notification",
+    });
+  }
+}
+
 async function getUnreadNotificationsCount(req, res) {
   try {
     const unreadCount = await db.notification.count({
@@ -227,5 +274,6 @@ export default {
   getNotifications,
   markNotificationAsRead,
   markAllNotificationsAsRead,
+  deleteNotification,
   getUnreadNotificationsCount,
 };

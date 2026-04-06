@@ -115,6 +115,7 @@ model User {
   behaviors           UserBehavior[]
   refreshTokens       RefreshToken[]
   passwordResetTokens PasswordResetToken[]
+  emailVerificationTokens EmailVerificationToken[]
 
   @@index([role])
   @@index([city])
@@ -183,6 +184,11 @@ model Product {
 
   isApproved Boolean @default(false)
   isFeatured Boolean @default(false)
+
+  adminReviewNote String?   @db.Text
+  ownerReviewReply String?  @db.Text
+  adminReviewedAt  DateTime? @db.Timestamptz(6)
+  ownerRepliedAt   DateTime? @db.Timestamptz(6)
 
   createdAt DateTime @default(now()) @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @db.Timestamptz(6)
@@ -392,6 +398,22 @@ model RefreshToken {
 }
 
 model PasswordResetToken {
+  id     String @id @default(uuid())
+  token  String @unique @db.VarChar(512)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  expiresAt DateTime  @db.Timestamptz(6)
+  isUsed    Boolean   @default(false)
+  usedAt    DateTime? @db.Timestamptz(6)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model EmailVerificationToken {
   id     String @id @default(uuid())
   token  String @unique @db.VarChar(512)
   userId String

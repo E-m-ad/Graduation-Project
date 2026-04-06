@@ -295,8 +295,17 @@ const updateProductStatusSchema = zod.object({
   status: zod.enum(PRODUCT_STATUS_UPDATE_VALUES),
 });
 
+const moderationReplySchema = zod.object({
+  reply: zod
+    .string()
+    .trim()
+    .min(5, "Reply must be at least 5 characters long")
+    .max(5000, "Reply must be at most 5000 characters long"),
+});
+
 export default {
   createProductSchema,
+  moderationReplySchema,
   productIdParamSchema,
   productImageParamSchema,
   updateProductSchema,

@@ -12,5 +12,6 @@ router.get(
   notification.getUnreadNotificationsCount,
 );
 router.put("/:id/read", authMiddleWare.auth, notification.markNotificationAsRead);
+router.delete("/:id", authMiddleWare.auth, notification.deleteNotification);
 
 export default router;

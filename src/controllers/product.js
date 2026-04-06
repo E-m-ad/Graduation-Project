@@ -6,7 +6,8 @@ import { maxProductImageCount } from "../middlewares/product.upload.js";
 import { createAdminNotifications } from "../utils/notification.helpers.js";
 import z from "../utils/product.zod.js";
 
-const PUBLIC_PRODUCT_STATUSES = ["available", "rented", "unavailable"];
+const PUBLIC_DISCOVERY_PRODUCT_STATUSES = ["available", "rented"];
+const APPROVED_PRODUCT_STATUSES = ["available", "rented", "unavailable"];
 const OWNER_ALLOWED_STATUS_UPDATES = ["available", "unavailable"];
 const ADMIN_ALLOWED_STATUS_UPDATES = [
   "available",
@@ -39,6 +40,10 @@ const MANAGE_PRODUCT_SELECT = {
   tags: true,
   isApproved: true,
   isFeatured: true,
+  adminReviewNote: true,
+  ownerReviewReply: true,
+  adminReviewedAt: true,
+  ownerRepliedAt: true,
   createdAt: true,
   updatedAt: true,
   owner: {
@@ -205,7 +210,12 @@ async function getProducts(req, res) {
   const where = {
     isApproved: true,
     status: {
-      in: PUBLIC_PRODUCT_STATUSES,
+      in: PUBLIC_DISCOVERY_PRODUCT_STATUSES,
+    },
+    owner: {
+      is: {
+        isActive: true,
+      },
     },
   };
 
@@ -334,13 +344,37 @@ async function getProductDetails(req, res) {
   }
 
   try {
+    const isAdmin = req.user?.role === "admin";
+    const canViewOwnUnpublishedListings = Boolean(req.user?.id);
+    const visibilityFilter = isAdmin
+      ? {}
+      : {
+          OR: [
+            {
+              isApproved: true,
+              status: {
+                in: PUBLIC_DISCOVERY_PRODUCT_STATUSES,
+              },
+              owner: {
+                is: {
+                  isActive: true,
+                },
+              },
+            },
+            ...(canViewOwnUnpublishedListings
+              ? [
+                  {
+                    ownerId: req.user.id,
+                  },
+                ]
+              : []),
+          ],
+        };
+
     const product = await db.product.findFirst({
       where: {
         id: id.trim(),
-        isApproved: true,
-        status: {
-          in: PUBLIC_PRODUCT_STATUSES,
-        },
+        ...visibilityFilter,
       },
       select: {
         id: true,
@@ -365,7 +399,12 @@ async function getProductDetails(req, res) {
         totalReviews: true,
         totalRentals: true,
         viewCount: true,
+        isApproved: true,
         isFeatured: true,
+        adminReviewNote: true,
+        ownerReviewReply: true,
+        adminReviewedAt: true,
+        ownerRepliedAt: true,
         createdAt: true,
         updatedAt: true,
         owner: {
@@ -765,6 +804,8 @@ async function updateProductStatus(req, res) {
       select: {
         id: true,
         ownerId: true,
+        isApproved: true,
+        status: true,
       },
     });
 
@@ -779,6 +820,16 @@ async function updateProductStatus(req, res) {
       return res.status(403).json({
         success: false,
         message: "You are not allowed to update this listing status",
+      });
+    }
+
+    if (
+      req.user.role !== "admin" &&
+      (!product.isApproved || !APPROVED_PRODUCT_STATUSES.includes(product.status))
+    ) {
+      return res.status(409).json({
+        success: false,
+        message: "Only approved live listings can change availability status",
       });
     }
 
@@ -827,7 +878,7 @@ async function getMyListings(req, res) {
   }
 
   const status = req.query.status?.trim();
-  const allowedStatuses = [...PUBLIC_PRODUCT_STATUSES, "under_review", "suspended"];
+  const allowedStatuses = [...APPROVED_PRODUCT_STATUSES, "under_review", "suspended"];
 
   if (status && !allowedStatuses.includes(status)) {
     return res.status(400).json({
@@ -883,6 +934,110 @@ async function getMyListings(req, res) {
     return res.status(500).json({
       success: false,
       message: "Failed to fetch your listings",
+    });
+  }
+}
+
+async function replyToModeration(req, res) {
+  const paramsData = z.productIdParamSchema.safeParse(req.params);
+  if (!paramsData.success) {
+    return res.status(400).json({
+      success: false,
+      message: paramsData.error.issues[0].message,
+    });
+  }
+
+  const bodyData = z.moderationReplySchema.safeParse(req.body);
+  if (!bodyData.success) {
+    return res.status(400).json({
+      success: false,
+      message: bodyData.error.issues[0].message,
+      error: {
+        path: bodyData.error.issues[0].path.join("."),
+        message: bodyData.error.issues[0].message,
+      },
+    });
+  }
+
+  try {
+    const product = await db.product.findUnique({
+      where: { id: paramsData.data.id },
+      select: {
+        id: true,
+        ownerId: true,
+        title: true,
+        status: true,
+        isApproved: true,
+        adminReviewNote: true,
+      },
+    });
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
+    }
+
+    if (product.ownerId !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: "You are not allowed to reply for this listing",
+      });
+    }
+
+    if (product.isApproved && APPROVED_PRODUCT_STATUSES.includes(product.status)) {
+      return res.status(409).json({
+        success: false,
+        message: "This listing is already approved",
+      });
+    }
+
+    if (!product.adminReviewNote) {
+      return res.status(409).json({
+        success: false,
+        message: "There is no admin feedback to reply to yet",
+      });
+    }
+
+    const updatedProduct = await db.$transaction(async (tx) => {
+      const nextProduct = await tx.product.update({
+        where: { id: product.id },
+        data: {
+          isApproved: false,
+          status: "under_review",
+          ownerReviewReply: bodyData.data.reply,
+          ownerRepliedAt: new Date(),
+        },
+        select: MANAGE_PRODUCT_SELECT,
+      });
+
+      await createAdminNotifications(tx, {
+        title: "Listing updated after feedback",
+        message: `${req.user.name} replied to the review note for "${product.title}"`,
+        data: {
+          action: "owner_moderation_reply",
+          productId: product.id,
+          productTitle: product.title,
+          ownerId: req.user.id,
+          adminReviewNote: product.adminReviewNote,
+          reply: bodyData.data.reply,
+        },
+      });
+
+      return nextProduct;
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Reply sent to the admin team and listing returned to review",
+      data: updatedProduct,
+    });
+  } catch (error) {
+    console.error("replyToModeration error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to send your reply",
     });
   }
 }
@@ -1092,6 +1247,7 @@ export default {
   getMyListings,
   getProductDetails,
   getProducts,
+  replyToModeration,
   updateProduct,
   updateProductStatus,
   uploadProductImages,
