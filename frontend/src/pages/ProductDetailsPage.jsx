@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import {
+  AVATAR_PLACEHOLDER,
   buildQuery,
   fetchApi,
   formatDateTime,
@@ -60,6 +61,22 @@ const RENTAL_PERIOD_OPTIONS = [
   { value: "monthly", label: "Monthly", priceField: "pricePerMonth" },
 ];
 
+const REVIEW_RATING_OPTIONS = [
+  { value: "5", label: "5 - Excellent" },
+  { value: "4", label: "4 - Very good" },
+  { value: "3", label: "3 - Good" },
+  { value: "2", label: "2 - Fair" },
+  { value: "1", label: "1 - Poor" },
+];
+
+const RENTAL_STATUS_PRIORITY = {
+  active: 0,
+  approved: 1,
+  pending: 2,
+  overdue: 3,
+  completed: 4,
+};
+
 function getSupportedRentalPeriods(product) {
   return RENTAL_PERIOD_OPTIONS.filter(
     ({ priceField }) =>
@@ -69,16 +86,92 @@ function getSupportedRentalPeriods(product) {
   );
 }
 
+function createReviewDraft(review) {
+  return {
+    rating: String(review?.rating ?? 5),
+    comment: review?.comment || "",
+  };
+}
+
+function mapReviewToRentalReview(review) {
+  if (!review) return null;
+
+  return {
+    id: review.id,
+    rating: review.rating,
+    comment: review.comment,
+    ownerReply: review.ownerReply,
+    ownerReplyAt: review.ownerReplyAt,
+    isVisible: review.isVisible,
+    createdAt: review.createdAt,
+    updatedAt: review.updatedAt,
+  };
+}
+
+function mapReviewToProductReview(review) {
+  if (!review) return null;
+
+  return {
+    id: review.id,
+    rentalId: review.rentalId,
+    reviewerId: review.reviewerId,
+    rating: review.rating,
+    comment: review.comment,
+    ownerReply: review.ownerReply,
+    ownerReplyAt: review.ownerReplyAt,
+    createdAt: review.createdAt,
+    updatedAt: review.updatedAt,
+    reviewer: review.reviewer,
+  };
+}
+
+function sortReviewsByNewest(reviews) {
+  return [...reviews].sort(
+    (left, right) => new Date(right.createdAt || 0) - new Date(left.createdAt || 0),
+  );
+}
+
+function getExistingProductRental(rentals) {
+  const visibleStatuses = new Set(["pending", "approved", "active", "overdue", "completed"]);
+  const relevantRentals = (rentals || []).filter((rental) =>
+    visibleStatuses.has(rental.status),
+  );
+
+  if (!relevantRentals.length) {
+    return null;
+  }
+
+  return [...relevantRentals].sort((left, right) => {
+    const leftPriority = RENTAL_STATUS_PRIORITY[left.status] ?? 99;
+    const rightPriority = RENTAL_STATUS_PRIORITY[right.status] ?? 99;
+
+    if (leftPriority !== rightPriority) {
+      return leftPriority - rightPriority;
+    }
+
+    return (
+      new Date(right.updatedAt || right.createdAt || 0) -
+      new Date(left.updatedAt || left.createdAt || 0)
+    );
+  })[0];
+}
+
 export function ProductDetailsPage({ page }) {
   const { user, loading, logout } = useSession();
   const [pageMessage, showPageMessage] = useMessageState("");
   const [bookingMessage, showBookingMessage] = useMessageState("");
+  const [reviewMessage, showReviewMessage] = useMessageState("");
   const [product, setProduct] = useState(null);
   const [mainImage, setMainImage] = useState("");
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [wishlistIds, setWishlistIds] = useState(new Set());
   const [similarProducts, setSimilarProducts] = useState([]);
+  const [reviewRentals, setReviewRentals] = useState([]);
+  const [reviewDrafts, setReviewDrafts] = useState({});
+  const [replyDrafts, setReplyDrafts] = useState({});
+  const [currentProductRental, setCurrentProductRental] = useState(null);
+  const [pendingBookingRequest, setPendingBookingRequest] = useState(null);
   const [pricingPreview, setPricingPreview] = useState(null);
   const [ownerReply, setOwnerReply] = useState("");
   const [bookingForm, setBookingForm] = useState({
@@ -91,6 +184,7 @@ export function ProductDetailsPage({ page }) {
   const [moderatingAction, setModeratingAction] = useState("");
   const [submittingOwnerReply, setSubmittingOwnerReply] = useState(false);
   const [updatingAdminStatus, setUpdatingAdminStatus] = useState("");
+  const [reviewActionKey, setReviewActionKey] = useState("");
 
   const productId = getProductId();
   const isAdmin = user?.role === "admin";
@@ -190,6 +284,96 @@ export function ProductDetailsPage({ page }) {
   }, [isAdmin, loading, productId, showPageMessage, user]);
 
   useEffect(() => {
+    let active = true;
+
+    async function loadReviewRentals() {
+      if (loading || !user || !productId || isAdmin) {
+        setReviewRentals([]);
+        return;
+      }
+
+      if (product?.owner?.id === user.id) {
+        setReviewRentals([]);
+        return;
+      }
+
+      const query = buildQuery({
+        status: "completed",
+        productId,
+        limit: 20,
+      });
+      const result = await fetchApi(`/api/v1/rentals/my-bookings?${query}`, {
+        auth: true,
+      });
+
+      if (!active) return;
+
+      if (!result.ok || !result.data?.success) {
+        setReviewRentals([]);
+        return;
+      }
+
+      setReviewRentals(result.data.data?.rentals || []);
+    }
+
+    loadReviewRentals();
+
+    return () => {
+      active = false;
+    };
+  }, [isAdmin, loading, product?.owner?.id, productId, user]);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadProductBookings() {
+      if (loading || !user || !productId || isAdmin) {
+        setCurrentProductRental(null);
+        setPendingBookingRequest(null);
+        return;
+      }
+
+      if (product?.owner?.id === user.id) {
+        setCurrentProductRental(null);
+        setPendingBookingRequest(null);
+        return;
+      }
+
+      const query = buildQuery({
+        productId,
+        limit: 20,
+      });
+      const result = await fetchApi(`/api/v1/rentals/my-bookings?${query}`, {
+        auth: true,
+      });
+
+      if (!active) return;
+
+      if (!result.ok || !result.data?.success) {
+        setCurrentProductRental(null);
+        setPendingBookingRequest(null);
+        return;
+      }
+
+      const nextRentals = result.data.data?.rentals || [];
+      const nextPendingRental = nextRentals.find(
+        (rental) =>
+          rental.status === "pending" &&
+          new Date(rental.endDate || rental.createdAt || 0) > new Date(),
+      );
+
+      setCurrentProductRental(getExistingProductRental(nextRentals));
+      setPendingBookingRequest(nextPendingRental || null);
+    }
+
+    loadProductBookings();
+
+    return () => {
+      active = false;
+    };
+  }, [isAdmin, loading, product?.owner?.id, productId, user]);
+
+  useEffect(() => {
     if (!product || !supportedRentalPeriods.length || hasSupportedRentalPeriod) {
       return;
     }
@@ -200,6 +384,230 @@ export function ProductDetailsPage({ page }) {
     }));
     setPricingPreview(null);
   }, [hasSupportedRentalPeriod, product, supportedRentalPeriods]);
+
+  useEffect(() => {
+    if (!reviewRentals.length) {
+      setReviewDrafts({});
+      return;
+    }
+
+    setReviewDrafts(
+      Object.fromEntries(
+        reviewRentals.map((rental) => [rental.id, createReviewDraft(rental.review)]),
+      ),
+    );
+  }, [reviewRentals]);
+
+  useEffect(() => {
+    const reviews = product?.reviews || [];
+    if (!reviews.length) {
+      setReplyDrafts({});
+      return;
+    }
+
+    setReplyDrafts(
+      Object.fromEntries(reviews.map((review) => [review.id, review.ownerReply || ""])),
+    );
+  }, [product?.reviews]);
+
+  function updateReviewDraft(rentalId, field, value) {
+    setReviewDrafts((previous) => ({
+      ...previous,
+      [rentalId]: {
+        ...(previous[rentalId] || createReviewDraft(null)),
+        [field]: value,
+      },
+    }));
+  }
+
+  function updateReplyDraft(reviewId, value) {
+    setReplyDrafts((previous) => ({
+      ...previous,
+      [reviewId]: value,
+    }));
+  }
+
+  function updateLocalProductReviews(nextReview, mode = "upsert") {
+    setProduct((previous) => {
+      if (!previous) return previous;
+
+      const currentReviews = Array.isArray(previous.reviews) ? previous.reviews : [];
+      let nextReviews = currentReviews;
+
+      if (mode === "delete") {
+        nextReviews = currentReviews.filter((review) => review.id !== nextReview.id);
+      } else {
+        const normalizedReview = mapReviewToProductReview(nextReview);
+        if (!normalizedReview) {
+          return previous;
+        }
+
+        const existingIndex = currentReviews.findIndex(
+          (review) => review.id === normalizedReview.id,
+        );
+
+        if (existingIndex >= 0) {
+          nextReviews = currentReviews.map((review) =>
+            review.id === normalizedReview.id ? normalizedReview : review,
+          );
+        } else {
+          nextReviews = [normalizedReview, ...currentReviews];
+        }
+      }
+
+      return {
+        ...previous,
+        avgRating: nextReview?.product?.avgRating ?? previous.avgRating,
+        totalReviews: nextReview?.product?.totalReviews ?? previous.totalReviews,
+        reviews: sortReviewsByNewest(nextReviews),
+      };
+    });
+  }
+
+  async function handleReviewSubmit(rental) {
+    if (!user) {
+      redirectToLogin();
+      return;
+    }
+
+    if (!product || isAdmin || isOwner) {
+      return;
+    }
+
+    const draft = reviewDrafts[rental.id] || createReviewDraft(rental.review);
+    const payload = {
+      rating: Number(draft.rating),
+      comment: draft.comment.trim() || null,
+    };
+    const isUpdating = Boolean(rental.review?.id);
+
+    setReviewActionKey(`${isUpdating ? "update" : "create"}:${rental.id}`);
+
+    const result = await fetchApi(isUpdating ? `/api/v1/reviews/${rental.review.id}` : "/api/v1/reviews", {
+      method: isUpdating ? "PUT" : "POST",
+      auth: true,
+      body: isUpdating
+        ? payload
+        : {
+            rentalId: rental.id,
+            ...payload,
+          },
+    });
+
+    setReviewActionKey("");
+    showReviewMessage(
+      result.data?.message || (isUpdating ? "Review updated." : "Review submitted."),
+      result.ok ? "success" : "error",
+    );
+
+    if (!result.ok || !result.data?.success || !result.data?.data) {
+      return;
+    }
+
+    const nextReview = result.data.data;
+    setReviewRentals((previous) =>
+      previous.map((item) =>
+        item.id === rental.id
+          ? {
+              ...item,
+              review: mapReviewToRentalReview(nextReview),
+            }
+          : item,
+      ),
+    );
+    setReviewDrafts((previous) => ({
+      ...previous,
+      [rental.id]: createReviewDraft(nextReview),
+    }));
+    updateLocalProductReviews(nextReview);
+  }
+
+  async function handleReviewDelete(rental) {
+    if (!rental.review?.id) {
+      return;
+    }
+
+    if (!window.confirm("Delete this review and remove its rating from the product?")) {
+      return;
+    }
+
+    setReviewActionKey(`delete:${rental.id}`);
+
+    const result = await fetchApi(`/api/v1/reviews/${rental.review.id}`, {
+      method: "DELETE",
+      auth: true,
+    });
+
+    setReviewActionKey("");
+    showReviewMessage(
+      result.data?.message || "Review deleted.",
+      result.ok ? "success" : "error",
+    );
+
+    if (!result.ok || !result.data?.success) {
+      return;
+    }
+
+    setReviewRentals((previous) =>
+      previous.map((item) =>
+        item.id === rental.id
+          ? {
+              ...item,
+              review: null,
+            }
+          : item,
+      ),
+    );
+    setReviewDrafts((previous) => ({
+      ...previous,
+      [rental.id]: createReviewDraft(null),
+    }));
+    updateLocalProductReviews(
+      result.data?.data || {
+        id: rental.review.id,
+      },
+      "delete",
+    );
+  }
+
+  async function handleReviewReplySubmit(review) {
+    if (!product || !isOwner) {
+      return;
+    }
+
+    const nextReply = (replyDrafts[review.id] || "").trim();
+    if (!nextReply) {
+      showReviewMessage("Add a short reply before sending it to the renter.", "error");
+      return;
+    }
+
+    setReviewActionKey(`reply:${review.id}`);
+
+    const result = await fetchApi(`/api/v1/reviews/${review.id}/reply`, {
+      method: "PUT",
+      auth: true,
+      body: {
+        ownerReply: nextReply,
+      },
+    });
+
+    setReviewActionKey("");
+    showReviewMessage(
+      result.data?.message || "Reply saved.",
+      result.ok ? "success" : "error",
+    );
+
+    if (!result.ok || !result.data?.success || !result.data?.data) {
+      return;
+    }
+
+    const nextReview = result.data.data;
+    setReplyDrafts((previous) => ({
+      ...previous,
+      [review.id]: nextReview.ownerReply || nextReply,
+    }));
+    updateLocalProductReviews(nextReview);
+  }
 
   async function handleToggleWishlist(productIdValue, saved) {
     const result = await toggleWishlist(productIdValue, saved);
@@ -291,6 +699,14 @@ export function ProductDetailsPage({ page }) {
       return;
     }
 
+    if (pendingBookingRequest) {
+      showBookingMessage(
+        "You already sent a rental request for this listing. Wait for the owner to approve or reject it before sending another one.",
+        "info",
+      );
+      return;
+    }
+
     const isAvailable = await checkAvailability();
     if (!isAvailable) return;
 
@@ -311,6 +727,10 @@ export function ProductDetailsPage({ page }) {
     setSubmittingRequest(false);
 
     if (!result.ok || !result.data?.success) {
+      if (result.data?.data?.rental?.status === "pending") {
+        setCurrentProductRental(result.data.data.rental);
+        setPendingBookingRequest(result.data.data.rental);
+      }
       showBookingMessage(
         result.data?.message || "Unable to submit the rental request.",
         "error",
@@ -322,6 +742,8 @@ export function ProductDetailsPage({ page }) {
       result.data.message || "Rental request created successfully.",
       "success",
     );
+    setCurrentProductRental(result.data?.data || null);
+    setPendingBookingRequest(result.data?.data || null);
 
     trackBehavior({
       actionType: "rent",
@@ -513,6 +935,11 @@ export function ProductDetailsPage({ page }) {
       product.isApproved &&
       ["available", "rented", "unavailable"].includes(product.status),
   );
+  const hasReviewAccess = Boolean(user && !isAdmin && !isOwner);
+  const pendingReviewCount = reviewRentals.filter((rental) => !rental.review).length;
+  const productReviews = sortReviewsByNewest(product?.reviews || []);
+  const hasExistingProductRental = Boolean(currentProductRental?.id);
+  const hasPendingBookingRequest = Boolean(pendingBookingRequest?.id);
   const canAdminToggleListingVisibility = Boolean(
     isAdmin && product?.isApproved,
   );
@@ -528,7 +955,9 @@ export function ProductDetailsPage({ page }) {
         ["Approval", getApprovalLabel(product)],
         [
           "Rating",
-          product.avgRating ? Number(product.avgRating).toFixed(1) : "No rating",
+          product.totalReviews
+            ? `${Number(product.avgRating || 0).toFixed(1)} / 5`
+            : "No rating",
         ],
         [
           "Rental range",
@@ -590,7 +1019,7 @@ export function ProductDetailsPage({ page }) {
             <DetailFactGrid facts={facts} />
 
             <div className="detail-actions">
-              {!isAdmin ? (
+              {!isAdmin && !isOwner ? (
                 <button
                   type="button"
                   className="btn btn--secondary"
@@ -791,6 +1220,61 @@ export function ProductDetailsPage({ page }) {
                 )}
               </div>
             </aside>
+          ) : hasExistingProductRental ? (
+            <aside className="surface-panel booking-panel">
+              <SectionHeading
+                eyebrow="Your rental"
+                title="Booking status"
+                compact
+              />
+
+              <div className="stack-form">
+                <div className="booking-preview owner-review-panel__status">
+                  <strong>
+                    {currentProductRental.status === "pending"
+                      ? "Your rental request is waiting for the owner response."
+                      : currentProductRental.status === "approved"
+                        ? "Your rental request has already been approved."
+                        : currentProductRental.status === "active"
+                          ? "You are currently renting this listing."
+                          : currentProductRental.status === "overdue"
+                            ? "This rental is overdue and still open."
+                            : "You already rented this listing."}
+                  </strong>
+                  <span>Status: {currentProductRental.status}</span>
+                  <span>Requested on: {formatDateTime(currentProductRental.createdAt)}</span>
+                  {currentProductRental.startDate ? (
+                    <span>Start: {formatDateTime(currentProductRental.startDate)}</span>
+                  ) : null}
+                  {currentProductRental.endDate ? (
+                    <span>End: {formatDateTime(currentProductRental.endDate)}</span>
+                  ) : null}
+                  {currentProductRental.actualReturnDate ? (
+                    <span>
+                      Finished at: {formatDateTime(currentProductRental.actualReturnDate)}
+                    </span>
+                  ) : null}
+                </div>
+
+                <MessageText
+                  message={{
+                    text:
+                      currentProductRental.status === "completed"
+                        ? currentProductRental.review?.id
+                          ? "Your review for this rental is already saved below."
+                          : "You can leave your review for this rental in the ratings section below."
+                        : "Request controls are hidden here because you already have a booking for this listing.",
+                    type: "info",
+                  }}
+                />
+
+                <div className="detail-actions detail-actions--stacked">
+                  <a className="btn btn--secondary" href="/html/profile.html">
+                    Open My Bookings
+                  </a>
+                </div>
+              </div>
+            </aside>
           ) : (
             <aside className="surface-panel booking-panel">
               <SectionHeading
@@ -895,9 +1379,13 @@ export function ProductDetailsPage({ page }) {
                   <button
                     type="submit"
                     className="btn btn--primary"
-                    disabled={isOwner || submittingRequest}
+                    disabled={isOwner || submittingRequest || hasPendingBookingRequest}
                   >
-                    {submittingRequest ? "Sending request..." : "Send Rental Request"}
+                    {submittingRequest
+                      ? "Sending request..."
+                      : hasPendingBookingRequest
+                        ? "Request Pending"
+                        : "Send Rental Request"}
                   </button>
                 </div>
 
@@ -918,6 +1406,12 @@ export function ProductDetailsPage({ page }) {
                           text: "You own this listing, so rental actions are disabled here.",
                           type: "info",
                         }
+                      : hasPendingBookingRequest && !bookingMessage.text
+                        ? {
+                            text:
+                              "You already have a pending rental request for this listing. Wait for the owner to approve or reject it before sending another one.",
+                            type: "info",
+                          }
                       : !user && !bookingMessage.text
                         ? {
                             text: "Log in to check availability and send a rental request.",
@@ -932,6 +1426,256 @@ export function ProductDetailsPage({ page }) {
         </section>
       ) : null}
 
+      {product ? (
+        <section className="section detail-reviews">
+          <SectionHeading
+            eyebrow="Ratings"
+            title="Reviews and ratings"
+            note={
+              isOwner
+                ? "Read renter feedback and reply from your product page."
+                : hasReviewAccess
+                  ? "Completed renters can leave one rating per finished rental, and owners are notified when feedback arrives."
+                  : "See how other renters rated this listing."
+            }
+          />
+          <MessageText message={reviewMessage} id="productReviewMessage" />
+
+          <div className="detail-reviews__grid">
+            {hasReviewAccess ? (
+              <article className="surface-panel detail-reviews__panel">
+                <SectionHeading
+                  eyebrow="Your feedback"
+                  title="Review this listing"
+                  compact
+                  note={
+                    pendingReviewCount
+                      ? `${pendingReviewCount} completed rental${pendingReviewCount === 1 ? "" : "s"} still waiting for your review.`
+                      : "Any review you already left can still be updated or deleted here."
+                  }
+                />
+
+                {reviewRentals.length ? (
+                  <div className="list-stack">
+                    {reviewRentals.map((rental) => {
+                      const draft = reviewDrafts[rental.id] || createReviewDraft(rental.review);
+                      const isSaving =
+                        reviewActionKey === `create:${rental.id}` ||
+                        reviewActionKey === `update:${rental.id}`;
+                      const isDeleting = reviewActionKey === `delete:${rental.id}`;
+
+                      return (
+                        <article className="detail-review-editor" key={rental.id}>
+                          <div className="detail-review-editor__header">
+                            <div>
+                              <strong>
+                                {rental.review ? "Update your review" : "Leave a review"}
+                              </strong>
+                              <p className="detail-note">
+                                Rental finished{" "}
+                                {formatDateTime(
+                                  rental.actualReturnDate ||
+                                    rental.endDate ||
+                                    rental.updatedAt,
+                                )}
+                              </p>
+                            </div>
+                            <span className={`tag${rental.review ? " tag--light" : ""}`}>
+                              {rental.review ? "Published" : "Pending"}
+                            </span>
+                          </div>
+
+                          <div className="field">
+                            <label htmlFor={`reviewRating-${rental.id}`}>Rating</label>
+                            <select
+                              id={`reviewRating-${rental.id}`}
+                              className="input"
+                              value={draft.rating}
+                              onChange={(event) =>
+                                updateReviewDraft(rental.id, "rating", event.target.value)
+                              }
+                            >
+                              {REVIEW_RATING_OPTIONS.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                  {option.label}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div className="field">
+                            <label htmlFor={`reviewComment-${rental.id}`}>Comment</label>
+                            <textarea
+                              id={`reviewComment-${rental.id}`}
+                              className="textarea"
+                              rows="5"
+                              placeholder="Share what went well and anything the next renter should know."
+                              value={draft.comment}
+                              onChange={(event) =>
+                                updateReviewDraft(rental.id, "comment", event.target.value)
+                              }
+                            />
+                          </div>
+
+                          {rental.review?.ownerReply ? (
+                            <div className="detail-thread detail-thread--muted">
+                              <strong>Owner reply</strong>
+                              <p className="detail-note">{rental.review.ownerReply}</p>
+                              <span className="detail-thread__meta">
+                                Sent {formatDateTime(rental.review.ownerReplyAt)}
+                              </span>
+                            </div>
+                          ) : null}
+
+                          <div className="listing-actions">
+                            <button
+                              type="button"
+                              className="btn btn--primary btn--small"
+                              onClick={() => handleReviewSubmit(rental)}
+                              disabled={isSaving || isDeleting}
+                            >
+                              {isSaving
+                                ? rental.review
+                                  ? "Saving changes..."
+                                  : "Submitting review..."
+                                : rental.review
+                                  ? "Save Review"
+                                  : "Submit Review"}
+                            </button>
+                            {rental.review ? (
+                              <button
+                                type="button"
+                                className="btn btn--ghost btn--small"
+                                onClick={() => handleReviewDelete(rental)}
+                                disabled={isSaving || isDeleting}
+                              >
+                                {isDeleting ? "Deleting..." : "Delete Review"}
+                              </button>
+                            ) : null}
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                ) : user ? (
+                  <EmptyState message="Complete a rental for this listing to unlock rating and review controls." />
+                ) : (
+                  <EmptyState message="Log in, complete a rental, and then come back here to leave a review." />
+                )}
+              </article>
+            ) : null}
+
+            <article
+              className={`surface-panel detail-reviews__panel${
+                hasReviewAccess ? " detail-reviews__panel--wide" : ""
+              }`}
+            >
+              <SectionHeading
+                eyebrow="Community feedback"
+                title="What renters are saying"
+                compact
+              >
+                <div className="detail-review-summary">
+                  <strong>
+                    {product.totalReviews
+                      ? `${Number(product.avgRating || 0).toFixed(1)} / 5`
+                      : "No ratings yet"}
+                  </strong>
+                  <span>
+                    {product.totalReviews} review{product.totalReviews === 1 ? "" : "s"}
+                  </span>
+                </div>
+              </SectionHeading>
+
+              {productReviews.length ? (
+                <div className="list-stack">
+                  {productReviews.map((review) => {
+                    const isOwnReview = Boolean(user && review.reviewer?.id === user.id);
+                    const isReplySaving = reviewActionKey === `reply:${review.id}`;
+
+                    return (
+                      <article
+                        className={`detail-review-card${
+                          isOwnReview ? " detail-review-card--own" : ""
+                        }`}
+                        key={review.id}
+                      >
+                        <div className="detail-review-card__header">
+                          <div className="detail-review-card__author">
+                            <img
+                              className="detail-review-card__avatar"
+                              src={review.reviewer?.avatarUrl || AVATAR_PLACEHOLDER}
+                              alt={review.reviewer?.name || "Reviewer"}
+                            />
+                            <div>
+                              <strong>{review.reviewer?.name || "Renter"}</strong>
+                              <p className="list-item__meta">
+                                Rating {review.rating}/5 | {formatDateTime(review.createdAt)}
+                              </p>
+                            </div>
+                          </div>
+                          {isOwnReview ? <span className="tag tag--light">You</span> : null}
+                        </div>
+
+                        <p className="detail-note">
+                          {review.comment || "This renter shared a rating without a written comment."}
+                        </p>
+
+                        {review.ownerReply ? (
+                          <div className="detail-thread detail-thread--muted">
+                            <strong>Owner reply</strong>
+                            <p className="detail-note">{review.ownerReply}</p>
+                            <span className="detail-thread__meta">
+                              Sent {formatDateTime(review.ownerReplyAt)}
+                            </span>
+                          </div>
+                        ) : null}
+
+                        {isOwner ? (
+                          <div className="detail-review-reply">
+                            <div className="field">
+                              <label htmlFor={`ownerReplyReview-${review.id}`}>
+                                {review.ownerReply ? "Update reply" : "Reply to this review"}
+                              </label>
+                              <textarea
+                                id={`ownerReplyReview-${review.id}`}
+                                className="textarea"
+                                rows="4"
+                                placeholder="Thank the renter or add a short follow-up."
+                                value={replyDrafts[review.id] || ""}
+                                onChange={(event) =>
+                                  updateReplyDraft(review.id, event.target.value)
+                                }
+                              />
+                            </div>
+                            <div className="listing-actions">
+                              <button
+                                type="button"
+                                className="btn btn--secondary btn--small"
+                                onClick={() => handleReviewReplySubmit(review)}
+                                disabled={isReplySaving}
+                              >
+                                {isReplySaving
+                                  ? "Saving reply..."
+                                  : review.ownerReply
+                                    ? "Update Reply"
+                                    : "Send Reply"}
+                              </button>
+                            </div>
+                          </div>
+                        ) : null}
+                      </article>
+                    );
+                  })}
+                </div>
+              ) : (
+                <EmptyState message="No ratings have been shared for this listing yet." />
+              )}
+            </article>
+          </div>
+        </section>
+      ) : null}
+
       {!isAdmin && !isOwner ? (
         <section className="section">
           <SectionHeading eyebrow="Similar options" title="More listings like this" />
@@ -941,7 +1685,7 @@ export function ProductDetailsPage({ page }) {
                 <ProductCard
                   key={similarProduct.id}
                   product={similarProduct}
-                  showWishlist={Boolean(user)}
+                  showWishlist={Boolean(user && user.id !== similarProduct.owner?.id)}
                   isSaved={wishlistIds.has(similarProduct.id)}
                   onToggleWishlist={handleSimilarWishlist}
                 />

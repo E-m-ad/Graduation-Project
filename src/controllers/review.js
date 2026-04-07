@@ -252,6 +252,13 @@ async function createReview(req, res) {
       });
     }
 
+    if (rental.ownerId === req.user.id) {
+      return res.status(409).json({
+        success: false,
+        message: "You cannot review or rate your own product",
+      });
+    }
+
     if (rental.status !== "completed") {
       return res.status(409).json({
         success: false,
@@ -378,6 +385,11 @@ async function updateOwnReview(req, res) {
         id: true,
         reviewerId: true,
         productId: true,
+        product: {
+          select: {
+            ownerId: true,
+          },
+        },
       },
     });
 
@@ -392,6 +404,13 @@ async function updateOwnReview(req, res) {
       return res.status(403).json({
         success: false,
         message: "You can only update your own review",
+      });
+    }
+
+    if (review.product.ownerId === req.user.id) {
+      return res.status(409).json({
+        success: false,
+        message: "You cannot review or rate your own product",
       });
     }
 
@@ -556,17 +575,23 @@ async function deleteOwnReview(req, res) {
       });
     }
 
-    await db.$transaction(async (tx) => {
+    const deletedReview = await db.$transaction(async (tx) => {
       await tx.review.delete({
         where: { id: review.id },
       });
 
-      await syncProductReviewStats(tx, review.productId);
+      const nextProduct = await syncProductReviewStats(tx, review.productId);
+
+      return {
+        id: review.id,
+        product: nextProduct,
+      };
     });
 
     return res.status(200).json({
       success: true,
       message: "Review deleted successfully",
+      data: deletedReview,
     });
   } catch (error) {
     console.error("deleteOwnReview error:", error);

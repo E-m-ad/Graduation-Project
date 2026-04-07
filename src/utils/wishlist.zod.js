@@ -15,8 +15,27 @@ function optionalInteger(schema) {
   }, schema.optional());
 }
 
+function optionalTrimmedString(schema) {
+  return zod.preprocess((value) => {
+    if (value === undefined || value === null) {
+      return undefined;
+    }
+
+    if (typeof value !== "string") {
+      return value;
+    }
+
+    const trimmedValue = value.trim();
+    return trimmedValue === "" ? undefined : trimmedValue;
+  }, schema.optional());
+}
+
 const wishlistProductParamSchema = zod.object({
   productId: zod.string().trim().uuid("Valid product id is required"),
+});
+
+const wishlistOwnerParamSchema = zod.object({
+  wishlistId: zod.string().trim().uuid("Valid wishlist id is required"),
 });
 
 const wishlistListQuerySchema = zod.object({
@@ -35,7 +54,24 @@ const wishlistListQuerySchema = zod.object({
   ),
 });
 
+const wishlistNotifyBodySchema = zod.object({
+  title: optionalTrimmedString(
+    zod
+      .string()
+      .min(3, "Title must be at least 3 characters long")
+      .max(200, "Title must be at most 200 characters long"),
+  ),
+  message: optionalTrimmedString(
+    zod
+      .string()
+      .min(3, "Message must be at least 3 characters long")
+      .max(1000, "Message must be at most 1000 characters long"),
+  ),
+});
+
 export default {
   wishlistListQuerySchema,
+  wishlistNotifyBodySchema,
+  wishlistOwnerParamSchema,
   wishlistProductParamSchema,
 };

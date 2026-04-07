@@ -7,6 +7,7 @@ import morgan from "morgan";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import helmet from "helmet";
+import db from "./database/db.js";
 import authMiddleWare from "./middlewares/auth.js";
 import auth from "./routes/auth.js";
 import user from "./routes/authenticated.user.js";
@@ -31,13 +32,33 @@ const uploadsDir = path.resolve(__dirname, "../uploads");
 
 export function createApp() {
   const app = express();
+  app.disable("x-powered-by");
+  app.set("trust proxy", 1);
+
   app.use(morgan("dev"));
   app.use(helmet());
   app.use(cors({ origin: true, credentials: true }));
   app.use(express.urlencoded({ extended: true }));
   app.use(express.json());
   app.use(cookieParser());
-  app.use(morgan("dev"));
+
+  app.get("/healthz", async (req, res) => {
+    try {
+      await db.$queryRaw`SELECT 1`;
+      res.status(200).json({
+        status: "ok",
+        database: "up",
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error("healthz error:", error);
+      res.status(503).json({
+        status: "degraded",
+        database: "down",
+      });
+    }
+  });
+
   app.use(express.static(staticDir));
   app.use(
     "/uploads",

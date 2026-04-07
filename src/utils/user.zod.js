@@ -1,23 +1,64 @@
 import zod from "zod";
+
+function nullableTrimmedString(schema) {
+  return zod.preprocess((value) => {
+    if (value === null) {
+      return null;
+    }
+
+    if (typeof value === "string") {
+      const trimmedValue = value.trim();
+      return trimmedValue === "" ? null : trimmedValue;
+    }
+
+    return value;
+  }, schema.nullable().optional());
+}
+
 const updateProfileSchema = zod
   .object({
-    name: zod
-      .string()
-      .trim()
-      .min(3, "Name must be at least 3 characters long")
-      .max(100, "Name must be at most 100 characters long")
-      .optional(),
-    phone: zod
+    name: zod.preprocess(
+      (value) => (typeof value === "string" ? value.trim() : value),
+      zod
+        .string()
+        .min(3, "Name must be at least 3 characters long")
+        .max(100, "Name must be at most 100 characters long")
+        .optional(),
+    ),
+    phone: zod.preprocess((value) => {
+      if (value === null) {
+        return null;
+      }
+
+      if (typeof value === "string") {
+        const normalizedValue = value.replace(/\s+/g, "");
+        return normalizedValue === "" ? null : normalizedValue;
+      }
+
+      return value;
+    }, zod
       .string()
       .max(15, "Phone number must be at most 15 characters long")
-      .transform((val) => val.replace(/\s+/g, ""))
       .refine((val) => /^01[0125][0-9]{8}$/.test(val), {
         message: "Invalid Egyptian phone number",
       })
-      .optional(),
-    city: zod.string().trim().min(10).max(100).optional(),
-    address: zod.string().trim().min(10).max(200).optional(),
-    bio: zod.string().trim().max(200).optional(),
+      .nullable()
+      .optional()),
+    city: nullableTrimmedString(
+      zod
+        .string()
+        .min(2, "City must be at least 2 characters long")
+        .max(100, "City must be at most 100 characters long"),
+    ),
+    address: nullableTrimmedString(
+      zod
+        .string()
+        .min(5, "Address must be at least 5 characters long")
+        .max(200, "Address must be at most 200 characters long"),
+    ),
+    bio: nullableTrimmedString(
+      zod.string().max(200, "Bio must be at most 200 characters long"),
+    ),
   })
   .refine((data) => Object.values(data).some((key) => key !== undefined), {
     message: "At least one field must be provided",

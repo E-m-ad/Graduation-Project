@@ -3,7 +3,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import db from "../database/db.js";
 import { maxProductImageCount } from "../middlewares/product.upload.js";
-import { createAdminNotifications } from "../utils/notification.helpers.js";
+import {
+  createAdminNotifications,
+  createWishlistAvailabilityNotifications,
+} from "../utils/notification.helpers.js";
 import z from "../utils/product.zod.js";
 
 const PUBLIC_DISCOVERY_PRODUCT_STATUSES = ["available", "rented"];
@@ -803,6 +806,7 @@ async function updateProductStatus(req, res) {
       where: { id },
       select: {
         id: true,
+        title: true,
         ownerId: true,
         isApproved: true,
         status: true,
@@ -845,10 +849,28 @@ async function updateProductStatus(req, res) {
       });
     }
 
-    const updatedProduct = await db.product.update({
-      where: { id },
-      data: { status },
-      select: MANAGE_PRODUCT_SELECT,
+    const updatedProduct = await db.$transaction(async (tx) => {
+      const nextProduct = await tx.product.update({
+        where: { id },
+        data: { status },
+        select: MANAGE_PRODUCT_SELECT,
+      });
+
+      if (product.status !== "available" && status === "available") {
+        await createWishlistAvailabilityNotifications(tx, {
+          productId: product.id,
+          ownerId: product.ownerId,
+          productTitle: product.title,
+          data: {
+            trigger:
+              req.user.role === "admin"
+                ? "admin_status_update"
+                : "owner_status_update",
+          },
+        });
+      }
+
+      return nextProduct;
     });
 
     return res.status(200).json({

@@ -1,5 +1,8 @@
 import db from "../database/db.js";
-import { createAdminNotifications } from "../utils/notification.helpers.js";
+import {
+  createAdminNotifications,
+  createWishlistAvailabilityNotifications,
+} from "../utils/notification.helpers.js";
 import z from "../utils/rental.zod.js";
 
 const DEFAULT_PAGE = 1;
@@ -16,6 +19,17 @@ const USER_SUMMARY_SELECT = {
   role: true,
   city: true,
   isVerified: true,
+};
+
+const REVIEW_SUMMARY_SELECT = {
+  id: true,
+  rating: true,
+  comment: true,
+  ownerReply: true,
+  ownerReplyAt: true,
+  isVisible: true,
+  createdAt: true,
+  updatedAt: true,
 };
 
 const RENTAL_PRODUCT_SELECT = {
@@ -79,6 +93,9 @@ const RENTAL_LIST_SELECT = {
   renterNotes: true,
   createdAt: true,
   updatedAt: true,
+  review: {
+    select: REVIEW_SUMMARY_SELECT,
+  },
   product: {
     select: RENTAL_PRODUCT_SELECT,
   },
@@ -92,18 +109,6 @@ const RENTAL_LIST_SELECT = {
 
 const RENTAL_DETAIL_SELECT = {
   ...RENTAL_LIST_SELECT,
-  review: {
-    select: {
-      id: true,
-      rating: true,
-      comment: true,
-      ownerReply: true,
-      ownerReplyAt: true,
-      isVisible: true,
-      createdAt: true,
-      updatedAt: true,
-    },
-  },
 };
 
 function isAdmin(user) {
@@ -387,6 +392,10 @@ async function getMyBookings(req, res) {
     where.status = data.data.status;
   }
 
+  if (data.data.productId) {
+    where.productId = data.data.productId;
+  }
+
   try {
     const [rentals, totalItems] = await db.$transaction([
       db.rental.findMany({
@@ -406,6 +415,7 @@ async function getMyBookings(req, res) {
         pagination: buildPagination(page, limit, totalItems),
         filters: {
           status: data.data.status ?? null,
+          productId: data.data.productId ?? null,
         },
       },
     });
@@ -438,6 +448,10 @@ async function getMyRequests(req, res) {
     where.status = data.data.status;
   }
 
+  if (data.data.productId) {
+    where.productId = data.data.productId;
+  }
+
   try {
     const [rentals, totalItems] = await db.$transaction([
       db.rental.findMany({
@@ -457,6 +471,7 @@ async function getMyRequests(req, res) {
         pagination: buildPagination(page, limit, totalItems),
         filters: {
           status: data.data.status ?? null,
+          productId: data.data.productId ?? null,
         },
       },
     });
@@ -535,6 +550,30 @@ async function createRental(req, res) {
       return res.status(409).json({
         success: false,
         message: "This listing is not accepting rental requests right now",
+      });
+    }
+
+    const existingPendingRental = await db.rental.findFirst({
+      where: {
+        productId: product.id,
+        renterId: req.user.id,
+        status: "pending",
+        endDate: {
+          gt: new Date(),
+        },
+      },
+      orderBy: [{ createdAt: "desc" }],
+      select: RENTAL_DETAIL_SELECT,
+    });
+
+    if (existingPendingRental) {
+      return res.status(409).json({
+        success: false,
+        message:
+          "You already have a pending rental request for this listing. Wait for the owner to approve or reject it before sending another request.",
+        data: {
+          rental: existingPendingRental,
+        },
       });
     }
 
@@ -1216,6 +1255,19 @@ async function completeRental(req, res) {
           actualReturnDate: actualReturnDate.toISOString(),
         },
       });
+
+      if (rental.product.status === "rented") {
+        await createWishlistAvailabilityNotifications(tx, {
+          productId: rental.productId,
+          ownerId: rental.ownerId,
+          productTitle: rental.product.title,
+          data: {
+            trigger: "rental_completed",
+            rentalId: rental.id,
+            actualReturnDate: actualReturnDate.toISOString(),
+          },
+        });
+      }
 
       return tx.rental.findUnique({
         where: { id: rental.id },

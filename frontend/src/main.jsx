@@ -8,6 +8,7 @@ import "./styles/profile.css";
 import "./styles/my-listings.css";
 import "./styles/product-details.css";
 import "./styles/admin-dashboard.css";
+import "./styles/wishlist.css";
 import { HomePage } from "./pages/HomePage";
 import { ProductsPage } from "./pages/ProductsPage";
 import { ProductDetailsPage } from "./pages/ProductDetailsPage";
@@ -20,6 +21,7 @@ import {
 import { ProfilePage } from "./pages/ProfilePage";
 import { MyListingsPage } from "./pages/MyListingsPage";
 import { AdminDashboardPage } from "./pages/AdminDashboardPage";
+import { WishlistPage } from "./pages/WishlistPage";
 
 const pages = {
   home: HomePage,
@@ -31,6 +33,7 @@ const pages = {
   "reset-password": ResetPasswordPage,
   "verify-email": VerifyEmailPage,
   profile: ProfilePage,
+  wishlist: WishlistPage,
   "my-listings": MyListingsPage,
   admin: AdminDashboardPage,
 };

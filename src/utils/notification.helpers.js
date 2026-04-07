@@ -43,3 +43,38 @@ export async function createAdminNotifications(tx, input) {
     },
   );
 }
+
+export async function createWishlistAvailabilityNotifications(tx, input) {
+  const wishlists = await tx.wishlist.findMany({
+    where: {
+      productId: input.productId,
+      ...(input.ownerId
+        ? {
+            userId: {
+              not: input.ownerId,
+            },
+          }
+        : {}),
+    },
+    select: {
+      userId: true,
+    },
+  });
+
+  return createNotificationsForUsers(
+    tx,
+    wishlists.map((wishlist) => wishlist.userId),
+    {
+      type: "system",
+      title: input.title ?? "Wishlist item available",
+      message: input.message ?? `${input.productTitle} is available again`,
+      data: {
+        action: "wishlist_item_available",
+        productId: input.productId,
+        productTitle: input.productTitle,
+        ownerId: input.ownerId ?? null,
+        ...(input.data ?? {}),
+      },
+    },
+  );
+}

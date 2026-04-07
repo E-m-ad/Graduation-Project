@@ -281,7 +281,7 @@ export function ProductsPage({ page }) {
               <ProductCard
                 key={product.id}
                 product={product}
-                showWishlist={Boolean(user)}
+                showWishlist={Boolean(user && user.id !== product.owner?.id)}
                 isSaved={wishlistIds.has(product.id)}
                 onToggleWishlist={handleToggleWishlist}
               />

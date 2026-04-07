@@ -117,6 +117,9 @@ const rentalListQuerySchema = zod.object({
       .max(50, "Limit must be at most 50"),
   ),
   status: optionalEnum(RENTAL_STATUS_VALUES),
+  productId: optionalTrimmedString(
+    zod.string().uuid("Valid product id is required"),
+  ),
 });
 
 const availabilityQuerySchema = zod

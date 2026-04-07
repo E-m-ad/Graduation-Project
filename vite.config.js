@@ -12,6 +12,7 @@ const htmlEntries = {
   resetPassword: path.resolve("frontend/html/reset-password.html"),
   verifyEmail: path.resolve("frontend/html/verify-email.html"),
   profile: path.resolve("frontend/html/profile.html"),
+  wishlist: path.resolve("frontend/html/wishlist.html"),
   myListings: path.resolve("frontend/html/my-listings.html"),
   adminDashboard: path.resolve("frontend/html/admin-dashboard.html"),
 };

@@ -169,6 +169,92 @@
   );
 }
 
+.detail-reviews {
+  display: grid;
+  gap: 18px;
+}
+
+.detail-reviews__grid {
+  display: grid;
+  grid-template-columns: minmax(300px, 0.9fr) minmax(0, 1.1fr);
+  gap: 22px;
+}
+
+.detail-reviews__panel {
+  display: grid;
+  gap: 18px;
+}
+
+.detail-reviews__panel--wide {
+  min-width: 0;
+}
+
+.detail-review-summary {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  text-align: right;
+}
+
+.detail-review-summary strong {
+  font-size: 1.2rem;
+  color: var(--primary);
+}
+
+.detail-review-summary span {
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.detail-review-editor,
+.detail-review-card {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.detail-review-editor {
+  background: linear-gradient(145deg, rgba(218, 41, 28, 0.04), rgba(243, 185, 0, 0.06));
+}
+
+.detail-review-card--own {
+  border-color: rgba(17, 104, 96, 0.18);
+  background: linear-gradient(145deg, rgba(17, 104, 96, 0.05), rgba(36, 99, 235, 0.04));
+}
+
+.detail-review-editor__header,
+.detail-review-card__header,
+.detail-review-card__author {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.detail-review-card__author {
+  justify-content: flex-start;
+}
+
+.detail-review-card__avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.detail-review-reply {
+  display: grid;
+  gap: 12px;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(17, 24, 39, 0.12);
+}
+
 .image-viewer {
   position: fixed;
   inset: 0;
@@ -203,6 +289,22 @@
   .detail-facts,
   .detail-gallery__thumbs {
     grid-template-columns: 1fr;
+  }
+
+  .detail-reviews__grid,
+  .detail-review-editor__header,
+  .detail-review-card__header,
+  .detail-review-card__author {
+    grid-template-columns: 1fr;
+  }
+
+  .detail-review-editor__header,
+  .detail-review-card__header,
+  .detail-review-card__author,
+  .detail-review-summary {
+    display: grid;
+    text-align: left;
+    justify-items: start;
   }
 
   .image-viewer {

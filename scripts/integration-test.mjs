@@ -492,6 +492,72 @@ async function runCatalogAndModerationTests(context, actors) {
   );
   expectStatus(ownerPublicProducts, 200, "Get public owner products");
 
+  await db.wishlist.create({
+    data: {
+      userId: ownerRecord.id,
+      productId: flowProduct.id,
+    },
+  });
+
+  const ownerSelfWishlistAttempt = await actors.ownerUser.request(
+    "POST",
+    `/wishlists/${flowProduct.id}`,
+  );
+  expectStatus(ownerSelfWishlistAttempt, 409, "Owner cannot wishlist own product");
+
+  const ownerSelfWishlistRow = await db.wishlist.findUnique({
+    where: {
+      userId_productId: {
+        userId: ownerRecord.id,
+        productId: flowProduct.id,
+      },
+    },
+    select: {
+      id: true,
+    },
+  });
+  assert(
+    !ownerSelfWishlistRow,
+    "Self-wishlist rows should be removed when the owner tries to save their own product",
+    ownerSelfWishlistRow,
+  );
+
+  const ownerWishlistAfterCleanup = await actors.ownerUser.request("GET", "/wishlists");
+  expectStatus(ownerWishlistAfterCleanup, 200, "Owner wishlist after self cleanup");
+  assert(
+    !ownerWishlistAfterCleanup.body?.data?.wishlists?.some(
+      (wishlist) => wishlist.productId === flowProduct.id,
+    ),
+    "Owner wishlist should not include the owner's own product",
+    ownerWishlistAfterCleanup.body,
+  );
+
+  const ownerInterestAfterCleanup = await actors.ownerUser.request(
+    "GET",
+    "/wishlists/owner",
+  );
+  expectStatus(ownerInterestAfterCleanup, 200, "Owner interest after self cleanup");
+  assert(
+    !ownerInterestAfterCleanup.body?.data?.products?.some(
+      (product) => product.id === flowProduct.id,
+    ),
+    "Owner interest should not include self-wishlist rows",
+    ownerInterestAfterCleanup.body,
+  );
+
+  const ownerSelfRentalWindow = createRentalWindow(16, 18);
+  const ownerSelfRentalAttempt = await actors.ownerUser.request("POST", "/rentals", {
+    json: {
+      productId: flowProduct.id,
+      startDate: ownerSelfRentalWindow.startDate.toISOString(),
+      endDate: ownerSelfRentalWindow.endDate.toISOString(),
+      rentalPeriodType: "daily",
+      quantity: 1,
+      renterNotes: "Owner should not be able to rent own listing",
+    },
+  });
+  expectStatus(ownerSelfRentalAttempt, 409, "Owner cannot rent own product");
+
   return {
     usedCategoryId: usedCategory.id,
     flowProductId: flowProduct.id,
@@ -536,6 +602,27 @@ async function runTransactionalFeatureTests(context, actors, fixtures) {
   });
   expectStatus(createRental1, 201, "Create rental request");
   const rental1Id = createRental1.body?.data?.id;
+
+  const duplicatePendingRentalAttempt = await actors.renterUser.request("POST", "/rentals", {
+    json: {
+      productId: fixtures.flowProductId,
+      startDate: availabilityWindow.startDate.toISOString(),
+      endDate: availabilityWindow.endDate.toISOString(),
+      rentalPeriodType: "daily",
+      quantity: 1,
+      renterNotes: "Duplicate pending request should be rejected",
+    },
+  });
+  expectStatus(
+    duplicatePendingRentalAttempt,
+    409,
+    "Reject duplicate pending rental request",
+  );
+  assert(
+    duplicatePendingRentalAttempt.body?.data?.rental?.id === rental1Id,
+    "Duplicate pending rental response should point to the existing pending request",
+    duplicatePendingRentalAttempt.body,
+  );
 
   const myBookingsResult = await actors.renterUser.request("GET", "/rentals/my-bookings");
   expectStatus(myBookingsResult, 200, "Get my bookings");
@@ -631,6 +718,22 @@ async function runTransactionalFeatureTests(context, actors, fixtures) {
   expectStatus(createReviewResult, 201, "Create review");
   const reviewId = createReviewResult.body?.data?.id;
 
+  const ownerNotificationsAfterReview = await actors.ownerUser.request(
+    "GET",
+    "/notifications?type=new_review",
+  );
+  expectStatus(ownerNotificationsAfterReview, 200, "Get owner new-review notifications");
+  assert(
+    ownerNotificationsAfterReview.body?.data?.notifications?.some(
+      (notification) =>
+        notification.type === "new_review" &&
+        notification.data?.reviewId === reviewId &&
+        notification.data?.productId === fixtures.flowProductId,
+    ),
+    "Owner notifications should include the new review with product context",
+    ownerNotificationsAfterReview.body,
+  );
+
   const productAfterReview = await actors.guest.request("GET", `/products/${fixtures.flowProductId}`, {
     useCookies: false,
     useAccessToken: false,
@@ -676,6 +779,84 @@ async function runTransactionalFeatureTests(context, actors, fixtures) {
   );
   expectStatus(replyReviewResult, 200, "Reply to review");
 
+  const renterNotificationsAfterReviewReply = await actors.renterUser.request(
+    "GET",
+    "/notifications?type=review_reply",
+  );
+  expectStatus(
+    renterNotificationsAfterReviewReply,
+    200,
+    "Get renter review-reply notifications",
+  );
+  assert(
+    renterNotificationsAfterReviewReply.body?.data?.notifications?.some(
+      (notification) =>
+        notification.type === "review_reply" &&
+        notification.data?.reviewId === reviewId &&
+        notification.data?.productId === fixtures.flowProductId,
+    ),
+    "Renter notifications should include the owner reply with product context",
+    renterNotificationsAfterReviewReply.body,
+  );
+
+  const renterRecord = await db.user.findUnique({
+    where: {
+      email: actors.renterEmail,
+    },
+    select: {
+      id: true,
+    },
+  });
+  assert(renterRecord?.id, "Renter record should exist for invalid self-review guard test");
+
+  const ownerSelfReviewGuardRental = await db.rental.create({
+    data: {
+      productId: fixtures.flowProductId,
+      renterId: renterRecord.id,
+      ownerId: fixtures.ownerId,
+      startDate: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000),
+      endDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+      actualReturnDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000 + 60 * 60 * 1000),
+      rentalPeriodType: "daily",
+      quantity: 1,
+      unitPrice: 25,
+      totalPrice: 25,
+      securityDeposit: 0,
+      platformFee: 0,
+      status: "completed",
+      renterNotes: "Synthetic invalid review guard verification",
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  const invalidOwnerReview = await db.review.create({
+    data: {
+      rentalId: ownerSelfReviewGuardRental.id,
+      reviewerId: fixtures.ownerId,
+      productId: fixtures.flowProductId,
+      rating: 2,
+      comment: "Synthetic invalid owner review",
+      isVisible: false,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  const ownerSelfReviewUpdateAttempt = await actors.ownerUser.request(
+    "PUT",
+    `/reviews/${invalidOwnerReview.id}`,
+    {
+      json: {
+        rating: 1,
+        comment: "Owners must not be able to rate their own listing",
+      },
+    },
+  );
+  expectStatus(ownerSelfReviewUpdateAttempt, 409, "Owner cannot rate own product");
+
   const ownerPublicReviews = await actors.guest.request(
     "GET",
     `/public/users/${fixtures.ownerId}/reviews`,
@@ -706,6 +887,110 @@ async function runTransactionalFeatureTests(context, actors, fixtures) {
     "Wishlist should include the approved product",
     getWishlistResult.body,
   );
+
+  const ownerWishlistInterest = await actors.ownerUser.request("GET", "/wishlists/owner");
+  expectStatus(ownerWishlistInterest, 200, "Get owner wishlist interest");
+  const ownerWishlistProduct = ownerWishlistInterest.body?.data?.products?.find(
+    (product) => product.id === fixtures.flowProductId,
+  );
+  assert(
+    ownerWishlistProduct,
+    "Owner wishlist interest should include the saved product",
+    ownerWishlistInterest.body,
+  );
+  const ownerWishlistEntry = ownerWishlistProduct?.wishlists?.[0];
+  assert(
+    ownerWishlistEntry?.id,
+    "Owner wishlist interest should expose the saved user entry",
+    ownerWishlistProduct,
+  );
+
+  const notifyWishlistUserResult = await actors.ownerUser.request(
+    "POST",
+    `/wishlists/owner/${ownerWishlistEntry.id}/notify`,
+    {
+      json: {
+        message: "Your saved item is available and ready for rent again.",
+      },
+    },
+  );
+  expectStatus(notifyWishlistUserResult, 201, "Notify wishlist user");
+
+  const renterNotificationsAfterOwnerNotice = await actors.renterUser.request(
+    "GET",
+    "/notifications",
+  );
+  expectStatus(
+    renterNotificationsAfterOwnerNotice,
+    200,
+    "Get renter notifications after owner wishlist notice",
+  );
+  assert(
+    renterNotificationsAfterOwnerNotice.body?.data?.notifications?.some(
+      (notification) => notification.data?.action === "wishlist_owner_notice",
+    ),
+    "Renter notifications should include the owner wishlist notice",
+    renterNotificationsAfterOwnerNotice.body,
+  );
+
+  const ownerSetUnavailableForWishlist = await actors.ownerUser.request(
+    "PUT",
+    `/products/${fixtures.flowProductId}/status`,
+    {
+      json: { status: "unavailable" },
+    },
+  );
+  expectStatus(
+    ownerSetUnavailableForWishlist,
+    200,
+    "Set wishlist product unavailable",
+  );
+
+  const ownerSetAvailableForWishlist = await actors.ownerUser.request(
+    "PUT",
+    `/products/${fixtures.flowProductId}/status`,
+    {
+      json: { status: "available" },
+    },
+  );
+  expectStatus(
+    ownerSetAvailableForWishlist,
+    200,
+    "Set wishlist product available after wishlist toggle",
+  );
+
+  const renterNotificationsAfterAvailability = await actors.renterUser.request(
+    "GET",
+    "/notifications",
+  );
+  expectStatus(
+    renterNotificationsAfterAvailability,
+    200,
+    "Get renter notifications after wishlist availability update",
+  );
+  assert(
+    renterNotificationsAfterAvailability.body?.data?.notifications?.some(
+      (notification) => notification.data?.action === "wishlist_item_available",
+    ),
+    "Renter notifications should include the automatic wishlist availability alert",
+    renterNotificationsAfterAvailability.body,
+  );
+
+  const ownerRemoveWishlistInterestResult = await actors.ownerUser.request(
+    "DELETE",
+    `/wishlists/owner/${ownerWishlistEntry.id}`,
+  );
+  expectStatus(
+    ownerRemoveWishlistInterestResult,
+    200,
+    "Remove wishlist interest from owner side",
+  );
+
+  const reAddWishlistResult = await actors.renterUser.request(
+    "POST",
+    `/wishlists/${fixtures.flowProductId}`,
+  );
+  expectStatus(reAddWishlistResult, 201, "Re-add wishlist item after owner removal");
 
   const flowProductRecord = await db.product.findUnique({
     where: { id: fixtures.flowProductId },

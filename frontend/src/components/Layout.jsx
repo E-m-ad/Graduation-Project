@@ -26,6 +26,11 @@ function SiteFooter({ user }) {
                 </a>
               ) : null}
               {user && user.role !== "admin" ? (
+                <a className="btn btn--secondary btn--small" href="/html/wishlist.html">
+                  Wishlist
+                </a>
+              ) : null}
+              {user && user.role !== "admin" ? (
                 <a className="btn btn--secondary btn--small" href="/html/my-listings.html">
                   My Listings
                 </a>
@@ -51,6 +56,9 @@ function SiteFooter({ user }) {
                 </>
               ) : null}
               {user && user.role !== "admin" ? (
+                <li><a href="/html/wishlist.html">Wishlist</a></li>
+              ) : null}
+              {user && user.role !== "admin" ? (
                 <li><a href="/html/my-listings.html">Manage listings</a></li>
               ) : null}
               {user?.role === "admin" ? (
@@ -68,6 +76,9 @@ function SiteFooter({ user }) {
                   <li><a href="/html/register.html">Register</a></li>
                   <li><a href="/html/forgot-password.html">Forgot password</a></li>
                 </>
+              ) : null}
+              {user && user.role !== "admin" ? (
+                <li><a href="/html/wishlist.html">Wishlist</a></li>
               ) : null}
               {user && user.role !== "admin" ? (
                 <li><a href="/html/profile.html">Profile</a></li>
@@ -195,6 +206,14 @@ export function SiteLayout({
               ) : null}
               {isAdmin ? (
                 <a href={getDefaultAuthenticatedPath(user)}>Admin Dashboard</a>
+              ) : null}
+              {user && !isAdmin ? (
+                <a
+                  href="/html/wishlist.html"
+                  className={page === "wishlist" || activeNav === "wishlist" ? "is-active" : ""}
+                >
+                  Wishlist
+                </a>
               ) : null}
               {user && !isAdmin ? (
                 <a

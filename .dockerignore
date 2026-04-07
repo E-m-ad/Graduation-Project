@@ -1,0 +1,11 @@
+.git
+.gitignore
+.vscode
+.agents
+.env
+.env.*
+!.env.example
+node_modules
+frontend/dist
+uploads
+npm-debug.log*

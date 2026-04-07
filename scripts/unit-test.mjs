@@ -1,6 +1,7 @@
 import authSchema from "../src/utils/auth.zod.js";
 import productSchema from "../src/utils/product.zod.js";
 import rentalSchema from "../src/utils/rental.zod.js";
+import wishlistSchema from "../src/utils/wishlist.zod.js";
 
 const VALID_ID = "11111111-1111-4111-8111-111111111111";
 
@@ -188,6 +189,30 @@ async function run() {
     availabilityQuery.quantity === 1,
     "Availability query schema should coerce quantity",
     availabilityQuery,
+  );
+
+  const wishlistNotifyPayload = wishlistSchema.wishlistNotifyBodySchema.parse({
+    title: "  Back in stock  ",
+    message: "  The owner says the item is ready again.  ",
+  });
+  assert(
+    wishlistNotifyPayload.title === "Back in stock",
+    "Wishlist notify schema should trim the title",
+    wishlistNotifyPayload,
+  );
+  assert(
+    wishlistNotifyPayload.message === "The owner says the item is ready again.",
+    "Wishlist notify schema should trim the message",
+    wishlistNotifyPayload,
+  );
+
+  const wishlistIdParams = wishlistSchema.wishlistOwnerParamSchema.parse({
+    wishlistId: VALID_ID,
+  });
+  assert(
+    wishlistIdParams.wishlistId === VALID_ID,
+    "Wishlist owner param schema should accept a valid wishlist id",
+    wishlistIdParams,
   );
 
   log("Unit test suite completed successfully");

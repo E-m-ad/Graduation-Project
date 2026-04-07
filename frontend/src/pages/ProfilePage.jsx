@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   AVATAR_PLACEHOLDER,
   fetchApi,
@@ -95,8 +95,23 @@ function getNotificationContextText(notification) {
   return contextLines;
 }
 
+function getNotificationProductId(notification) {
+  const rawProductId =
+    notification?.data?.productId ||
+    notification?.rental?.productId ||
+    notification?.rental?.product?.id ||
+    null;
+
+  return typeof rawProductId === "string" && rawProductId.trim() ? rawProductId : null;
+}
+
 function NotificationListItem({ notification, onMarkRead, onDelete }) {
   const contextLines = getNotificationContextText(notification);
+  const productId = getNotificationProductId(notification);
+  const productHref = productId
+    ? `/html/product-details.html?id=${encodeURIComponent(productId)}`
+    : "";
+  const hasActions = Boolean(productId || !notification.isRead || onDelete);
 
   return (
     <article className="list-item">
@@ -123,8 +138,13 @@ function NotificationListItem({ notification, onMarkRead, onDelete }) {
             </p>
           ))
         : null}
-      {!notification.isRead || onDelete ? (
+      {hasActions ? (
         <div className="listing-actions">
+          {productId ? (
+            <a className="btn btn--secondary btn--small" href={productHref}>
+              View Product
+            </a>
+          ) : null}
           {!notification.isRead ? (
             <button
               type="button"
@@ -164,6 +184,7 @@ export function ProfilePage({ page }) {
   const [activeTab, setActiveTab] = useState(getInitialProfileTab);
   const [profileUser, setProfileUser] = useState(user);
   const [profileForm, setProfileForm] = useState(createProfileForm(user));
+  const profileDirtyRef = useRef(false);
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: "",
     newPassword: "",
@@ -176,6 +197,8 @@ export function ProfilePage({ page }) {
   const [notificationsUnreadCount, setNotificationsUnreadCount] = useState(0);
   const [verificationPreview, setVerificationPreview] = useState(null);
   const [sendingVerification, setSendingVerification] = useState(false);
+  const userId = user?.id;
+  const userRole = user?.role;
   const activeOwnerRentals = requests.filter((rental) => rental.status === "active");
   const ownerRequestHistory = requests.filter((rental) => rental.status !== "active");
 
@@ -196,7 +219,9 @@ export function ProfilePage({ page }) {
 
   useEffect(() => {
     setProfileUser(user);
-    setProfileForm(createProfileForm(user));
+    if (!profileDirtyRef.current) {
+      setProfileForm(createProfileForm(user));
+    }
   }, [user]);
 
   useEffect(() => {
@@ -222,7 +247,7 @@ export function ProfilePage({ page }) {
     let active = true;
 
     async function loadDashboard() {
-      if (loading || !user || user.role === "admin") {
+      if (loading || !userId || userRole === "admin") {
         return;
       }
 
@@ -246,7 +271,9 @@ export function ProfilePage({ page }) {
         saveSession({ user: profileResult.data.data });
         setUser(profileResult.data.data);
         setProfileUser(profileResult.data.data);
-        setProfileForm(createProfileForm(profileResult.data.data));
+        if (!profileDirtyRef.current) {
+          setProfileForm(createProfileForm(profileResult.data.data));
+        }
       }
 
       setBookings(bookingsResult.data?.data?.rentals || []);
@@ -259,7 +286,7 @@ export function ProfilePage({ page }) {
     return () => {
       active = false;
     };
-  }, [loading, setUser, user]);
+  }, [loading, setUser, userId, userRole]);
 
   const avatarSrc = useMemo(() => {
     if (avatarFile) {
@@ -418,20 +445,30 @@ export function ProfilePage({ page }) {
     syncProfileTabInUrl(nextTab);
   }
 
+  function updateProfileField(field, value) {
+    profileDirtyRef.current = true;
+    setProfileForm((previous) => ({
+      ...previous,
+      [field]: value,
+    }));
+  }
+
   async function handleProfileSubmit(event) {
     event.preventDefault();
 
-    const payload = {};
-    if (profileForm.name.trim()) payload.name = profileForm.name.trim();
-    if (profileForm.phone.trim()) payload.phone = profileForm.phone.trim();
-    if (profileForm.city.trim()) payload.city = profileForm.city.trim();
-    if (profileForm.address.trim()) payload.address = profileForm.address.trim();
-    if (profileForm.bio.trim()) payload.bio = profileForm.bio.trim();
-
-    if (!Object.keys(payload).length) {
-      showMessage("Add at least one value before saving your profile.", "error");
+    const trimmedName = profileForm.name.trim();
+    if (trimmedName.length < 3) {
+      showMessage("Name must be at least 3 characters long.", "error");
       return;
     }
+
+    const payload = {
+      name: trimmedName,
+      phone: profileForm.phone.trim() || null,
+      city: profileForm.city.trim() || null,
+      address: profileForm.address.trim() || null,
+      bio: profileForm.bio.trim() || null,
+    };
 
     const result = await fetchApi("/api/v1/users/me", {
       method: "PUT",
@@ -446,6 +483,7 @@ export function ProfilePage({ page }) {
 
     if (result.ok && result.data?.data) {
       saveSession({ user: result.data.data });
+      profileDirtyRef.current = false;
       setUser(result.data.data);
       setProfileUser(result.data.data);
       setProfileForm(createProfileForm(result.data.data));
@@ -642,12 +680,7 @@ export function ProfilePage({ page }) {
                       type="text"
                       className="input"
                       value={profileForm.name}
-                      onChange={(event) =>
-                        setProfileForm((previous) => ({
-                          ...previous,
-                          name: event.target.value,
-                        }))
-                      }
+                      onChange={(event) => updateProfileField("name", event.target.value)}
                     />
                   </div>
 
@@ -659,12 +692,7 @@ export function ProfilePage({ page }) {
                       type="text"
                       className="input"
                       value={profileForm.phone}
-                      onChange={(event) =>
-                        setProfileForm((previous) => ({
-                          ...previous,
-                          phone: event.target.value,
-                        }))
-                      }
+                      onChange={(event) => updateProfileField("phone", event.target.value)}
                     />
                   </div>
 
@@ -676,12 +704,7 @@ export function ProfilePage({ page }) {
                       type="text"
                       className="input"
                       value={profileForm.city}
-                      onChange={(event) =>
-                        setProfileForm((previous) => ({
-                          ...previous,
-                          city: event.target.value,
-                        }))
-                      }
+                      onChange={(event) => updateProfileField("city", event.target.value)}
                     />
                   </div>
 
@@ -693,12 +716,7 @@ export function ProfilePage({ page }) {
                       type="text"
                       className="input"
                       value={profileForm.address}
-                      onChange={(event) =>
-                        setProfileForm((previous) => ({
-                          ...previous,
-                          address: event.target.value,
-                        }))
-                      }
+                      onChange={(event) => updateProfileField("address", event.target.value)}
                     />
                   </div>
 
@@ -710,12 +728,7 @@ export function ProfilePage({ page }) {
                       className="textarea"
                       rows="4"
                       value={profileForm.bio}
-                      onChange={(event) =>
-                        setProfileForm((previous) => ({
-                          ...previous,
-                          bio: event.target.value,
-                        }))
-                      }
+                      onChange={(event) => updateProfileField("bio", event.target.value)}
                     />
                   </div>
 

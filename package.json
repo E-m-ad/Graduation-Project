@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon src/app.js",
-    "start": "npm run client:build && node src/app.js",
+    "build": "npm run client:build",
+    "start": "node src/app.js",
+    "start:with-build": "npm run client:build && node src/app.js",
     "client:dev": "vite",
     "client:build": "vite build",
     "client:preview": "vite preview",

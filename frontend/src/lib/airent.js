@@ -282,6 +282,40 @@ export async function toggleWishlist(productId, isSaved) {
   };
 }
 
+export async function fetchWishlistPage({ page = 1, limit = 12 } = {}) {
+  return fetchApi(`/api/v1/wishlists?${buildQuery({ page, limit })}`, {
+    auth: true,
+  });
+}
+
+export async function fetchOwnerWishlistPage({ page = 1, limit = 12 } = {}) {
+  return fetchApi(`/api/v1/wishlists/owner?${buildQuery({ page, limit })}`, {
+    auth: true,
+  });
+}
+
+export async function removeWishlistItem(productId) {
+  return fetchApi(`/api/v1/wishlists/${productId}`, {
+    method: "DELETE",
+    auth: true,
+  });
+}
+
+export async function removeOwnerWishlistItem(wishlistId) {
+  return fetchApi(`/api/v1/wishlists/owner/${wishlistId}`, {
+    method: "DELETE",
+    auth: true,
+  });
+}
+
+export async function sendWishlistNotification(wishlistId, payload = {}) {
+  return fetchApi(`/api/v1/wishlists/owner/${wishlistId}/notify`, {
+    method: "POST",
+    auth: true,
+    body: payload,
+  });
+}
+
 export function buildQuery(params) {
   const searchParams = new URLSearchParams();
 
