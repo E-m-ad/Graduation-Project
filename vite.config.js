@@ -1,4 +1,4 @@
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "node:path";
 
@@ -18,26 +18,33 @@ const htmlEntries = {
   adminDashboard: path.resolve("frontend/html/admin-dashboard.html"),
 };
 
-export default defineConfig({
-  root: "frontend",
-  plugins: [react()],
-  server: {
-    proxy: {
-      "/api": {
-        target: "http://localhost:3000",
-        changeOrigin: true,
-      },
-      "/uploads": {
-        target: "http://localhost:3000",
-        changeOrigin: true,
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), "");
+  const backendOrigin =
+    env.VITE_API_ORIGIN?.trim() ||
+    `http://localhost:${env.PORT?.trim() || "3000"}`;
+
+  return {
+    root: "frontend",
+    plugins: [react()],
+    server: {
+      proxy: {
+        "/api": {
+          target: backendOrigin,
+          changeOrigin: true,
+        },
+        "/uploads": {
+          target: backendOrigin,
+          changeOrigin: true,
+        },
       },
     },
-  },
-  build: {
-    outDir: "dist",
-    emptyOutDir: true,
-    rollupOptions: {
-      input: htmlEntries,
+    build: {
+      outDir: "dist",
+      emptyOutDir: true,
+      rollupOptions: {
+        input: htmlEntries,
+      },
     },
-  },
+  };
 });
