@@ -5,6 +5,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 enum UserRole {
@@ -110,11 +111,11 @@ model User {
   rentalsAsOwner  Rental[]  @relation("UserRentalsAsOwner")
   reviewsWritten  Review[]  @relation("UserReviewsWritten")
 
-  wishlists           Wishlist[]
-  notifications       Notification[]
-  behaviors           UserBehavior[]
-  refreshTokens       RefreshToken[]
-  passwordResetTokens PasswordResetToken[]
+  wishlists               Wishlist[]
+  notifications           Notification[]
+  behaviors               UserBehavior[]
+  refreshTokens           RefreshToken[]
+  passwordResetTokens     PasswordResetToken[]
   emailVerificationTokens EmailVerificationToken[]
 
   @@index([role])
@@ -185,8 +186,8 @@ model Product {
   isApproved Boolean @default(false)
   isFeatured Boolean @default(false)
 
-  adminReviewNote String?   @db.Text
-  ownerReviewReply String?  @db.Text
+  adminReviewNote  String?   @db.Text
+  ownerReviewReply String?   @db.Text
   adminReviewedAt  DateTime? @db.Timestamptz(6)
   ownerRepliedAt   DateTime? @db.Timestamptz(6)
 
