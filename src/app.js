@@ -89,7 +89,7 @@ export function createApp() {
 export function startServer(port = Number(process.env.PORT || 3000)) {
   const app = createApp();
 
-  return app.listen(port, () => {
+  return app.listen(port, "0.0.0.0", () => {
     console.log(`Server is running on port ${port}`);
   });
 }
