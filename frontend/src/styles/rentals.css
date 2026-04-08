@@ -1,0 +1,63 @@
+.rental-workspace-hero__panel {
+  gap: 16px;
+}
+
+.rental-workspace-hero__points {
+  display: grid;
+  gap: 14px;
+}
+
+.rental-workspace-hero__point {
+  padding: 16px 18px;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.rental-workspace-hero__point strong {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 1rem;
+  color: #ffffff;
+}
+
+.rental-workspace-hero__point p {
+  color: rgba(248, 250, 252, 0.76);
+  line-height: 1.6;
+}
+
+.rental-workspace__panel {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.rental-workspace__summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.rental-workspace__filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 16px;
+}
+
+.rental-workspace__filters .field {
+  flex: 0 1 280px;
+  min-width: min(280px, 100%);
+}
+
+@media (max-width: 720px) {
+  .rental-workspace__summary {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .rental-workspace__filters .field {
+    flex-basis: 100%;
+  }
+}

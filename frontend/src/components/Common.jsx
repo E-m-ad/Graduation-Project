@@ -18,12 +18,6 @@ function getCategoryCardMonogram(name) {
   return (letters.slice(0, 2) || "AR").toUpperCase();
 }
 
-function getMediaBackdropStyle(imageUrl) {
-  return {
-    "--product-card-media-image": `url(${JSON.stringify(imageUrl)})`,
-  };
-}
-
 export function MessageText({ message, id }) {
   const text = typeof message === "string" ? message : message?.text || "";
   const type = typeof message === "string" ? "" : message?.type || "";
@@ -105,11 +99,7 @@ export function ProductCard({
 
   return (
     <article className="product-card">
-      <a
-        className="product-card__media"
-        href={detailsUrl}
-        style={getMediaBackdropStyle(imageUrl)}
-      >
+      <a className="product-card__media" href={detailsUrl}>
         <img
           className="product-card__image"
           src={imageUrl}
@@ -197,7 +187,6 @@ export function CategoryCard({ category }) {
             href={`/html/products.html?categoryId=${encodeURIComponent(category.id)}`}
           >
             Explore category
-            <span aria-hidden="true">{"->"}</span>
           </a>
         </div>
       </div>
@@ -306,8 +295,47 @@ function RentalCountdown({ endDate }) {
   );
 }
 
+function formatRentalStatusLabel(status) {
+  return String(status || "rental")
+    .split("_")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
 export function RentalListItem({ rental, listType, onAction, showOwner = false }) {
   const actions = [];
+  const detailsUrl = `/html/product-details.html?id=${encodeURIComponent(rental.productId)}`;
+  const imageUrl = getPrimaryImage(rental.product);
+  const productCity =
+    rental.product?.city || rental.owner?.city || rental.renter?.city || "Unknown city";
+  const counterpartRole = showOwner ? "Owner" : "Renter";
+  const counterpartName = showOwner
+    ? rental.owner?.name || "Unknown"
+    : rental.renter?.name || "Unknown";
+  const rentalStatusLabel = formatRentalStatusLabel(rental.status);
+  const rentalPeriodLabel = formatRentalStatusLabel(rental.rentalPeriodType || "Flexible");
+  const listingStatusLabel = rental.product?.status
+    ? formatRentalStatusLabel(rental.product.status)
+    : "Unavailable";
+  let timelineLabel = "Update";
+  let timelineValue = "Awaiting the next step";
+
+  if (rental.status === "completed" && rental.actualReturnDate) {
+    timelineLabel = "Finished at";
+    timelineValue = formatDateTime(rental.actualReturnDate);
+  } else if (["approved", "active"].includes(rental.status) && rental.endDate) {
+    timelineLabel = "Scheduled finish";
+    timelineValue = formatDateTime(rental.endDate);
+  } else if (rental.status === "pending") {
+    timelineValue = "Awaiting approval";
+  } else if (rental.status === "cancelled") {
+    timelineValue = "Cancelled";
+  } else if (rental.status === "rejected") {
+    timelineValue = "Rejected";
+  } else if (rental.status === "overdue") {
+    timelineValue = "Past the scheduled return";
+  }
 
   if (listType === "bookings" && ["pending", "approved"].includes(rental.status)) {
     actions.push(["cancel", "Cancel", "btn--secondary"]);
@@ -324,50 +352,89 @@ export function RentalListItem({ rental, listType, onAction, showOwner = false }
   }
 
   return (
-    <article className="list-item">
-      <div className="list-item__title-row">
-        <div>
-          <strong>{rental.product?.title || "Rental"}</strong>
-          <p className="list-item__meta">
-            {rental.status} | {formatMoney(rental.totalPrice)} |{" "}
-            {formatDateTime(rental.startDate)}
-          </p>
+    <article className="product-card rental-card">
+      <a className="product-card__media rental-card__media" href={detailsUrl}>
+        <img
+          className="product-card__image"
+          src={imageUrl}
+          alt={rental.product?.title || "Rental product image"}
+        />
+      </a>
+
+      <div className="product-card__body rental-card__body">
+        <div className="product-card__meta">
+          <span className="tag">{rental.product?.category?.name || "General"}</span>
+          <span className="product-card__city">{productCity}</span>
         </div>
-        <span className="tag tag--light">{rental.rentalPeriodType || "rental"}</span>
-      </div>
-      <p className="list-item__meta">
-        {showOwner
-          ? `Owner: ${rental.owner?.name || "Unknown"}`
-          : `Renter: ${rental.renter?.name || "Unknown"}`}
-      </p>
-      {["approved", "active"].includes(rental.status) && rental.endDate ? (
-        <p className="list-item__meta">
-          Scheduled finish: {formatDateTime(rental.endDate)}
-        </p>
-      ) : null}
-      {rental.status === "active" ? <RentalCountdown endDate={rental.endDate} /> : null}
-      {rental.status === "completed" && rental.actualReturnDate ? (
-        <p className="list-item__meta list-item__meta--accent">
-          Finished at: {formatDateTime(rental.actualReturnDate)}
-        </p>
-      ) : null}
-      <div className="listing-actions">
-        <a
-          className="btn btn--ghost btn--small"
-          href={`/html/product-details.html?id=${encodeURIComponent(rental.productId)}`}
-        >
-          View Product
-        </a>
-        {actions.map(([action, label, variant]) => (
-          <button
-            key={action}
-            type="button"
-            className={`btn ${variant} btn--small`}
-            onClick={() => onAction?.(action, rental.id)}
-          >
-            {label}
-          </button>
-        ))}
+
+        <div className="rental-card__headline">
+          <div className="rental-card__title-block">
+            <div className="rental-card__fact-tags">
+              <span className="tag tag--light">{rentalStatusLabel}</span>
+              <span className="tag">{rentalPeriodLabel}</span>
+            </div>
+            <h3 className="product-card__title">
+              <a href={detailsUrl}>{rental.product?.title || "Rental"}</a>
+            </h3>
+            <p className="product-card__summary rental-card__summary">
+              {truncateText(
+                rental.product?.description || "No description available.",
+                120,
+              )}
+            </p>
+          </div>
+          <div className="rental-card__price-block">
+            <span className="rental-card__price-label">Total price</span>
+            <p className="product-card__price">{formatMoney(rental.totalPrice)}</p>
+            <p className="compact-text">{getPriceLabel(rental.product)}</p>
+          </div>
+        </div>
+
+        <div className="rental-card__detail-grid">
+          <div className="rental-card__fact">
+            <span className="rental-card__fact-label">{counterpartRole}</span>
+            <span className="rental-card__fact-value">{counterpartName}</span>
+          </div>
+          <div className="rental-card__fact">
+            <span className="rental-card__fact-label">Starts</span>
+            <span className="rental-card__fact-value">{formatDateTime(rental.startDate)}</span>
+          </div>
+          <div className="rental-card__fact">
+            <span className="rental-card__fact-label">{timelineLabel}</span>
+            <span className="rental-card__fact-value">{timelineValue}</span>
+          </div>
+          <div className="rental-card__fact">
+            <span className="rental-card__fact-label">Listing</span>
+            <span className="rental-card__fact-value">{listingStatusLabel}</span>
+          </div>
+        </div>
+
+        {rental.status === "active" && rental.endDate ? (
+          <div className="rental-card__notice">
+            <RentalCountdown endDate={rental.endDate} />
+          </div>
+        ) : null}
+
+        <div className="product-card__bottom rental-card__bottom">
+          <p className="compact-text rental-card__listing-note">
+            {showOwner ? "Renter-side booking view" : "Owner-side rental control"}
+          </p>
+          <div className="listing-actions rental-card__actions">
+            <a className="btn btn--ghost btn--small" href={detailsUrl}>
+              View Product
+            </a>
+            {actions.map(([action, label, variant]) => (
+              <button
+                key={action}
+                type="button"
+                className={`btn ${variant} btn--small`}
+                onClick={() => onAction?.(action, rental.id)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
     </article>
   );

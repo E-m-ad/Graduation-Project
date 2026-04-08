@@ -8,6 +8,7 @@
     "build": "npm run client:build",
     "start": "node src/app.js",
     "start:with-build": "npm run client:build && node src/app.js",
+    "check": "npm run build && npm run test:smoke",
     "client:dev": "vite",
     "client:build": "vite build",
     "client:preview": "vite preview",
@@ -16,6 +17,8 @@
     "test:integration": "node scripts/integration-test.mjs",
     "test:system": "node scripts/system-smoke-test.mjs",
     "test:smoke": "npm run test:system",
+    "prisma:generate": "prisma generate",
+    "prisma:deploy": "prisma migrate deploy",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio"
   },
@@ -23,6 +26,9 @@
   "author": "",
   "license": "ISC",
   "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
   "dependencies": {
     "@prisma/adapter-pg": "^7.4.0",
     "@prisma/client": "^7.4.1",

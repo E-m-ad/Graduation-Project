@@ -7,7 +7,13 @@
 .compact-filter {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 10px;
+}
+
+.compact-filter .input {
+  flex: 1 1 min(220px, 100%);
+  min-width: 0;
 }
 
 .listing-actions {
@@ -17,7 +23,7 @@
 }
 
 .listing-card-grid {
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
   align-items: start;
 }
 
@@ -42,9 +48,10 @@
 }
 
 .owner-listing-card__status-row {
-  grid-template-columns: repeat(2, max-content);
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
 }
 
 .owner-listing-card__actions {
@@ -66,8 +73,31 @@
   background: rgba(17, 104, 96, 0.06);
 }
 
-@media (max-width: 720px) {
-  .owner-listing-card__status-row {
+@media (max-width: 980px) {
+  .listing-layout {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .compact-filter {
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .listing-card-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .owner-listing-card__media {
+    min-height: 200px;
+  }
+
+  .owner-listing-card__status-row {
+    align-items: flex-start;
+  }
+
+  .owner-listing-card__actions {
+    width: 100%;
   }
 }

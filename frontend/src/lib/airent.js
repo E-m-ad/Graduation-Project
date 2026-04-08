@@ -5,6 +5,7 @@ export const FALLBACK_IMAGE =
   "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='640' height='480' viewBox='0 0 640 480'%3E%3Crect width='640' height='480' fill='%23e2e8f0'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%231e293b' font-family='Trebuchet MS%2C sans-serif' font-size='34'%3EAI Rent%3C/text%3E%3C/svg%3E";
 export const AVATAR_PLACEHOLDER =
   "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'%3E%3Crect width='160' height='160' fill='%23e2e8f0'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%231e293b' font-family='Trebuchet MS%2C sans-serif' font-size='26'%3EUser%3C/text%3E%3C/svg%3E";
+export const DEFAULT_CURRENCY_LOCALE = "en-EG";
 
 export function truncateText(value, maxLength = 120) {
   if (!value) return "";
@@ -209,11 +210,13 @@ export function formatMoney(value) {
     return "Not set";
   }
 
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
+  const numericValue = Number(value);
+
+  return new Intl.NumberFormat(DEFAULT_CURRENCY_LOCALE, {
+    style: "decimal",
+    minimumFractionDigits: Number.isInteger(numericValue) ? 0 : 2,
     maximumFractionDigits: 2,
-  }).format(Number(value));
+  }).format(numericValue);
 }
 
 export function formatDateTime(value) {

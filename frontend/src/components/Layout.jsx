@@ -1,6 +1,35 @@
 import React, { useEffect, useState } from "react";
 import { fetchApi, getDefaultAuthenticatedPath } from "../lib/airent";
 
+function toBadgeCount(value) {
+  const nextValue = Number(value);
+  return Number.isFinite(nextValue) && nextValue > 0 ? nextValue : 0;
+}
+
+function normalizeNotificationBadgeCounts(value = {}) {
+  return {
+    notifications: toBadgeCount(value.notifications ?? value.unreadCount),
+    bookings: toBadgeCount(value.bookings ?? value.bookingUnreadCount),
+    rentals: toBadgeCount(value.rentals ?? value.rentalUnreadCount),
+  };
+}
+
+function formatBadgeCount(value) {
+  return value > 99 ? "99+" : value;
+}
+
+function NavBadgeLink({ href, label, count, isActive = false }) {
+  return (
+    <a
+      href={href}
+      className={`site-nav__link--with-badge${isActive ? " is-active" : ""}`}
+    >
+      <span>{label}</span>
+      {count ? <span className="site-nav__badge">{formatBadgeCount(count)}</span> : null}
+    </a>
+  );
+}
+
 function SiteFooter({ user }) {
   return (
     <footer className="site-footer">
@@ -61,6 +90,12 @@ function SiteFooter({ user }) {
               {user && user.role !== "admin" ? (
                 <li><a href="/html/my-listings.html">Manage listings</a></li>
               ) : null}
+              {user && user.role !== "admin" ? (
+                <li><a href="/html/bookings.html">Bookings</a></li>
+              ) : null}
+              {user && user.role !== "admin" ? (
+                <li><a href="/html/rentals.html">Rentals</a></li>
+              ) : null}
               {user?.role === "admin" ? (
                 <li><a href={getDefaultAuthenticatedPath(user)}>Admin dashboard</a></li>
               ) : null}
@@ -79,6 +114,12 @@ function SiteFooter({ user }) {
               ) : null}
               {user && user.role !== "admin" ? (
                 <li><a href="/html/wishlist.html">Wishlist</a></li>
+              ) : null}
+              {user && user.role !== "admin" ? (
+                <li><a href="/html/bookings.html">Bookings</a></li>
+              ) : null}
+              {user && user.role !== "admin" ? (
+                <li><a href="/html/rentals.html">Rentals</a></li>
               ) : null}
               {user && user.role !== "admin" ? (
                 <li><a href="/html/profile.html">Profile</a></li>
@@ -112,31 +153,54 @@ export function SiteLayout({
   children,
   activeNav,
   notificationBadgeCount,
+  notificationBadgeCounts,
 }) {
   const isAdmin = user?.role === "admin";
   const mainClassName =
     page === "home" ? "page-shell page-shell--landing" : "page-shell";
   const brandHref = page === "admin" ? getDefaultAuthenticatedPath(user) : "/";
-  const [layoutUnreadCount, setLayoutUnreadCount] = useState(
-    notificationBadgeCount ?? 0,
+  const [layoutBadgeCounts, setLayoutBadgeCounts] = useState(
+    normalizeNotificationBadgeCounts({
+      notifications: notificationBadgeCount,
+      ...(notificationBadgeCounts || {}),
+    }),
   );
 
   useEffect(() => {
-    if (notificationBadgeCount === undefined) {
+    if (
+      notificationBadgeCount === undefined &&
+      notificationBadgeCounts === undefined
+    ) {
       return;
     }
 
-    setLayoutUnreadCount(notificationBadgeCount);
-  }, [notificationBadgeCount]);
+    setLayoutBadgeCounts((previous) =>
+      normalizeNotificationBadgeCounts({
+        notifications:
+          notificationBadgeCounts?.notifications ??
+          notificationBadgeCounts?.unreadCount ??
+          notificationBadgeCount ??
+          previous.notifications,
+        bookings:
+          notificationBadgeCounts?.bookings ??
+          notificationBadgeCounts?.bookingUnreadCount ??
+          previous.bookings,
+        rentals:
+          notificationBadgeCounts?.rentals ??
+          notificationBadgeCounts?.rentalUnreadCount ??
+          previous.rentals,
+      }),
+    );
+  }, [notificationBadgeCount, notificationBadgeCounts]);
 
   useEffect(() => {
-    if (!user || isAdmin || notificationBadgeCount !== undefined) {
+    if (!user || isAdmin || notificationBadgeCounts !== undefined) {
       return undefined;
     }
 
     let active = true;
 
-    async function refreshUnreadCount() {
+    async function refreshUnreadCounts() {
       const result = await fetchApi("/api/v1/notifications/unread-count", {
         auth: true,
       });
@@ -145,31 +209,33 @@ export function SiteLayout({
         return;
       }
 
-      setLayoutUnreadCount(result.data?.data?.unreadCount || 0);
+      setLayoutBadgeCounts(normalizeNotificationBadgeCounts(result.data?.data));
     }
 
     function handleNotificationsChanged(event) {
       if (typeof event?.detail?.unreadCount === "number") {
-        setLayoutUnreadCount(event.detail.unreadCount);
-        return;
+        setLayoutBadgeCounts((previous) => ({
+          ...previous,
+          notifications: toBadgeCount(event.detail.unreadCount),
+        }));
       }
 
-      refreshUnreadCount();
+      refreshUnreadCounts();
     }
 
-    refreshUnreadCount();
-    window.addEventListener("focus", refreshUnreadCount);
+    refreshUnreadCounts();
+    window.addEventListener("focus", refreshUnreadCounts);
     window.addEventListener("notifications:changed", handleNotificationsChanged);
 
     return () => {
       active = false;
-      window.removeEventListener("focus", refreshUnreadCount);
+      window.removeEventListener("focus", refreshUnreadCounts);
       window.removeEventListener(
         "notifications:changed",
         handleNotificationsChanged,
       );
     };
-  }, [isAdmin, notificationBadgeCount, user]);
+  }, [isAdmin, notificationBadgeCounts, user]);
 
   return (
     <>
@@ -224,19 +290,28 @@ export function SiteLayout({
                 </a>
               ) : null}
               {user && !isAdmin ? (
-                <a
+                <NavBadgeLink
+                  href="/html/bookings.html"
+                  label="Bookings"
+                  count={layoutBadgeCounts.bookings}
+                  isActive={page === "bookings" || activeNav === "bookings"}
+                />
+              ) : null}
+              {user && !isAdmin ? (
+                <NavBadgeLink
+                  href="/html/rentals.html"
+                  label="Rentals"
+                  count={layoutBadgeCounts.rentals}
+                  isActive={page === "rentals" || activeNav === "rentals"}
+                />
+              ) : null}
+              {user && !isAdmin ? (
+                <NavBadgeLink
                   href="/html/profile.html?tab=notifications"
-                  className={`site-nav__link--with-badge${
-                    activeNav === "notifications" ? " is-active" : ""
-                  }`}
-                >
-                  <span>Notifications</span>
-                  {layoutUnreadCount ? (
-                    <span className="site-nav__badge">
-                      {layoutUnreadCount > 99 ? "99+" : layoutUnreadCount}
-                    </span>
-                  ) : null}
-                </a>
+                  label="Notifications"
+                  count={layoutBadgeCounts.notifications}
+                  isActive={activeNav === "notifications"}
+                />
               ) : null}
               {user && !isAdmin ? (
                 <a

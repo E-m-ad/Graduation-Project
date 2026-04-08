@@ -4,6 +4,13 @@ import z from "../utils/notification.zod.js";
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
+const BOOKING_NOTIFICATION_TYPES = new Set([
+  "rental_approved",
+  "rental_rejected",
+  "rental_started",
+  "rental_ending_soon",
+]);
+const RENTAL_NOTIFICATION_TYPES = new Set(["rental_request"]);
 
 const NOTIFICATION_SELECT = {
   id: true,
@@ -43,6 +50,51 @@ const NOTIFICATION_SELECT = {
     },
   },
 };
+
+function getScopedNotificationUserId(notification, field) {
+  if (typeof notification?.rental?.[field] === "string" && notification.rental[field]) {
+    return notification.rental[field];
+  }
+
+  const dataValue = notification?.data?.[field];
+  return typeof dataValue === "string" && dataValue ? dataValue : null;
+}
+
+function getUnreadNotificationCounts(notifications, userId) {
+  return notifications.reduce(
+    (counts, notification) => {
+      counts.unreadCount += 1;
+
+      if (BOOKING_NOTIFICATION_TYPES.has(notification.type)) {
+        counts.bookingUnreadCount += 1;
+      }
+
+      if (RENTAL_NOTIFICATION_TYPES.has(notification.type)) {
+        counts.rentalUnreadCount += 1;
+      }
+
+      if (
+        notification.type === "rental_cancelled" ||
+        notification.type === "rental_completed"
+      ) {
+        if (getScopedNotificationUserId(notification, "renterId") === userId) {
+          counts.bookingUnreadCount += 1;
+        }
+
+        if (getScopedNotificationUserId(notification, "ownerId") === userId) {
+          counts.rentalUnreadCount += 1;
+        }
+      }
+
+      return counts;
+    },
+    {
+      unreadCount: 0,
+      bookingUnreadCount: 0,
+      rentalUnreadCount: 0,
+    },
+  );
+}
 
 function buildPagination(page, limit, totalItems) {
   const totalPages = totalItems === 0 ? 0 : Math.ceil(totalItems / limit);
@@ -248,18 +300,26 @@ async function deleteNotification(req, res) {
 
 async function getUnreadNotificationsCount(req, res) {
   try {
-    const unreadCount = await db.notification.count({
+    const unreadNotifications = await db.notification.findMany({
       where: {
         userId: req.user.id,
         isRead: false,
+      },
+      select: {
+        type: true,
+        data: true,
+        rental: {
+          select: {
+            ownerId: true,
+            renterId: true,
+          },
+        },
       },
     });
 
     return res.status(200).json({
       success: true,
-      data: {
-        unreadCount,
-      },
+      data: getUnreadNotificationCounts(unreadNotifications, req.user.id),
     });
   } catch (error) {
     console.error("getUnreadNotificationsCount error:", error);

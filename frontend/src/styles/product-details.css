@@ -108,6 +108,17 @@
   font-weight: 700;
 }
 
+.detail-fact__link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.detail-fact__link:hover,
+.detail-fact__link:focus-visible {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
 .detail-actions--stacked {
   flex-direction: column;
 }

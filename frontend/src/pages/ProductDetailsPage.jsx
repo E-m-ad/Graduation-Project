@@ -26,6 +26,14 @@ function getProductId() {
   return new URLSearchParams(window.location.search).get("id");
 }
 
+function getOwnerProfileHref(ownerId) {
+  if (!ownerId) {
+    return "";
+  }
+
+  return `/html/profile.html?id=${encodeURIComponent(ownerId)}`;
+}
+
 function getApprovalLabel(product) {
   if (!product) return "Unknown";
   if (product.isApproved) return "Approved";
@@ -946,12 +954,23 @@ export function ProductDetailsPage({ page }) {
   const isUnlistedApprovedListing = Boolean(
     product?.isApproved && product?.status === "suspended",
   );
+  const ownerName = product?.owner?.name || "Unknown";
+  const ownerProfileHref = getOwnerProfileHref(product?.owner?.id);
   const facts = product
     ? [
         ["City", product.city || "Not set"],
         ["Condition", product.condition || "Not set"],
         ["Deposit", formatMoney(product.securityDeposit)],
-        ["Owner", product.owner?.name || "Unknown"],
+        [
+          "Owner",
+          ownerProfileHref ? (
+            <a className="detail-fact__link" href={ownerProfileHref}>
+              {ownerName}
+            </a>
+          ) : (
+            ownerName
+          ),
+        ],
         ["Approval", getApprovalLabel(product)],
         [
           "Rating",
@@ -1028,9 +1047,15 @@ export function ProductDetailsPage({ page }) {
                   {isSaved ? "Saved to Wishlist" : "Save to Wishlist"}
                 </button>
               ) : null}
-              <a className="btn btn--ghost" href="#" onClick={(event) => event.preventDefault()}>
-                Owner: {product.owner?.name || "Unknown"}
-              </a>
+              {ownerProfileHref ? (
+                <a className="btn btn--ghost" href={ownerProfileHref}>
+                  Owner: {ownerName}
+                </a>
+              ) : (
+                <span className="btn btn--ghost" aria-disabled="true">
+                  Owner: {ownerName}
+                </span>
+              )}
             </div>
           </article>
 

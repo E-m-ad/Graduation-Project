@@ -10,7 +10,7 @@ import { useMessageState, useSession } from "../lib/hooks";
 import {
   EmptyState,
   MessageText,
-  RentalListItem,
+  ProductCard,
   SectionHeading,
 } from "../components/Common";
 import { SiteLayout } from "../components/Layout";
@@ -25,6 +25,7 @@ function createProfileForm(user) {
   };
 }
 
+const CHECK_MARK = "\u2713";
 const PROFILE_TAB_VALUES = ["account", "notifications"];
 
 function getInitialProfileTab() {
@@ -34,6 +35,15 @@ function getInitialProfileTab() {
       : new URLSearchParams(window.location.search).get("tab");
 
   return PROFILE_TAB_VALUES.includes(tab) ? tab : "account";
+}
+
+function getPublicProfileId() {
+  const id =
+    typeof window === "undefined"
+      ? ""
+      : new URLSearchParams(window.location.search).get("id") || "";
+
+  return id.trim();
 }
 
 function syncProfileTabInUrl(tab) {
@@ -169,21 +179,14 @@ function NotificationListItem({ notification, onMarkRead, onDelete }) {
   );
 }
 
-function replaceRentalInList(items, nextRental) {
-  const hasMatch = items.some((item) => item.id === nextRental.id);
-  if (!hasMatch) {
-    return items;
-  }
-
-  return items.map((item) => (item.id === nextRental.id ? nextRental : item));
-}
-
 export function ProfilePage({ page }) {
   const { user, loading, setUser, refreshUser, logout } = useSession();
   const [message, showMessage] = useMessageState("");
   const [activeTab, setActiveTab] = useState(getInitialProfileTab);
   const [profileUser, setProfileUser] = useState(user);
   const [profileForm, setProfileForm] = useState(createProfileForm(user));
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState(null);
   const profileDirtyRef = useRef(false);
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: "",
@@ -191,38 +194,51 @@ export function ProfilePage({ page }) {
     confirmNewPassword: "",
   });
   const [avatarFile, setAvatarFile] = useState(null);
-  const [bookings, setBookings] = useState([]);
-  const [requests, setRequests] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [notificationsUnreadCount, setNotificationsUnreadCount] = useState(0);
   const [verificationPreview, setVerificationPreview] = useState(null);
   const [sendingVerification, setSendingVerification] = useState(false);
+  const [publicProfileUser, setPublicProfileUser] = useState(null);
+  const [publicProducts, setPublicProducts] = useState([]);
+  const [loadingPublicProfile, setLoadingPublicProfile] = useState(false);
   const userId = user?.id;
   const userRole = user?.role;
-  const activeOwnerRentals = requests.filter((rental) => rental.status === "active");
-  const ownerRequestHistory = requests.filter((rental) => rental.status !== "active");
+  const publicProfileId = getPublicProfileId();
+  const isOwnPublicProfile = Boolean(
+    publicProfileId && userId && publicProfileId === userId,
+  );
+  const isViewingPublicProfile = Boolean(publicProfileId) && !isOwnPublicProfile;
 
   useEffect(() => {
+    if (isViewingPublicProfile && publicProfileUser?.name) {
+      document.title = `${publicProfileUser.name} | AI Rent`;
+      return;
+    }
+
     document.title = "Profile | AI Rent";
-  }, []);
+  }, [isViewingPublicProfile, publicProfileUser?.name]);
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!loading && !user && !isViewingPublicProfile) {
       redirectToLogin();
       return;
     }
 
-    if (!loading && user?.role === "admin") {
+    if (!loading && user?.role === "admin" && !isViewingPublicProfile) {
       window.location.href = getDefaultAuthenticatedPath(user);
     }
-  }, [loading, user]);
+  }, [isViewingPublicProfile, loading, user]);
 
   useEffect(() => {
+    if (isViewingPublicProfile) {
+      return;
+    }
+
     setProfileUser(user);
     if (!profileDirtyRef.current) {
       setProfileForm(createProfileForm(user));
     }
-  }, [user]);
+  }, [isViewingPublicProfile, user]);
 
   useEffect(() => {
     function handlePopState() {
@@ -235,6 +251,29 @@ export function ProfilePage({ page }) {
     };
   }, []);
 
+  useEffect(() => {
+    if (activeTab !== "account") {
+      setIsEditProfileOpen(false);
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (!avatarPreview) {
+      return undefined;
+    }
+
+    function handleKeyDown(event) {
+      if (event.key === "Escape") {
+        setAvatarPreview(null);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [avatarPreview]);
+
   function applyNotificationsPayload(payload) {
     const nextNotifications = payload?.notifications || [];
     const nextUnreadCount = payload?.unreadCount || 0;
@@ -244,22 +283,78 @@ export function ProfilePage({ page }) {
   }
 
   useEffect(() => {
-    let active = true;
+    if (!isViewingPublicProfile || !publicProfileId) {
+      setPublicProfileUser(null);
+      setPublicProducts([]);
+      setLoadingPublicProfile(false);
+      return;
+    }
 
-    async function loadDashboard() {
-      if (loading || !userId || userRole === "admin") {
+    let active = true;
+    setLoadingPublicProfile(true);
+    showMessage("");
+
+    async function loadPublicProfile() {
+      const encodedProfileId = encodeURIComponent(publicProfileId);
+      const [profileResult, productsResult] = await Promise.all([
+        fetchApi(`/api/v1/public/users/${encodedProfileId}`),
+        fetchApi(`/api/v1/public/users/${encodedProfileId}/products`),
+      ]);
+
+      if (!active) {
         return;
       }
 
-      const [
-        profileResult,
-        bookingsResult,
-        requestsResult,
-        notificationsResult,
-      ] = await Promise.all([
+      const nextProfile =
+        profileResult.data?.user ||
+        profileResult.data?.data?.user ||
+        productsResult.data?.data?.user ||
+        null;
+
+      if (!profileResult.ok || !profileResult.data?.success || !nextProfile) {
+        setPublicProfileUser(null);
+        setPublicProducts([]);
+        setLoadingPublicProfile(false);
+        showMessage(
+          profileResult.data?.message || "Unable to load this owner profile.",
+          "error",
+        );
+        return;
+      }
+
+      setPublicProfileUser(nextProfile);
+
+      if (productsResult.ok && productsResult.data?.success) {
+        setPublicProducts(productsResult.data?.data?.products || []);
+      } else {
+        setPublicProducts([]);
+        showMessage(
+          productsResult.data?.message ||
+            "Profile loaded, but the owner's public listings are unavailable right now.",
+          "error",
+        );
+      }
+
+      setLoadingPublicProfile(false);
+    }
+
+    loadPublicProfile();
+
+    return () => {
+      active = false;
+    };
+  }, [isViewingPublicProfile, publicProfileId, showMessage]);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadDashboard() {
+      if (isViewingPublicProfile || loading || !userId || userRole === "admin") {
+        return;
+      }
+
+      const [profileResult, notificationsResult] = await Promise.all([
         fetchApi("/api/v1/users/me", { auth: true }),
-        fetchApi("/api/v1/rentals/my-bookings?limit=5", { auth: true }),
-        fetchApi("/api/v1/rentals/my-requests?limit=5", { auth: true }),
         fetchApi("/api/v1/notifications?limit=20", { auth: true }),
       ]);
 
@@ -276,8 +371,6 @@ export function ProfilePage({ page }) {
         }
       }
 
-      setBookings(bookingsResult.data?.data?.rentals || []);
-      setRequests(requestsResult.data?.data?.rentals || []);
       applyNotificationsPayload(notificationsResult.data?.data);
     }
 
@@ -286,7 +379,7 @@ export function ProfilePage({ page }) {
     return () => {
       active = false;
     };
-  }, [loading, setUser, userId, userRole]);
+  }, [isViewingPublicProfile, loading, setUser, userId, userRole]);
 
   const avatarSrc = useMemo(() => {
     if (avatarFile) {
@@ -304,18 +397,6 @@ export function ProfilePage({ page }) {
     };
   }, [avatarFile, avatarSrc]);
 
-  async function reloadLists() {
-    const [bookingsResult, requestsResult, notificationsResult] = await Promise.all([
-      fetchApi("/api/v1/rentals/my-bookings?limit=5", { auth: true }),
-      fetchApi("/api/v1/rentals/my-requests?limit=5", { auth: true }),
-      fetchApi("/api/v1/notifications?limit=20", { auth: true }),
-    ]);
-
-    setBookings(bookingsResult.data?.data?.rentals || []);
-    setRequests(requestsResult.data?.data?.rentals || []);
-    applyNotificationsPayload(notificationsResult.data?.data);
-  }
-
   async function reloadNotifications() {
     const notificationsResult = await fetchApi("/api/v1/notifications?limit=20", {
       auth: true,
@@ -327,62 +408,6 @@ export function ProfilePage({ page }) {
 
     applyNotificationsPayload(notificationsResult.data?.data);
     return true;
-  }
-
-  async function handleRentalAction(action, rentalId) {
-    const endpointMap = {
-      approve: { method: "PUT", path: `/api/v1/rentals/${rentalId}/approve` },
-      reject: { method: "PUT", path: `/api/v1/rentals/${rentalId}/reject` },
-      cancel: { method: "PUT", path: `/api/v1/rentals/${rentalId}/cancel` },
-      start: { method: "PUT", path: `/api/v1/rentals/${rentalId}/start` },
-      complete: { method: "PUT", path: `/api/v1/rentals/${rentalId}/complete` },
-    };
-
-    const requestConfig = endpointMap[action];
-    if (!requestConfig) {
-      return;
-    }
-
-    const body =
-      action === "reject" || action === "cancel"
-        ? {
-            reason:
-              window.prompt("Optional reason for this action:")?.trim() ||
-              undefined,
-          }
-        : undefined;
-
-    const result = await fetchApi(requestConfig.path, {
-      method: requestConfig.method,
-      auth: true,
-      body,
-    });
-
-    const responseRental = result.data?.data;
-    const successMessage =
-      action === "start" && responseRental?.endDate
-        ? `Rental started. Scheduled finish: ${new Date(responseRental.endDate).toLocaleString()}`
-        : action === "complete" &&
-            (responseRental?.actualReturnDate || responseRental?.endDate)
-          ? `Rental completed. Finished at: ${new Date(
-              responseRental.actualReturnDate || responseRental.endDate,
-            ).toLocaleString()}`
-          : null;
-
-    showMessage(
-      successMessage ||
-        result.data?.message ||
-        (result.ok ? "Action completed successfully." : "Action failed."),
-      result.ok ? "success" : "error",
-    );
-
-    if (result.ok) {
-      if (responseRental) {
-        setBookings((previous) => replaceRentalInList(previous, responseRental));
-        setRequests((previous) => replaceRentalInList(previous, responseRental));
-      }
-      await reloadLists();
-    }
   }
 
   async function handleMarkRead(notificationId) {
@@ -453,6 +478,29 @@ export function ProfilePage({ page }) {
     }));
   }
 
+  function closeEditProfileForm() {
+    profileDirtyRef.current = false;
+    setProfileForm(createProfileForm(profileUser || user));
+    setIsEditProfileOpen(false);
+  }
+
+  function openEditProfileForm() {
+    profileDirtyRef.current = false;
+    setProfileForm(createProfileForm(profileUser || user));
+    setIsEditProfileOpen(true);
+  }
+
+  function openAvatarPreview(src, alt) {
+    if (!src) {
+      return;
+    }
+
+    setAvatarPreview({
+      src,
+      alt,
+    });
+  }
+
   async function handleProfileSubmit(event) {
     event.preventDefault();
 
@@ -487,6 +535,7 @@ export function ProfilePage({ page }) {
       setUser(result.data.data);
       setProfileUser(result.data.data);
       setProfileForm(createProfileForm(result.data.data));
+      setIsEditProfileOpen(false);
     }
   }
 
@@ -588,6 +637,157 @@ export function ProfilePage({ page }) {
     }
   }
 
+  const publicProfileAvatar = publicProfileUser?.avatarUrl || AVATAR_PLACEHOLDER;
+  const publicProfileName = publicProfileUser?.name || "Owner profile";
+  const publicListingCount = publicProducts.length;
+  const showProfileSidebar = activeTab === "account";
+  const avatarViewer = avatarPreview ? (
+    <div
+      className="image-viewer"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Large profile image"
+      onClick={() => setAvatarPreview(null)}
+    >
+      <div
+        className="image-viewer__content"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <button
+          type="button"
+          className="image-viewer__close"
+          onClick={() => setAvatarPreview(null)}
+        >
+          Close
+        </button>
+        <img
+          className="image-viewer__image"
+          src={avatarPreview.src}
+          alt={avatarPreview.alt}
+        />
+      </div>
+    </div>
+  ) : null;
+
+  if (isViewingPublicProfile) {
+    return (
+      <SiteLayout page={page} user={user} onLogout={logout}>
+        <MessageText message={message} id="profileMessage" />
+
+        <section className="profile-grid">
+          <aside className="surface-panel profile-card">
+            <button
+              type="button"
+              className="profile-card__avatar-button"
+              onClick={() =>
+                openAvatarPreview(publicProfileAvatar, `${publicProfileName} avatar`)
+              }
+              aria-label="Open larger avatar view"
+            >
+              <img
+                className="profile-card__avatar"
+                src={publicProfileAvatar}
+                alt={`${publicProfileName} avatar`}
+              />
+            </button>
+            <p className="profile-card__hint">Click the image to preview it larger.</p>
+            <div className="profile-card__headline">
+              <h1>{publicProfileName}</h1>
+              {publicProfileUser?.isVerified ? (
+                <span className="profile-status-badge profile-status-badge--verified">
+                  <span className="profile-status-badge__icon" aria-hidden="true">
+                    {CHECK_MARK}
+                  </span>
+                  <span>Verified owner</span>
+                </span>
+              ) : null}
+            </div>
+            <p>Public owner profile</p>
+            <div className="profile-card__meta">
+              <span className="profile-card__meta-item">
+                {publicProfileUser?.city || "City not added"}
+              </span>
+              <span className="profile-card__meta-item">
+                {publicProfileUser?.isVerified
+                  ? "Verified account"
+                  : "Verification pending"}
+              </span>
+              <span className="profile-card__meta-item">
+                {loadingPublicProfile
+                  ? "Loading listings..."
+                  : `${publicListingCount} public listing${
+                      publicListingCount === 1 ? "" : "s"
+                    }`}
+              </span>
+            </div>
+            <p className="profile-card__bio">
+              {publicProfileUser?.bio || "This owner has not added a bio yet."}
+            </p>
+          </aside>
+
+          <section className="profile-content">
+            <article className="surface-panel">
+              <SectionHeading
+                eyebrow="Owner overview"
+                title="Profile details"
+                compact
+              />
+              {loadingPublicProfile ? (
+                <EmptyState message="Loading owner profile..." />
+              ) : publicProfileUser ? (
+                <div className="profile-public-summary">
+                  <div className="profile-public-summary__item">
+                    <strong>Name</strong>
+                    <span>{publicProfileUser.name || "Unknown owner"}</span>
+                  </div>
+                  <div className="profile-public-summary__item">
+                    <strong>City</strong>
+                    <span>{publicProfileUser.city || "City not added"}</span>
+                  </div>
+                  <div className="profile-public-summary__item">
+                    <strong>Verification</strong>
+                    <span>
+                      {publicProfileUser.isVerified
+                        ? "Verified account"
+                        : "Verification pending"}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <EmptyState message="Owner profile unavailable." />
+              )}
+            </article>
+
+            <article className="surface-panel">
+              <SectionHeading
+                eyebrow="Owner listings"
+                title="Related products"
+                note={
+                  publicProfileUser
+                    ? `Browse ${publicProfileName}'s public listings.`
+                    : "Browse this owner's public listings."
+                }
+                compact
+              />
+              {loadingPublicProfile ? (
+                <EmptyState message="Loading owner listings..." />
+              ) : publicProducts.length ? (
+                <div className="card-grid">
+                  {publicProducts.map((product) => (
+                    <ProductCard key={product.id} product={product} />
+                  ))}
+                </div>
+              ) : (
+                <EmptyState message="This owner has no public listings yet." />
+              )}
+            </article>
+          </section>
+        </section>
+        {avatarViewer}
+      </SiteLayout>
+    );
+  }
+
   return (
     <SiteLayout
       page={page}
@@ -598,147 +798,211 @@ export function ProfilePage({ page }) {
     >
       <MessageText message={message} id="profileMessage" />
 
-      <section className="profile-grid">
-        <aside className="surface-panel profile-card">
-          <img
-            className="profile-card__avatar"
-            src={avatarSrc}
-            alt="Profile avatar"
-          />
-          <h1>{profileUser?.name || "Your profile"}</h1>
-          <p>Role: {profileUser?.role || "user"}</p>
-          <div className="profile-card__meta">
-            <span>{profileUser?.email || "No email added"}</span>
-            <span>{profileUser?.city || "City not added"}</span>
-            <span>
-              {profileUser?.isVerified ? "Verified account" : "Verification pending"}
-            </span>
-          </div>
-
-          <form className="stack-form" onSubmit={handleAvatarSubmit}>
-            <div className="field">
-              <label htmlFor="avatarInput">Update avatar</label>
-              <input
-                id="avatarInput"
-                name="avatar"
-                type="file"
-                className="input"
-                accept="image/*"
-                onChange={(event) =>
-                  setAvatarFile(event.target.files?.[0] || null)
-                }
+      <section className={`profile-grid${showProfileSidebar ? "" : " profile-grid--single"}`}>
+        {showProfileSidebar ? (
+          <aside className="surface-panel profile-card">
+            <button
+              type="button"
+              className="profile-card__avatar-button"
+              onClick={() => openAvatarPreview(avatarSrc, "Profile avatar")}
+              aria-label="Open larger avatar view"
+            >
+              <img
+                className="profile-card__avatar"
+                src={avatarSrc}
+                alt="Profile avatar"
               />
-            </div>
-            <button type="submit" className="btn btn--secondary btn--full">
-              Upload Avatar
             </button>
-          </form>
-        </aside>
+            <p className="profile-card__hint">Click the image to preview it larger.</p>
+            <div className="profile-card__headline">
+              <h1>{profileUser?.name || "Your profile"}</h1>
+              <span
+                className={`profile-status-badge ${
+                  profileUser?.isVerified
+                    ? "profile-status-badge--verified"
+                    : "profile-status-badge--pending"
+                }`}
+              >
+                <span className="profile-status-badge__icon" aria-hidden="true">
+                  {profileUser?.isVerified ? CHECK_MARK : "!"}
+                </span>
+                <span>
+                  {profileUser?.isVerified
+                    ? "Email verified"
+                    : "Verification pending"}
+                </span>
+              </span>
+            </div>
+
+            <form className="stack-form" onSubmit={handleAvatarSubmit}>
+              <div className="field">
+                <label htmlFor="avatarInput">Update avatar</label>
+                <input
+                  id="avatarInput"
+                  name="avatar"
+                  type="file"
+                  className="input"
+                  accept="image/*"
+                  onChange={(event) =>
+                    setAvatarFile(event.target.files?.[0] || null)
+                  }
+                />
+              </div>
+              <button type="submit" className="btn btn--secondary btn--full">
+                Upload Avatar
+              </button>
+            </form>
+          </aside>
+        ) : null}
 
         <section className="profile-content">
-          <div className="profile-tabs" role="tablist" aria-label="Profile sections">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === "account"}
-              className={`profile-tab${activeTab === "account" ? " is-active" : ""}`}
-              onClick={() => handleTabChange("account")}
-            >
-              <span>Profile</span>
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === "notifications"}
-              className={`profile-tab${activeTab === "notifications" ? " is-active" : ""}`}
-              onClick={() => handleTabChange("notifications")}
-            >
-              <span>Notifications</span>
-              {notificationsUnreadCount ? (
-                <span className="profile-tab__badge">
-                  {notificationsUnreadCount > 99 ? "99+" : notificationsUnreadCount}
-                </span>
-              ) : null}
-            </button>
-          </div>
-
           {activeTab === "account" ? (
             <>
               <article className="surface-panel">
                 <SectionHeading
-                  eyebrow="Account details"
-                  title="Edit profile"
+                  eyebrow="Account overview"
+                  title="Profile summary"
                   compact
-                />
+                >
+                  <button
+                    type="button"
+                    className={`btn btn--small ${
+                      isEditProfileOpen ? "btn--ghost" : "btn--primary"
+                    }`}
+                    onClick={() =>
+                      isEditProfileOpen
+                        ? closeEditProfileForm()
+                        : openEditProfileForm()
+                    }
+                  >
+                    {isEditProfileOpen ? "Close editor" : "Edit profile"}
+                  </button>
+                </SectionHeading>
 
-                <form className="form-grid" onSubmit={handleProfileSubmit}>
-                  <div className="field">
-                    <label htmlFor="profileNameInput">Name</label>
-                    <input
-                      id="profileNameInput"
-                      name="name"
-                      type="text"
-                      className="input"
-                      value={profileForm.name}
-                      onChange={(event) => updateProfileField("name", event.target.value)}
-                    />
+                <div className="profile-summary-grid">
+                  <div className="profile-summary-card">
+                    <strong>Name</strong>
+                    <span>{profileUser?.name || "Not added"}</span>
                   </div>
-
-                  <div className="field">
-                    <label htmlFor="profilePhoneInput">Phone</label>
-                    <input
-                      id="profilePhoneInput"
-                      name="phone"
-                      type="text"
-                      className="input"
-                      value={profileForm.phone}
-                      onChange={(event) => updateProfileField("phone", event.target.value)}
-                    />
+                  <div className="profile-summary-card">
+                    <strong>Email</strong>
+                    <span>{profileUser?.email || "Not added"}</span>
                   </div>
-
-                  <div className="field">
-                    <label htmlFor="profileCityInput">City</label>
-                    <input
-                      id="profileCityInput"
-                      name="city"
-                      type="text"
-                      className="input"
-                      value={profileForm.city}
-                      onChange={(event) => updateProfileField("city", event.target.value)}
-                    />
+                  <div className="profile-summary-card">
+                    <strong>Phone</strong>
+                    <span>{profileUser?.phone || "Not added"}</span>
                   </div>
-
-                  <div className="field">
-                    <label htmlFor="profileAddressInput">Address</label>
-                    <input
-                      id="profileAddressInput"
-                      name="address"
-                      type="text"
-                      className="input"
-                      value={profileForm.address}
-                      onChange={(event) => updateProfileField("address", event.target.value)}
-                    />
+                  <div className="profile-summary-card">
+                    <strong>City</strong>
+                    <span>{profileUser?.city || "Not added"}</span>
                   </div>
-
-                  <div className="field field--full">
-                    <label htmlFor="profileBioInput">Bio</label>
-                    <textarea
-                      id="profileBioInput"
-                      name="bio"
-                      className="textarea"
-                      rows="4"
-                      value={profileForm.bio}
-                      onChange={(event) => updateProfileField("bio", event.target.value)}
-                    />
+                  <div className="profile-summary-card profile-summary-card--full">
+                    <strong>Address</strong>
+                    <span>{profileUser?.address || "Not added"}</span>
                   </div>
-
-                  <div className="field field--full">
-                    <button type="submit" className="btn btn--primary">
-                      Save Profile
-                    </button>
+                  <div className="profile-summary-card profile-summary-card--full">
+                    <strong>Bio</strong>
+                    <span>
+                      {profileUser?.bio || "Add a short bio to make your profile feel more complete."}
+                    </span>
                   </div>
-                </form>
+                </div>
               </article>
+
+              {isEditProfileOpen ? (
+                <article className="surface-panel profile-edit-panel">
+                  <SectionHeading
+                    eyebrow="Account details"
+                    title="Edit profile"
+                    compact
+                  >
+                    <button
+                      type="button"
+                      className="btn btn--ghost btn--small"
+                      onClick={closeEditProfileForm}
+                    >
+                      Cancel
+                    </button>
+                  </SectionHeading>
+
+                  <form className="form-grid" onSubmit={handleProfileSubmit}>
+                    <div className="field">
+                      <label htmlFor="profileNameInput">Name</label>
+                      <input
+                        id="profileNameInput"
+                        name="name"
+                        type="text"
+                        className="input"
+                        value={profileForm.name}
+                        onChange={(event) => updateProfileField("name", event.target.value)}
+                      />
+                    </div>
+
+                    <div className="field">
+                      <label htmlFor="profilePhoneInput">Phone</label>
+                      <input
+                        id="profilePhoneInput"
+                        name="phone"
+                        type="text"
+                        className="input"
+                        value={profileForm.phone}
+                        onChange={(event) => updateProfileField("phone", event.target.value)}
+                      />
+                    </div>
+
+                    <div className="field">
+                      <label htmlFor="profileCityInput">City</label>
+                      <input
+                        id="profileCityInput"
+                        name="city"
+                        type="text"
+                        className="input"
+                        value={profileForm.city}
+                        onChange={(event) => updateProfileField("city", event.target.value)}
+                      />
+                    </div>
+
+                    <div className="field">
+                      <label htmlFor="profileAddressInput">Address</label>
+                      <input
+                        id="profileAddressInput"
+                        name="address"
+                        type="text"
+                        className="input"
+                        value={profileForm.address}
+                        onChange={(event) => updateProfileField("address", event.target.value)}
+                      />
+                    </div>
+
+                    <div className="field field--full">
+                      <label htmlFor="profileBioInput">Bio</label>
+                      <textarea
+                        id="profileBioInput"
+                        name="bio"
+                        className="textarea"
+                        rows="4"
+                        value={profileForm.bio}
+                        onChange={(event) => updateProfileField("bio", event.target.value)}
+                      />
+                    </div>
+
+                    <div className="field field--full">
+                      <div className="profile-section-actions">
+                        <button type="submit" className="btn btn--primary">
+                          Save Profile
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn--secondary"
+                          onClick={closeEditProfileForm}
+                        >
+                          Discard changes
+                        </button>
+                      </div>
+                    </div>
+                  </form>
+                </article>
+              ) : null}
 
               <article className="surface-panel">
                 <SectionHeading
@@ -807,18 +1071,14 @@ export function ProfilePage({ page }) {
                 </form>
               </article>
 
-              <article className="surface-panel">
-                <SectionHeading
-                  eyebrow="Email verification"
-                  title="Verify your email"
-                  compact
-                />
+              {!profileUser?.isVerified ? (
+                <article className="surface-panel">
+                  <SectionHeading
+                    eyebrow="Email verification"
+                    title="Verify your email"
+                    compact
+                  />
 
-                {profileUser?.isVerified ? (
-                  <p className="compact-text">
-                    Your email is already verified.
-                  </p>
-                ) : (
                   <div className="profile-verification">
                     <p className="compact-text">
                       Your account is not verified yet. Send yourself a verification
@@ -857,77 +1117,34 @@ export function ProfilePage({ page }) {
                       </div>
                     ) : null}
                   </div>
-                )}
+                </article>
+              ) : null}
+
+              <article className="surface-panel">
+                <SectionHeading
+                  eyebrow="Workspace"
+                  title="Open your rental pages"
+                  compact
+                />
+                <p className="compact-text">
+                  Bookings and rentals now live in dedicated pages from the main
+                  navigation, so your profile stays focused on account settings.
+                </p>
+                <div className="profile-section-actions">
+                  <a className="btn btn--secondary" href="/html/bookings.html">
+                    Bookings
+                  </a>
+                  <a className="btn btn--secondary" href="/html/rentals.html">
+                    Rentals
+                  </a>
+                  <a
+                    className="btn btn--ghost"
+                    href="/html/profile.html?tab=notifications"
+                  >
+                    Notifications
+                  </a>
+                </div>
               </article>
-
-              <section className="profile-panels">
-                <article className="surface-panel">
-                  <SectionHeading
-                    eyebrow="Renter side"
-                    title="My bookings"
-                    compact
-                  />
-                  <div className="list-stack">
-                    {bookings.length ? (
-                      bookings.map((rental) => (
-                        <RentalListItem
-                          key={rental.id}
-                          rental={rental}
-                          listType="bookings"
-                          showOwner
-                          onAction={handleRentalAction}
-                        />
-                      ))
-                    ) : (
-                      <EmptyState message="You have no bookings yet." />
-                    )}
-                  </div>
-                </article>
-
-                <article className="surface-panel">
-                  <SectionHeading
-                    eyebrow="Owner side"
-                    title="Active rentals"
-                    compact
-                  />
-                  <div className="list-stack">
-                    {activeOwnerRentals.length ? (
-                      activeOwnerRentals.map((rental) => (
-                        <RentalListItem
-                          key={rental.id}
-                          rental={rental}
-                          listType="requests"
-                          onAction={handleRentalAction}
-                        />
-                      ))
-                    ) : (
-                      <EmptyState message="No owner rentals are active right now." />
-                    )}
-                  </div>
-                </article>
-
-                <article className="surface-panel">
-                  <SectionHeading
-                    eyebrow="Owner side"
-                    title="Incoming requests"
-                    compact
-                  />
-                  <div className="list-stack">
-                    {ownerRequestHistory.length ? (
-                      ownerRequestHistory.map((rental) => (
-                        <RentalListItem
-                          key={rental.id}
-                          rental={rental}
-                          listType="requests"
-                          onAction={handleRentalAction}
-                        />
-                      ))
-                    ) : (
-                      <EmptyState message="You have no pending owner requests right now." />
-                    )}
-                  </div>
-                </article>
-              </section>
             </>
           ) : (
             <article className="surface-panel">
@@ -937,6 +1154,13 @@ export function ProfilePage({ page }) {
                 compact
               >
                 <div className="profile-notifications__actions">
+                  <button
+                    type="button"
+                    className="btn btn--ghost btn--small"
+                    onClick={() => handleTabChange("account")}
+                  >
+                    Back to profile
+                  </button>
                   <span className="tag">
                     {notificationsUnreadCount
                       ? `${notificationsUnreadCount} unread`
@@ -970,6 +1194,7 @@ export function ProfilePage({ page }) {
           )}
         </section>
       </section>
+      {avatarViewer}
     </SiteLayout>
   );
 }

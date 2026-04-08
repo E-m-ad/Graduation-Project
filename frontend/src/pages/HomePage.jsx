@@ -212,10 +212,11 @@ export function HomePage({ page }) {
   const cityHighlights = getCityHighlights(products);
   const cityCount = new Set(products.map((product) => product.city).filter(Boolean)).size;
   const totalListings = pagination.totalItems || products.length || 0;
+  const hasRecommendations = Boolean(user && recommendations.length);
   const showcaseProducts = getShowcaseProducts(
     recommendations,
     featuredProducts,
-    1,
+    hasRecommendations ? 3 : 2,
   );
   const heroGreeting = user
     ? `Welcome back, ${user.name}. Your saved listings and marketplace picks are ready.`
@@ -308,6 +309,34 @@ export function HomePage({ page }) {
     activeRecommendationTab === "top"
       ? "Keep one standout match front and center when you want the fastest next step."
       : "Every recommendation returned for your account is visible here, so you can compare the full personalized set without leaving the homepage.";
+  const homeSectionLinks = [
+    hasRecommendations
+      ? {
+          key: "recommendations",
+          label: "For you",
+          note: `${formatMetric(recommendations.length)} picks`,
+          href: "#home-recommendations",
+        }
+      : null,
+    {
+      key: "categories",
+      label: "Categories",
+      note: `${formatMetric(topCategories.length)} popular`,
+      href: "#home-categories",
+    },
+    {
+      key: "fresh-listings",
+      label: "Fresh listings",
+      note: `${formatMetric(featuredProducts.length)} shown`,
+      href: "#home-fresh-listings",
+    },
+    {
+      key: "cities",
+      label: "Cities",
+      note: `${formatMetric(cityHighlights.length)} hotspots`,
+      href: "#home-cities",
+    },
+  ].filter(Boolean);
   const projectAbstract =
     "AI Rent is a rental marketplace project built to make item discovery, booking decisions, and listing management simpler for both renters and owners. It brings search, recommendations, moderation, and request handling into one connected experience instead of sending people across disconnected tools.";
 
@@ -376,6 +405,12 @@ export function HomePage({ page }) {
                 Browse listings
               </a>
               <a
+                className="btn btn--secondary"
+                href={hasRecommendations ? "#home-recommendations" : "#home-categories"}
+              >
+                {hasRecommendations ? "Jump to recommendations" : "Jump to categories"}
+              </a>
+              <a
                 className="btn btn--ghost"
                 href={user ? "/html/my-listings.html" : "/html/register.html"}
               >
@@ -384,12 +419,23 @@ export function HomePage({ page }) {
             </div>
             <p className="market-hero__note">{heroGreeting}</p>
           </div>
+
+          <div className="market-hero__routes">
+            <span className="market-hero__quicklinks-label">Quick routes</span>
+            <div className="market-route-row">
+              {homeSectionLinks.map((link) => (
+                <a className="market-route-pill" href={link.href} key={link.key}>
+                  <span className="market-route-pill__label">{link.label}</span>
+                  <span className="market-route-pill__note">{link.note}</span>
+                </a>
+              ))}
+            </div>
+          </div>
         </div>
 
         <aside className="market-hero__panel">
           <div className="market-hero__panel-copy">
             <p className="panel-label">Marketplace pulse</p>
-            <h2>Fresh inventory, clearer discovery, and cleaner decisions.</h2>
           </div>
 
           <div className="market-showcase">
@@ -457,56 +503,12 @@ export function HomePage({ page }) {
         </aside>
       </section>
 
-      <section className="section">
-        <SectionHeading
-          eyebrow="Browse by type"
-          title="Popular categories renters open first"
-          note="Open high-demand categories first, then move into the full marketplace with less searching and more confidence."
-          linkHref="/html/products.html"
-          linkLabel="Open full catalog"
-        />
-        <div className="category-grid">
-          {topCategories.length ? (
-            topCategories.map((category) => (
-              <CategoryCard category={category} key={category.id} />
-            ))
-          ) : (
-            <EmptyState message="Categories will appear here once listings are available." />
-          )}
-        </div>
-      </section>
-
-      <section className="section">
-        <SectionHeading
-          eyebrow="Recently active"
-          title="Fresh listings ready to browse"
-          note="Fresh inventory stays close to the top so renters can compare active options quickly and owners stay visible."
-          linkHref="/html/products.html"
-          linkLabel="See all listings"
-        />
-        <div className="card-grid">
-          {featuredProducts.length ? (
-            featuredProducts.map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                showWishlist={Boolean(user && user.id !== product.owner?.id)}
-                isSaved={wishlistIds.has(product.id)}
-                onToggleWishlist={handleToggleWishlist}
-              />
-            ))
-          ) : (
-            <EmptyState message="No products are available right now." />
-          )}
-        </div>
-      </section>
-
-      {user && recommendations.length ? (
-        <section className="section recommendation-section">
+      {hasRecommendations ? (
+        <section className="section recommendation-section home-section-anchor" id="home-recommendations">
           <SectionHeading
             eyebrow="Made for you"
             title="Recommendations connected to your account"
-            note="Switch between a focused top match and the full personalized set, so every recommendation stays easy to review."
+            note="Your personalized picks stay near the top, so you can reach them quickly even as the homepage grows."
           />
           <div className="recommendation-panel">
             <div className="recommendation-panel__header">
@@ -557,7 +559,51 @@ export function HomePage({ page }) {
         </section>
       ) : null}
 
-      <section className="section">
+      <section className="section home-section-anchor" id="home-categories">
+        <SectionHeading
+          eyebrow="Browse by type"
+          title="Popular categories renters open first"
+          note="Open high-demand categories first, then move into the full marketplace with less searching and more confidence."
+          linkHref="/html/products.html"
+          linkLabel="Open full catalog"
+        />
+        <div className="category-grid">
+          {topCategories.length ? (
+            topCategories.map((category) => (
+              <CategoryCard category={category} key={category.id} />
+            ))
+          ) : (
+            <EmptyState message="Categories will appear here once listings are available." />
+          )}
+        </div>
+      </section>
+
+      <section className="section home-section-anchor" id="home-fresh-listings">
+        <SectionHeading
+          eyebrow="Recently active"
+          title="Fresh listings ready to browse"
+          note="Fresh inventory stays close to the top so renters can compare active options quickly and owners stay visible."
+          linkHref="/html/products.html"
+          linkLabel="See all listings"
+        />
+        <div className="card-grid">
+          {featuredProducts.length ? (
+            featuredProducts.map((product) => (
+              <ProductCard
+                key={product.id}
+                product={product}
+                showWishlist={Boolean(user && user.id !== product.owner?.id)}
+                isSaved={wishlistIds.has(product.id)}
+                onToggleWishlist={handleToggleWishlist}
+              />
+            ))
+          ) : (
+            <EmptyState message="No products are available right now." />
+          )}
+        </div>
+      </section>
+
+      <section className="section home-section-anchor" id="home-cities">
         <SectionHeading
           eyebrow="Popular cities"
           title="Explore where marketplace activity is strongest"

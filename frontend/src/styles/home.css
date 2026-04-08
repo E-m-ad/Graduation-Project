@@ -34,6 +34,10 @@
   color: var(--home-muted);
 }
 
+.home-section-anchor {
+  scroll-margin-top: 28px;
+}
+
 .market-hero {
   position: relative;
   display: grid;
@@ -261,6 +265,11 @@
   gap: 14px;
 }
 
+.market-hero__routes {
+  display: grid;
+  gap: 14px;
+}
+
 .market-hero__actions {
   display: flex;
   flex-wrap: wrap;
@@ -271,6 +280,50 @@
   max-width: 62ch;
   color: var(--home-muted);
   line-height: 1.75;
+}
+
+.market-route-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.market-route-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 176px;
+  padding: 14px 16px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.76);
+  color: var(--home-ink);
+  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.06);
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    background 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.market-route-pill:hover,
+.market-route-pill:focus-visible {
+  transform: translateY(-2px);
+  border-color: rgba(218, 41, 28, 0.18);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08);
+  text-decoration: none;
+  outline: none;
+}
+
+.market-route-pill__label {
+  font-weight: 700;
+}
+
+.market-route-pill__note {
+  color: var(--home-muted);
+  font-size: 0.84rem;
 }
 
 .market-hero__panel {
@@ -307,6 +360,7 @@
 
 .market-showcase {
   display: grid;
+  flex: 1;
   gap: 18px;
   padding: 20px;
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -1117,7 +1171,8 @@
 
   .about-project__facts,
   .about-tabs,
-  .recommendation-tabs {
+  .recommendation-tabs,
+  .market-route-row {
     flex-direction: column;
     align-items: stretch;
   }
@@ -1129,6 +1184,10 @@
 
   .market-chip {
     min-width: 100%;
+  }
+
+  .market-route-pill {
+    min-width: 0;
   }
 
   .showcase-card,

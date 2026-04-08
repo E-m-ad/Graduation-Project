@@ -14,6 +14,8 @@ const htmlEntries = {
   profile: path.resolve("frontend/html/profile.html"),
   wishlist: path.resolve("frontend/html/wishlist.html"),
   myListings: path.resolve("frontend/html/my-listings.html"),
+  bookings: path.resolve("frontend/html/bookings.html"),
+  rentals: path.resolve("frontend/html/rentals.html"),
   adminDashboard: path.resolve("frontend/html/admin-dashboard.html"),
 };
 

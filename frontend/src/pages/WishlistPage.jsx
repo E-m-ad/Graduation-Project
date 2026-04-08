@@ -38,13 +38,10 @@ function SavedWishlistCard({ item, busy, onRemove }) {
   const imageUrl = getPrimaryImage(product);
 
   return (
-    <article className="wishlist-saved-card">
+    <article className="product-card wishlist-saved-card">
       <a
         className="product-card__media wishlist-saved-card__media"
         href={detailsUrl}
-        style={{
-          "--product-card-media-image": `url(${JSON.stringify(imageUrl)})`,
-        }}
       >
         <img
           className="product-card__image"
@@ -53,19 +50,19 @@ function SavedWishlistCard({ item, busy, onRemove }) {
         />
       </a>
 
-      <div className="wishlist-saved-card__body">
-        <div className="wishlist-saved-card__meta">
+      <div className="product-card__body wishlist-saved-card__body">
+        <div className="product-card__meta wishlist-saved-card__meta">
           <span className="tag">{product.category?.name || "General"}</span>
           <span className="tag tag--light">
             {formatStatusLabel(product.status || "saved")}
           </span>
         </div>
 
-        <div>
-          <h3>
+        <div className="wishlist-saved-card__copy">
+          <h3 className="product-card__title wishlist-saved-card__title">
             <a href={detailsUrl}>{product.title || "Wishlist item"}</a>
           </h3>
-          <p className="compact-text">
+          <p className="compact-text wishlist-saved-card__description">
             {truncateText(product.description || "No description available.", 150)}
           </p>
         </div>
@@ -77,7 +74,7 @@ function SavedWishlistCard({ item, busy, onRemove }) {
           <span>Owner: {product.owner?.name || "Unknown owner"}</span>
         </div>
 
-        <div className="listing-actions">
+        <div className="product-card__bottom wishlist-saved-card__bottom">
           <a className="btn btn--ghost btn--small" href={detailsUrl}>
             View Details
           </a>
@@ -153,13 +150,10 @@ function OwnerWishlistCard({ product, busyKey, onNotify, onRemove }) {
 
   return (
     <article className="wishlist-owner-card">
-      <div className="wishlist-owner-card__top">
+      <div className="product-card wishlist-owner-card__product">
         <a
           className="product-card__media wishlist-owner-card__media"
           href={detailsUrl}
-          style={{
-            "--product-card-media-image": `url(${JSON.stringify(imageUrl)})`,
-          }}
         >
           <img
             className="product-card__image"
@@ -168,19 +162,19 @@ function OwnerWishlistCard({ product, busyKey, onNotify, onRemove }) {
           />
         </a>
 
-        <div className="wishlist-owner-card__summary">
-          <div className="wishlist-owner-card__meta">
+        <div className="product-card__body wishlist-owner-card__summary">
+          <div className="product-card__meta wishlist-owner-card__meta">
             <span className="tag">{product.category?.name || "General"}</span>
             <span className="tag tag--light">
               {formatStatusLabel(product.status || "saved")}
             </span>
           </div>
 
-          <div>
-            <h3>
+          <div className="wishlist-owner-card__copy">
+            <h3 className="product-card__title wishlist-owner-card__title">
               <a href={detailsUrl}>{product.title || "Wishlist listing"}</a>
             </h3>
-            <p className="compact-text">
+            <p className="compact-text wishlist-owner-card__description">
               {truncateText(product.description || "No description available.", 160)}
             </p>
           </div>
@@ -191,9 +185,11 @@ function OwnerWishlistCard({ product, busyKey, onNotify, onRemove }) {
             <span>{watcherCount} interested user{watcherCount === 1 ? "" : "s"}</span>
           </div>
 
-          <a className="btn btn--ghost btn--small wishlist-owner-card__link" href={detailsUrl}>
-            View Listing
-          </a>
+          <div className="product-card__bottom wishlist-owner-card__actions">
+            <a className="btn btn--ghost btn--small wishlist-owner-card__link" href={detailsUrl}>
+              View Listing
+            </a>
+          </div>
         </div>
       </div>
 
@@ -439,7 +435,6 @@ export function WishlistPage({ page }) {
         <div className="wishlist-hero">
           <div>
             <p className="eyebrow">Wishlist workspace</p>
-            <h1>Track saved items and manage who is waiting for your listings.</h1>
             <p>
               Keep your saved products in one place, remove them whenever you want,
               and notify interested users when your item becomes available again.

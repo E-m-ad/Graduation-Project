@@ -186,16 +186,10 @@ export function ProductsPage({ page }) {
   return (
     <SiteLayout page={page} user={user} onLogout={logout}>
       <section className="listings-hero">
-        <div className="listings-hero__copy">
-          <p className="eyebrow">Search Listings</p>
-          <h1>Browse rentals by keyword, city, and category.</h1>
-          <p>
-            Use the live search controls below to filter available listings and
-            keep the current state directly in the URL.
-          </p>
-        </div>
-
         <div className="surface-panel listings-search-panel">
+          <div className="listings-search-panel__header">
+            <p className="eyebrow">Search Listings</p>
+          </div>
           <form className="listings-search-grid" onSubmit={handleSubmit}>
             <div className="field">
               <label htmlFor="searchInput">Search</label>

@@ -9,6 +9,7 @@ import "./styles/my-listings.css";
 import "./styles/product-details.css";
 import "./styles/admin-dashboard.css";
 import "./styles/wishlist.css";
+import "./styles/rentals.css";
 import { HomePage } from "./pages/HomePage";
 import { ProductsPage } from "./pages/ProductsPage";
 import { ProductDetailsPage } from "./pages/ProductDetailsPage";
@@ -22,6 +23,7 @@ import { ProfilePage } from "./pages/ProfilePage";
 import { MyListingsPage } from "./pages/MyListingsPage";
 import { AdminDashboardPage } from "./pages/AdminDashboardPage";
 import { WishlistPage } from "./pages/WishlistPage";
+import { BookingsPage, RentalsPage } from "./pages/RentalPages";
 
 const pages = {
   home: HomePage,
@@ -35,6 +37,8 @@ const pages = {
   profile: ProfilePage,
   wishlist: WishlistPage,
   "my-listings": MyListingsPage,
+  bookings: BookingsPage,
+  rentals: RentalsPage,
   admin: AdminDashboardPage,
 };
 

@@ -1,1214 +1,862 @@
 # AI Rent
 
-AI Rent is an **AI-powered smart rental platform** that allows users to **list, discover, request, rent, return, and review items** through one unified system. The platform is designed for multiple rental categories such as **vehicles, electronics, tools, and apartments**, with a focus on smarter discovery, secure workflows, and a more sustainable sharing economy.
+AI Rent is a full-stack rental marketplace for discovering, listing, booking, approving, renting, returning, and reviewing shareable products from one web application.
 
-## Project Overview
+The system supports four practical user modes:
 
-AI Rent is built as a cross-platform rental marketplace where:
+- `Guest` users who browse public listings and owner profiles
+- `Renter` users who request bookings and review completed rentals
+- `Owner` users who create listings and manage rental requests
+- `Admin` users who moderate the marketplace and monitor system activity
 
-- **Renters** can browse listings, search and filter items, request rentals, add products to their wishlist, and leave reviews after completed rentals.
-- **Owners** can create and manage listings, upload images, approve or reject rental requests, and manage rental states.
-- **Admins** can moderate listings, manage users and categories, inspect rentals, and monitor the system.
+The project is built with:
 
-The platform also includes an **AI recommendation engine** that learns from user behavior such as views, searches, wishlists, rentals, and reviews to provide personalized recommendations and similar-item suggestions.
+- `Node.js + Express` for the API and static hosting
+- `React + Vite` for the frontend
+- `PostgreSQL + Prisma` for persistence
+- `JWT + refresh cookies` for authentication
+- `Nodemailer` for email delivery
 
-## Tech Stack
+## Table Of Contents
 
-### Mobile Application
-- Flutter
+1. [Project Summary](#project-summary)
+2. [Core Features](#core-features)
+3. [Technology Stack](#technology-stack)
+4. [Architecture Overview](#architecture-overview)
+5. [User Roles And Permissions](#user-roles-and-permissions)
+6. [Use Cases](#use-cases)
+7. [How The System Is Used](#how-the-system-is-used)
+8. [Data Model](#data-model)
+9. [Diagrams](#diagrams)
+10. [API Overview](#api-overview)
+11. [Project Structure](#project-structure)
+12. [Local Setup](#local-setup)
+13. [Environment Variables](#environment-variables)
+14. [Available Scripts](#available-scripts)
+15. [Testing And Quality Assurance](#testing-and-quality-assurance)
+16. [Deployment Guide](#deployment-guide)
+17. [Engineering Standards Followed In This Project](#engineering-standards-followed-in-this-project)
+18. [Known Constraints And Recommended Next Steps](#known-constraints-and-recommended-next-steps)
+19. [GitHub Upload Checklist](#github-upload-checklist)
+20. [License](#license)
 
-### Backend API
-- Node.js
-- Express.js
+## Project Summary
 
-### Database
-- PostgreSQL
-- Prisma ORM
+AI Rent solves a common marketplace problem: a user should be able to move from discovery to rental fulfillment without switching platforms or workflows.
 
-### Authentication & Security
-- JWT
-- bcrypt
+This repository currently delivers:
 
-### AI Service
-- Python
-- Flask
-
-### Storage & Notifications
-- Cloudinary or AWS S3
-- Firebase Cloud Messaging (FCM)
-
-### Deployment & Version Control
-- Docker
-- Render or Railway
-- Git & GitHub
+- public browsing for categories and products
+- product details with reviews and similar-product recommendations
+- owner public profile pages with related listings
+- profile management, avatar uploads, email verification, and notifications
+- wishlist management
+- dedicated `Bookings` and `Rentals` pages
+- owner listing management and moderation feedback handling
+- admin moderation for users, listings, rentals, and reports
+- a behavior-driven recommendation engine
+- OpenAPI documentation and automated smoke tests
 
 ## Core Features
 
-- User registration, login, logout, refresh token rotation, and profile management
-- Role-based access control for **Renter**, **Owner**, and **Admin**
-- Product listing management with multiple images
-- Category management
-- Product browsing, keyword search, filtering, sorting, and pagination
-- Rental request workflow with approval, rejection, availability checks, and lifecycle tracking
-- Ratings and reviews after completed rentals
-- Wishlist / favorites
-- Notifications system
-- Admin dashboard and moderation endpoints
-- AI recommendations for home feed and similar products
-- Dockerized deployment and API documentation
+### Marketplace Features
 
-## User Roles
+- browse public listings by keyword, category, and filters
+- view product details, pricing, city, owner, images, and reviews
+- view similar products and personalized recommendations
+- open public owner profiles and browse related owner listings
 
-### Guest
-- Register and log in
-- Browse public listings
-- View categories
+### Account Features
 
-### Renter
-- Search and filter products
-- Add products to wishlist
-- Request rentals
-- Cancel eligible bookings
-- Review completed rentals
+- user registration and login
+- access token + refresh cookie authentication flow
+- password reset flow
+- email verification flow
+- profile update and avatar upload
 
-### Owner
-- Create, edit, and delete listings
-- Upload listing images
-- Approve or reject rental requests
-- Mark rental states
+### Renter Features
 
-### Admin
-- Manage users
-- Manage listings
-- Manage categories
-- Inspect rentals
-- Review reports and moderate platform activity
+- create rental requests
+- track personal bookings in a dedicated page
+- cancel eligible bookings
+- complete post-rental reviews
+- save items to a wishlist
 
-## High-Level Architecture
+### Owner Features
 
-The project follows a **client-server architecture** with a **modular backend** and a separate **AI microservice**.
+- create, edit, and delete listings
+- upload multiple product images
+- monitor moderation notes and reply to them
+- approve, reject, start, and complete rentals
+- track owner-side rentals in a dedicated page
 
-```text
-Flutter Mobile App  <----HTTPS / JSON---->  Node.js / Express API
-                                                |
-                                                |---- PostgreSQL
-                                                |---- Image Storage
-                                                |---- FCM / Email
-                                                |
-                                                |---- Python Flask AI Service
-```
+### Admin Features
 
-### Backend Layering
+- inspect marketplace dashboard metrics
+- view and update user status
+- approve or reject products
+- review rental activity
+- review aggregate reports
 
-```text
-Routes -> Controllers -> Services -> Repositories -> Database
-                                     -> External Services
-```
+### Intelligence And Personalization
 
-This structure helps keep the system maintainable, scalable, and easier to test.
+- track user behavior such as views, searches, wishlist actions, rentals, reviews, and recommendation clicks
+- compute personalized recommendations from behavior and product signals
+- compute similar products for each product details page
 
-## Main Modules
+## Technology Stack
 
-- **Authentication & User Profile**
-- **Product Listing Management**
-- **Search, Browse, and Filter**
-- **Rental and Booking Workflow**
-- **Review and Rating System**
-- **Wishlist Module**
-- **Notification Module**
-- **Admin Module**
-- **AI Recommendation Module**
+| Layer | Technology | Purpose |
+| --- | --- | --- |
+| Frontend | React 19, Vite 8 | Multi-page UI, routing by HTML entry pages |
+| Backend | Node.js, Express 5 | REST API, auth, static serving, business workflows |
+| Database | PostgreSQL | Relational data store |
+| ORM | Prisma 7 | Schema, migrations, typed database client |
+| Authentication | JWT, httpOnly refresh cookie, bcrypt | Login, session refresh, password protection |
+| Uploads | Multer, local filesystem | Product and avatar uploads |
+| Email | Nodemailer | Verification and password reset delivery |
+| Documentation | OpenAPI, Swagger UI | Interactive API docs |
+| Testing | Node-based unit, integration, and smoke scripts | Regression protection |
+| Deployment | Docker, standard Node hosting | Production delivery options |
 
-## Rental Workflow
+## Architecture Overview
 
-1. Renter opens a product detail page
-2. Renter selects rental dates
-3. Backend checks availability and overlapping rentals
-4. Renter submits rental request
-5. Owner receives a notification
-6. Owner approves or rejects the request
-7. If approved, the dates become reserved
-8. Owner marks the rental as active when it starts
-9. Owner marks the rental as completed after return
-10. Renter becomes eligible to leave a rating and review
-
-## API Overview
-
-Base URL:
-
-```text
-/api/v1
-```
-
-Main endpoint groups:
-
-- `auth`
-- `users`
-- `products`
-- `categories`
-- `rentals`
-- `reviews`
-- `wishlists`
-- `recommendations`
-- `behavior`
-- `notifications`
-- `admin`
-
-## AI Recommendation Engine
-
-The recommendation engine is designed to improve discovery and conversion using:
-
-- **Content-based filtering**
-- **Collaborative filtering**
-- **Hybrid recommendation scoring**
-
-It uses behavior signals such as:
-
-- Product views
-- Search events
-- Wishlist additions
-- Completed rentals
-- Reviews
-- Recommendation clicks
-
-## Suggested Project Structure
-
-```text
-src/
-  app.js
-  server.js
-  config/
-  routes/
-  controllers/
-  services/
-  repositories/
-  middlewares/
-  validators/
-  utils/
-  modules/
-    auth/
-    users/
-    categories/
-    products/
-    rentals/
-    reviews/
-    wishlists/
-    notifications/
-    admin/
-    recommendations/
-prisma/
-tests/
-```
-
-## Environment Variables
-
-Create a `.env` file and add your environment variables.
-
-Example:
-
-```env
-DATABASE_URL=
-JWT_ACCESS_SECRET=
-JWT_REFRESH_SECRET=
-ACCESS_TOKEN_EXPIRES_IN=
-REFRESH_TOKEN_EXPIRES_IN=
-CLOUDINARY_URL=
-FCM_SERVER_KEY=
-AI_SERVICE_URL=
-PORT=
-NODE_ENV=
-```
-
-> Do not commit your real `.env` file to GitHub.
-
-## Development Plan
-
-Suggested implementation order:
-
-1. Authentication and user module
-2. Categories and products
-3. Media upload
-4. Search and filtering
-5. Rentals and availability
-6. Notifications
-7. Reviews and wishlist
-8. Admin tools
-9. AI recommendation service
-10. Deployment and quality assurance
-
-## Testing
-
-Recommended testing tools:
-
-- Jest
-- Supertest
-- Postman or Bruno
-- Flutter widget and integration tests
-- pytest for the Flask AI service
-
-## Future Enhancements
-
-- Online payment gateway
-- Real-time chat between renter and owner
-- Map-based discovery
-- Identity verification and trust scores
-- Delivery tracking
-- Insurance and damage claim workflow
-- Advanced analytics dashboard
-- Multilingual support
-- Demand-based pricing
-- Stronger machine learning models
-
-## Documentation
-
-This README was prepared from the project documentation and refined project specification.
-
-## Author
-
-Add your name here.
-
-## License
-
-This project is for academic / graduation project purposes.
-# AI Rent — UML & Architecture Diagrams.
-
-## 1) Use Case Diagram
+The application is a server-rendered static hosting + API architecture:
 
 ```mermaid
 flowchart LR
-  %% Actors
-  Guest([Guest])
-  Renter([Renter])
-  Owner([Owner])
-  Admin([Admin])
-
-  subgraph System[AI RENT SYSTEM]
-    direction LR
-
-    subgraph Auth[Authentication]
-      UC_Register((Register))
-      UC_Login((Login))
-      UC_Forgot((Forgot Password))
-      UC_Reset((Reset Password))
-    end
-
-    subgraph RenterFeatures[Renter Features]
-      UC_Browse((Browse Listings))
-      UC_Search((Search & Filter))
-      UC_View((View Product Details))
-      UC_Request((Request Rental))
-      UC_Cancel((Cancel Booking))
-      UC_MyBookings((View My Bookings))
-      UC_Rate((Rate & Review))
-      UC_Wishlist((Manage Wishlist))
-      UC_Recommendations((View Recommendations))
-      UC_RenterNotif((View Notifications))
-      UC_EditProfileR((Edit Profile))
-    end
-
-    subgraph OwnerFeatures[Owner Features]
-      UC_CreateListing((Create Listing))
-      UC_EditListing((Edit Listing))
-      UC_DeleteListing((Delete Listing))
-      UC_UploadImages((Upload Product Images))
-      UC_Pricing((Set Pricing Tiers))
-      UC_UpdateStatus((Update Listing Status))
-      UC_ViewRequests((View Rental Requests))
-      UC_Approve((Approve Rental))
-      UC_Reject((Reject Rental))
-      UC_Start((Mark Rental Started))
-      UC_Complete((Mark Rental Completed))
-      UC_ReplyReview((Reply to Review))
-      UC_OwnerNotif((View Notifications))
-      UC_EditProfileO((Edit Profile))
-    end
-
-    subgraph AdminFeatures[Admin Features]
-      UC_Dashboard((View Dashboard))
-      UC_ManageUsers((Manage Users))
-      UC_Activate((Activate/Suspend User))
-      UC_Categories((Manage Categories))
-      UC_ApproveListing((Approve Listing))
-      UC_RejectListing((Reject Listing))
-      UC_AllRentals((View All Rentals))
-      UC_Reports((View System Reports))
-      UC_ManageAllListings((Manage All Listings))
-    end
-
-    subgraph SystemAuto["SYSTEM - Automated"]
-      UC_GenRecs((Generate Recommendations))
-      UC_Track((Track User Behavior))
-      UC_SendNotif((Send Notifications))
-      UC_CalcPrice((Calculate Rental Price))
-      UC_CheckAvail((Check Availability))
-      UC_UpdateAvail((Update Listing Availability))
-      UC_ComputeRating((Compute Average Rating))
-    end
-  end
-
-  %% Associations
-  Guest --- UC_Register
-  Guest --- UC_Login
-  Renter --- UC_Browse
-  Renter --- UC_Search
-  Renter --- UC_View
-  Renter --- UC_Request
-  Renter --- UC_Cancel
-  Renter --- UC_MyBookings
-  Renter --- UC_Rate
-  Renter --- UC_Wishlist
-  Renter --- UC_Recommendations
-  Renter --- UC_RenterNotif
-  Renter --- UC_EditProfileR
-
-  Owner --- UC_CreateListing
-  Owner --- UC_EditListing
-  Owner --- UC_DeleteListing
-  Owner --- UC_UploadImages
-  Owner --- UC_Pricing
-  Owner --- UC_UpdateStatus
-  Owner --- UC_ViewRequests
-  Owner --- UC_Approve
-  Owner --- UC_Reject
-  Owner --- UC_Start
-  Owner --- UC_Complete
-  Owner --- UC_ReplyReview
-  Owner --- UC_OwnerNotif
-  Owner --- UC_EditProfileO
-
-  Admin --- UC_Dashboard
-  Admin --- UC_ManageUsers
-  Admin --- UC_Activate
-  Admin --- UC_Categories
-  Admin --- UC_ApproveListing
-  Admin --- UC_RejectListing
-  Admin --- UC_AllRentals
-  Admin --- UC_Reports
-  Admin --- UC_ManageAllListings
+  Browser[Browser Client] --> Frontend[React Pages Built By Vite]
+  Frontend --> API[Express API]
+  API --> Auth[JWT + Refresh Cookie Auth]
+  API --> Prisma[Prisma ORM]
+  Prisma --> Postgres[(PostgreSQL)]
+  API --> Uploads[Local Upload Storage]
+  API --> Mail[SMTP / Nodemailer]
+  API --> Docs[OpenAPI + Swagger UI]
 ```
 
----
+### Runtime Responsibilities
 
-## 2) Class Diagram
+- `frontend/` contains the React UI and HTML page entries
+- `src/app.js` creates the Express app, configures middleware, and serves static assets
+- `src/routes/` defines the REST API surface
+- `src/controllers/` holds business logic
+- `src/middlewares/` handles auth and file uploads
+- `prisma/schema.prisma` defines the domain model and migrations
+- `uploads/` stores avatar and product media on disk
+
+### Request Flow
+
+1. A page or action in the React client calls `/api/v1/...`
+2. Express authenticates the request when needed
+3. Controllers validate input, run business rules, and query Prisma
+4. The database persists or returns the result
+5. The frontend updates the UI and, when needed, refreshes auth via the refresh cookie
+
+## User Roles And Permissions
+
+| Role | Description | Main Capabilities |
+| --- | --- | --- |
+| `guest` | Unauthenticated visitor | Browse public listings, categories, product details, similar products, and public owner profiles |
+| `renter` | Authenticated marketplace user | Book products, manage bookings, save wishlist items, review completed rentals |
+| `owner` | Listing manager | Create listings, upload images, handle approvals and rental lifecycle |
+| `both` | User acting as renter and owner | Can use both renter and owner workflows |
+| `admin` | Marketplace operator | Moderate users, products, rentals, and reports |
+
+Notes:
+
+- The schema supports `renter`, `owner`, `both`, and `admin`.
+- In practice, a user can move into owner workflows once they create listings.
+- Admin access is not self-service. An existing user must be promoted in the database.
+
+## Use Cases
+
+### Main Business Use Cases
+
+- Guest browses categories and available products
+- User registers, logs in, and verifies email
+- Owner creates a listing and uploads images
+- Admin reviews and approves or rejects listings
+- Renter requests a rental for an approved listing
+- Owner approves or rejects the request
+- Owner starts and completes the rental lifecycle
+- Renter leaves a review after completion
+- System records behavior and improves recommendations
+
+### Use Case Diagram
+
+```mermaid
+flowchart LR
+  Guest((Guest))
+  Renter((Renter))
+  Owner((Owner))
+  Admin((Admin))
+
+  UC1[Browse listings]
+  UC2[View product details]
+  UC3[Register / Login]
+  UC4[Manage profile]
+  UC5[Save wishlist]
+  UC6[Request rental]
+  UC7[Track bookings]
+  UC8[Create listing]
+  UC9[Upload product images]
+  UC10[Approve / Reject rental]
+  UC11[Start / Complete rental]
+  UC12[Leave review]
+  UC13[Moderate users]
+  UC14[Moderate products]
+  UC15[View dashboard]
+  UC16[Manage categories]
+
+  Guest --> UC1
+  Guest --> UC2
+  Guest --> UC3
+
+  Renter --> UC4
+  Renter --> UC5
+  Renter --> UC6
+  Renter --> UC7
+  Renter --> UC12
+
+  Owner --> UC4
+  Owner --> UC8
+  Owner --> UC9
+  Owner --> UC10
+  Owner --> UC11
+
+  Admin --> UC13
+  Admin --> UC14
+  Admin --> UC15
+  Admin --> UC16
+```
+
+## How The System Is Used
+
+### Standard Marketplace Walkthrough
+
+1. A visitor opens the home page and explores recommended and public listings.
+2. A user registers an account and logs in.
+3. The user updates the profile, uploads an avatar, and optionally verifies email.
+4. An owner creates a listing from `My Listings`.
+5. The admin reviews the listing and approves it.
+6. A renter opens the product details page and submits a rental request.
+7. The owner manages the request from the `Rentals` page.
+8. The renter follows the booking from the `Bookings` page.
+9. After completion, the renter leaves a review.
+10. Behavior events and marketplace signals improve future recommendations.
+
+### Owner Listing Lifecycle
+
+1. Create a listing
+2. Upload images
+3. Wait for admin approval
+4. Reply to moderation notes if needed
+5. Toggle availability
+6. Handle rental requests
+7. Track completed rentals and reviews
+
+### Rental Lifecycle
+
+1. `pending`
+2. `approved` or `rejected`
+3. `active`
+4. `completed`, `cancelled`, or `overdue`
+
+## Data Model
+
+The domain is centered around users, products, rentals, reviews, and recommendation signals.
+
+### Core Models
+
+| Model | Purpose | Key Relationships |
+| --- | --- | --- |
+| `User` | Account, identity, role, profile | owns products, rents products, receives notifications, writes reviews |
+| `Category` | Marketplace taxonomy | contains many products, optional parent/child nesting |
+| `Product` | Rentable item listing | belongs to user and category, has images, rentals, reviews, wishlists |
+| `ProductImage` | Listing media | belongs to one product |
+| `Rental` | Booking and fulfillment record | links renter, owner, and product |
+| `Review` | Rating after rental completion | belongs to one rental and one product |
+| `Wishlist` | Saved interest in a product | links one user and one product |
+| `Notification` | In-app updates | belongs to one user, optionally linked to a rental |
+| `UserBehavior` | Analytics and recommendation signal | belongs to a user and optionally a product/category |
+| `AvailabilityCalendar` | Explicit blocked dates | belongs to one product |
+| `RefreshToken` | Long-lived auth refresh session | belongs to one user |
+| `PasswordResetToken` | Password reset security token | belongs to one user |
+| `EmailVerificationToken` | Email verification security token | belongs to one user |
+
+### Important Enums
+
+| Enum | Values |
+| --- | --- |
+| `UserRole` | `renter`, `owner`, `both`, `admin` |
+| `ProductStatus` | `available`, `rented`, `unavailable`, `under_review`, `suspended` |
+| `ProductCondition` | `new`, `like_new`, `excellent`, `good`, `fair` |
+| `RentalStatus` | `pending`, `approved`, `rejected`, `active`, `completed`, `cancelled`, `overdue` |
+| `RentalPeriodType` | `hourly`, `daily`, `weekly`, `monthly` |
+| `BehaviorAction` | `view`, `search`, `wishlist`, `rent`, `review`, `share`, `click_recommendation` |
+| `NotificationType` | rental, review, recommendation, and system event types |
+| `UnavailabilityReason` | `maintenance`, `personal_use`, `booked`, `other` |
+
+## Diagrams
+
+### Entity Relationship Diagram
+
+```mermaid
+erDiagram
+  User ||--o{ Product : owns
+  User ||--o{ Rental : renter
+  User ||--o{ Rental : owner
+  User ||--o{ Review : writes
+  User ||--o{ Wishlist : saves
+  User ||--o{ Notification : receives
+  User ||--o{ UserBehavior : generates
+  User ||--o{ RefreshToken : has
+  User ||--o{ PasswordResetToken : has
+  User ||--o{ EmailVerificationToken : has
+
+  Category ||--o{ Product : classifies
+  Category ||--o{ UserBehavior : context
+  Category ||--o{ Category : parent_of
+
+  Product ||--o{ ProductImage : contains
+  Product ||--o{ Rental : booked_in
+  Product ||--o{ Review : reviewed_in
+  Product ||--o{ Wishlist : saved_in
+  Product ||--o{ UserBehavior : tracked_in
+  Product ||--o{ AvailabilityCalendar : blocks
+
+  Rental ||--o| Review : results_in
+  Rental ||--o{ Notification : triggers
+```
+
+### Domain Class Diagram
 
 ```mermaid
 classDiagram
   class User {
-    +UUID id
+    +String id
+    +String name
     +String email
-    +String passwordHash
-    +String fullName
-    +String phone
-    +String avatarUrl
-    +String address
-    +Role role
-    +AccountStatus status
-    +DateTime createdAt
-    +DateTime updatedAt
-    +register()
-    +login(): Token
-    +updateProfile()
-    +changePassword()
-    +resetPassword()
+    +String role
+    +Boolean isActive
+    +Boolean isVerified
   }
 
   class Category {
-    +UUID id
+    +String id
     +String name
     +String description
-    +String icon
     +Boolean isActive
-    +DateTime createdAt
-    +DateTime updatedAt
   }
 
   class Product {
-    +UUID id
+    +String id
     +String title
-    +String description
-    +UUID categoryId
-    +UUID ownerId
-    +Decimal pricePerHour
+    +String status
+    +String condition
     +Decimal pricePerDay
-    +Decimal pricePerWeek
-    +Decimal pricePerMonth
-    +Condition condition
-    +String city
-    +Decimal latitude
-    +Decimal longitude
-    +String terms
-    +ModerationStatus moderationStatus
-    +AvailabilityStatus availabilityStatus
-    +Decimal averageRating
-    +Int totalReviews
-    +DateTime createdAt
-    +DateTime updatedAt
-    +calculatePrice(duration): Decimal
-    +updateAvailability()
-    +computeAverageRating()
+    +Decimal avgRating
+    +Boolean isApproved
   }
 
   class ProductImage {
-    +UUID id
-    +UUID productId
+    +String id
     +String imageUrl
     +Boolean isPrimary
-    +Int displayOrder
-    +DateTime createdAt
-  }
-
-  class Wishlist {
-    +UUID id
-    +UUID userId
-    +UUID productId
-    +DateTime createdAt
-    +add()
-    +remove()
-  }
-
-  class Review {
-    +UUID id
-    +UUID productId
-    +UUID renterId
-    +UUID rentalId
-    +Int rating
-    +String comment
-    +String ownerReply
-    +DateTime createdAt
-    +create()
-    +update()
-    +reply()
-    +delete()
   }
 
   class Rental {
-    +UUID id
-    +UUID productId
-    +UUID renterId
-    +UUID ownerId
-    +DateTime startAt
-    +DateTime endAt
-    +PricingTier pricingTier
+    +String id
+    +DateTime startDate
+    +DateTime endDate
+    +String rentalPeriodType
+    +String status
     +Decimal totalPrice
-    +RentalStatus status
-    +String cancellationReason
-    +CancelledBy cancelledBy
+  }
+
+  class Review {
+    +String id
+    +Int rating
+    +String comment
+    +String ownerReply
+  }
+
+  class Wishlist {
+    +String id
     +DateTime createdAt
-    +DateTime updatedAt
-    +approve()
-    +reject()
-    +cancel()
-    +start()
-    +complete()
-    +calculateTotal(): Decimal
   }
 
   class Notification {
-    +UUID id
-    +UUID userId
+    +String id
+    +String type
     +String title
-    +String message
-    +NotificationType type
     +Boolean isRead
-    +DateTime createdAt
-    +markAsRead()
   }
 
   class UserBehavior {
-    +UUID id
-    +UUID userId
-    +UUID productId
-    +EventType eventType
+    +String id
+    +String actionType
     +String searchQuery
-    +Int weight
-    +DateTime createdAt
-    +track()
+    +Json metadata
   }
 
-  class Recommendation {
-    +UUID id
-    +UUID userId
-    +UUID productId
-    +Decimal score
-    +Algorithm algorithm
-    +DateTime createdAt
-    +generate() ListOfRecommendation
-    +getSimilar(productId) ListOfProduct
+  class AvailabilityCalendar {
+    +String id
+    +Date unavailableFrom
+    +Date unavailableTo
+    +String reason
   }
 
-  %% Enums
-  class Role {
-    <<enumeration>>
-    RENTER
-    OWNER
-    ADMIN
-  }
-  class AccountStatus {
-    <<enumeration>>
-    ACTIVE
-    SUSPENDED
-  }
-  class Condition {
-    <<enumeration>>
-    NEW
-    GOOD
-    FAIR
-  }
-  class ModerationStatus {
-    <<enumeration>>
-    PENDING
-    APPROVED
-    REJECTED
-  }
-  class AvailabilityStatus {
-    <<enumeration>>
-    AVAILABLE
-    UNAVAILABLE
-  }
-  class PricingTier {
-    <<enumeration>>
-    HOURLY
-    DAILY
-    WEEKLY
-    MONTHLY
-  }
-  class RentalStatus {
-    <<enumeration>>
-    PENDING
-    APPROVED
-    ACTIVE
-    COMPLETED
-    CANCELLED
-    REJECTED
-  }
-  class CancelledBy {
-    <<enumeration>>
-    RENTER
-    OWNER
-    SYSTEM
-  }
-  class NotificationType {
-    <<enumeration>>
-    RENTAL_REQUEST
-    RENTAL_APPROVED
-    RENTAL_REJECTED
-    RENTAL_REMINDER
-    RECOMMENDATION
-  }
-  class EventType {
-    <<enumeration>>
-    VIEW
-    SEARCH
-    WISHLIST_ADD
-    RENTAL_COMPLETE
-    REVIEW
-    RECOMMENDATION_CLICK
-  }
-  class Algorithm {
-    <<enumeration>>
-    CONTENT_BASED
-    COLLABORATIVE
-    HYBRID
-    POPULAR
-  }
-
-  %% Relationships
-  User "1" -- "*" Notification : receives
-  User "1" -- "*" Wishlist : saves
-  User "1" -- "*" UserBehavior : generates
-  User "1" -- "*" Recommendation : gets
-  User "1" -- "*" Rental : renter
-  User "1" -- "*" Product : owns
-  Product "1" -- "*" ProductImage : has
-  Product "1" -- "*" Review : receives
-  Product "1" -- "*" Rental : requested for
-  Review "*" -- "1" Rental : about
-  Category "1" -- "*" Product : categorizes
+  User "1" --> "*" Product : owns
+  User "1" --> "*" Rental : rents
+  User "1" --> "*" Rental : fulfills
+  User "1" --> "*" Review : writes
+  User "1" --> "*" Wishlist : saves
+  User "1" --> "*" Notification : receives
+  User "1" --> "*" UserBehavior : generates
+  Category "1" --> "*" Product : groups
+  Product "1" --> "*" ProductImage : has
+  Product "1" --> "*" Rental : booked_in
+  Product "1" --> "*" Review : reviewed
+  Product "1" --> "*" Wishlist : wished
+  Product "1" --> "*" AvailabilityCalendar : blocks
+  Rental "1" --> "0..1" Review : produces
 ```
 
----
-
-## 3) Sequence Diagrams
-
-### 3.1 User Registration
+### Rental Booking Sequence Diagram
 
 ```mermaid
 sequenceDiagram
-  autonumber
-  participant C as Client
-  participant R as AuthRouter
-  participant Ctrl as AuthController
-  participant Svc as AuthService
-  participant DB as Database
+  actor R as Renter
+  actor O as Owner
+  participant UI as React UI
+  participant API as Express API
+  participant DB as PostgreSQL
 
-  C->>R: POST /auth/register {email, password, fullName, phone}
-  R->>Ctrl: register(req, res)
-  Ctrl->>Ctrl: validateInput()
-  Ctrl->>Svc: registerUser(data)
-  Svc->>DB: findByEmail(email)
-  DB-->>Svc: null (not found)
-  Svc->>Svc: hashPassword()
-  Svc->>DB: createUser()
-  DB-->>Svc: user
-  Svc->>Svc: generateJWT()
-  Svc-->>Ctrl: {user, token}
-  Ctrl-->>R: 201 Created
-  R-->>C: {success: true, data: {user, token}}
+  R->>UI: Open product details
+  UI->>API: GET /api/v1/products/:id
+  API->>DB: Read product, owner, reviews, images
+  DB-->>API: Product data
+  API-->>UI: Product details
+
+  R->>UI: Submit rental request
+  UI->>API: POST /api/v1/rentals
+  API->>DB: Validate availability and create pending rental
+  DB-->>API: Rental created
+  API-->>UI: Rental confirmation
+
+  O->>UI: Open Rentals page
+  UI->>API: GET /api/v1/rentals/my-requests
+  API->>DB: Load owner requests
+  DB-->>API: Requests
+  API-->>UI: Requests list
+
+  O->>UI: Approve rental
+  UI->>API: PUT /api/v1/rentals/:id/approve
+  API->>DB: Update rental status and notifications
+  DB-->>API: Approved
+  API-->>UI: Approval success
+
+  O->>UI: Start rental
+  UI->>API: PUT /api/v1/rentals/:id/start
+  API->>DB: Mark rental active
+  DB-->>API: Active
+  API-->>UI: Start success
+
+  O->>UI: Complete rental
+  UI->>API: PUT /api/v1/rentals/:id/complete
+  API->>DB: Mark rental completed
+  DB-->>API: Completed
+  API-->>UI: Completion success
+
+  R->>UI: Leave review
+  UI->>API: POST /api/v1/reviews
+  API->>DB: Create review and update product rating
+  DB-->>API: Review stored
+  API-->>UI: Review submitted
 ```
 
-### 3.2 Rental Booking Flow
+## API Overview
 
-```mermaid
-sequenceDiagram
-  autonumber
-  participant U as Renter
-  participant RR as RentalRouter
-  participant RC as RentalController
-  participant RS as RentalService
-  participant DB as Database
-  participant N as Notification
+### Base Paths
 
-  U->>RR: POST /rentals {productId, startAt, endAt, pricingTier}
-  RR->>RR: authMiddleware()
-  RR->>RC: createRental()
-  RC->>RS: createRental(data)
-  RS->>DB: getProduct(productId)
-  DB-->>RS: product
-  RS->>DB: checkAvailability(productId, range)
-  DB-->>RS: available
-  RS->>RS: calculateTotal()
-  RS->>DB: createRental(...)
-  DB-->>RS: rental
-  RS->>N: notifyOwner(rental)
-  RS-->>RC: rental
-  RC-->>RR: 201 Created
-  RR-->>U: {success: true, data: rental}
+- UI pages are served from `/` and `/html/*.html`
+- API routes are served from `/api/v1`
+- Swagger UI is served from `/api/v1/docs`
+- OpenAPI JSON is served from `/api/v1/docs/openapi.json`
+- Health check is served from `/healthz`
+
+### Route Groups
+
+| Group | Example Routes | Access |
+| --- | --- | --- |
+| Auth | `/auth/register`, `/auth/login`, `/auth/refresh-token` | Public / cookie-based refresh |
+| Users | `/users/me`, `/users/change-password`, `/users/upload-avatar` | Authenticated |
+| Public Users | `/public/users/:id`, `/public/users/:id/products` | Public |
+| Categories | `/categories`, `/categories/:id` | Public read, admin write |
+| Products | `/products`, `/products/:id`, `/products/my-listings` | Mixed |
+| Rentals | `/rentals`, `/rentals/my-bookings`, `/rentals/:id/approve` | Authenticated |
+| Reviews | `/reviews`, `/reviews/product/:id`, `/reviews/:id/reply` | Mixed |
+| Wishlists | `/wishlists`, `/wishlists/:productId`, `/wishlists/owner` | Authenticated |
+| Recommendations | `/recommendations`, `/recommendations/similar/:productId` | Authenticated personalized, public similar |
+| Behavior | `/behavior/track` | Authenticated |
+| Notifications | `/notifications`, `/notifications/unread-count` | Authenticated |
+| Admin | `/admin/dashboard`, `/admin/products/:id/approve` | Admin only |
+
+### Authentication Model
+
+- Login returns a short-lived access token in JSON.
+- Login also sets a `refreshToken` httpOnly cookie.
+- The frontend stores the access token in browser storage.
+- When an authenticated request returns `401`, the frontend attempts `/auth/refresh-token`.
+- In production, the refresh cookie is `secure` and uses `sameSite: strict`.
+
+## Project Structure
+
+```text
+.
+|-- frontend/
+|   |-- html/
+|   |-- src/
+|   |   |-- components/
+|   |   |-- lib/
+|   |   |-- pages/
+|   |   `-- styles/
+|   `-- index.html
+|-- prisma/
+|   |-- migrations/
+|   `-- schema.prisma
+|-- scripts/
+|   |-- integration-test.mjs
+|   |-- system-smoke-test.mjs
+|   |-- unit-test.mjs
+|   `-- testing/
+|-- src/
+|   |-- app.js
+|   |-- controllers/
+|   |-- database/
+|   |-- docs/
+|   |-- generated/
+|   |-- middlewares/
+|   |-- routes/
+|   `-- utils/
+|-- uploads/
+|   |-- avatars/
+|   `-- products/
+|-- .env.example
+|-- Dockerfile
+|-- package.json
+|-- prisma.config.js
+`-- vite.config.js
 ```
 
-### 3.3 AI Recommendation Flow
+## Local Setup
 
-```mermaid
-sequenceDiagram
-  autonumber
-  participant C as Client
-  participant RR as RecommendationRouter
-  participant RC as RecommendationController
-  participant API as Node.js API
-  participant ML as Flask ML Service
-  participant DB as Database
+### Prerequisites
 
-  C->>RR: GET /recommendations
-  RR->>RC: getRecommendations()
-  RC->>API: getUserBehavior(userId)
-  API->>DB: fetchBehavior(userId)
-  DB-->>API: behaviorData
-  API->>ML: POST /recommend {userId, data}
-  ML->>DB: fetchProducts()
-  DB-->>ML: products
-  ML->>ML: contentBased, collaborative, hybridMerge
-  ML-->>API: rankedProducts
-  API-->>RC: recommendations
-  RC-->>RR: 200 OK
-  RR-->>C: {success: true, data: [products]}
+- Node.js `20+`
+- npm `10+`
+- PostgreSQL `15+` or compatible hosted Postgres
+
+### 1. Install Dependencies
+
+```bash
+npm ci
 ```
 
-### 3.4 Owner Approves Rental
+### 2. Create Your Environment File
 
-```mermaid
-sequenceDiagram
-  autonumber
-  participant O as Owner
-  participant RR as RentalRouter
-  participant RC as RentalController
-  participant RS as RentalService
-  participant DB as Database
-  participant N as Notification
-
-  O->>RR: PUT /rentals/:id/approve
-  RR->>RR: authMiddleware()+ownerCheck()
-  RR->>RC: approveRental()
-  RC->>RS: approve(rentalId)
-  RS->>DB: getRental(rentalId)
-  DB-->>RS: rental
-  RS->>RS: validate(status == PENDING)
-  RS->>DB: updateStatus(APPROVED)
-  RS->>DB: updateProductAvailability()
-  RS->>N: notifyRenter()
-  RS-->>RC: updatedRental
-  RC-->>RR: 200 OK
-  RR-->>O: {success: true, data: rental}
+```bash
+cp .env.example .env
 ```
 
----
+Then edit `.env` with your real local database connection and secrets.
 
-## 4) Activity Diagrams
+### 3. Generate Prisma Client
 
-### 4.1 Rental Lifecycle
-
-```mermaid
-flowchart TD
-  A([Start]) --> B[Browse/Search Products]
-  B --> C[View Product Detail]
-  C --> D["Select Dates & Pricing Tier"]
-  D --> E[System Checks Availability]
-  E -->|Available| F["Create Rental - PENDING"]
-  E -->|Not Available| G[["Show error: dates not available"]]
-  F --> H[Notify Owner]
-  H --> I[Owner Reviews Request]
-  I --> J{Approve?}
-  J -->|Yes| K["Status: APPROVED / Notify Renter"]
-  J -->|No| L["Status: REJECTED / Notify Renter"]
-  K --> M["Owner marks ACTIVE - handover"]
-  M --> N[Rental in Progress]
-  N --> O{Renter Cancels?}
-  O -->|Yes| P["Status: CANCELLED - apply policy"]
-  O -->|No| Q["Owner marks COMPLETED - returned"]
-  P --> R[Update Product Availability]
-  Q --> R[Update Product Availability]
-  R --> S[Renter leaves Review]
-  S --> T([End])
+```bash
+npm run prisma:generate
 ```
 
-### 4.2 AI Recommendation Generation
+### 4. Apply Database Migrations
 
-```mermaid
-flowchart TD
-  A([Start]) --> B["Track interactions: view, search, wishlist, rent, review"]
-  B --> C[Persist in UserBehavior]
-  C --> D{Enough data?}
-  D -->|No| E[Popularity-based fallback]
-  D -->|Yes| F[Build user profile]
-  F --> G[Content-Based Filtering]
-  G --> H[Collaborative Filtering]
-  H --> I["Hybrid Merge - weighted"]
-  E --> J[Rank & Return Top N]
-  I --> J
-  J --> K[Display on Home/Detail]
-  K --> L([End])
+For local development:
+
+```bash
+npm run prisma:migrate
 ```
 
----
+For production-style migration application:
 
-## 5) State Machine Diagrams
-
-### 5.1 Rental Status States
-
-```mermaid
-stateDiagram-v2
-  [*] --> PENDING
-  PENDING --> APPROVED: Owner approves
-  PENDING --> REJECTED: Owner rejects
-  APPROVED --> ACTIVE: Owner starts
-  APPROVED --> CANCELLED: Renter/Owner cancels
-  ACTIVE --> COMPLETED: Owner marks completed
-  COMPLETED --> [*]
-  REJECTED --> [*]
-  CANCELLED --> [*]
+```bash
+npm run prisma:deploy
 ```
 
-### 5.2 Product Status States
+### 5. Start The Backend API
 
-```mermaid
-stateDiagram-v2
-  [*] --> PENDING: New listing (awaiting review)
-  PENDING --> APPROVED: Admin approves
-  PENDING --> REJECTED: Admin rejects
-  APPROVED --> AVAILABLE: Owner sets available
-  AVAILABLE --> UNAVAILABLE: Owner sets unavailable
-  UNAVAILABLE --> AVAILABLE: Owner sets available
-  REJECTED --> [*]
+```bash
+npm run dev
 ```
 
-### 5.3 User Account Status States
+The API runs on `http://localhost:3000` by default.
 
-```mermaid
-stateDiagram-v2
-  [*] --> ACTIVE
-  ACTIVE --> SUSPENDED: Admin suspends
-  SUSPENDED --> ACTIVE: Admin reactivates
-  ACTIVE --> [*]
+### 6. Start The Frontend Dev Server
+
+In a second terminal:
+
+```bash
+npm run client:dev
 ```
 
----
+The Vite UI runs on `http://localhost:5173`.
 
-## 6) Component Diagram
+Vite is already configured to proxy:
 
-```mermaid
-flowchart LR
-  subgraph Mobile[Flutter Mobile App]
-    AuthUI[Auth Screens]
-    ProductUI[Product Screens]
-    RentalUI[Rental Screens]
-    ProfileUI[Profile]
-    WishlistUI[Wishlist]
-    ReviewUI[Review]
-    StateMgmt["State Management - Provider/Riverpod/BLoC"]
-  end
+- `/api` -> `http://localhost:3000`
+- `/uploads` -> `http://localhost:3000`
 
-  subgraph AdminPanel[Admin Web Panel]
-    Dashboard[Dashboard]
-    UserMgmt[User Mgmt]
-    ProductMgmt[Product Mgmt]
-    RentalMgmt[Rental Mgmt]
-  end
+### 7. Open The Application
 
-  subgraph API["Node.js/Express Backend"]
-    subgraph Middleware[Middleware]
-      MWAuth[Auth]
-      MWValidate[Validation]
-      MWRate[Rate Limiter]
-      MWError[Error Handler]
-    end
-    subgraph Routes[Routes]
-      RAuth[Auth]
-      RProd[Product]
-      RRent[Rental]
-      RRev[Review]
-      RWish[Wishlist]
-      RAdmin[Admin]
-      RRecom[Recommendation]
-      RNotif[Notification]
-    end
-    subgraph Controllers[Controllers]
-      CAuth[Auth]
-      CProd[Product]
-      CRent[Rental]
-      CRev[Review]
-      CWish[Wishlist]
-      CAdmin[Admin]
-      CRecom[Recommendation]
-      CNotif[Notification]
-    end
-    subgraph Services[Services]
-      SAuth[Auth]
-      SProd[Product]
-      SRent[Rental]
-      SRev[Review]
-      SNotif[Notification]
-      SBehav[Behavior]
-    end
-    subgraph Repo["Repository - Prisma"]
-      URepo[User]
-      PRepo[Product]
-      RRepo[Rental]
-      RevRepo[Review]
-      WRepo[Wishlist]
-      BRepo[Behavior]
-    end
-  end
+- Home page: `http://localhost:5173/`
+- Login page: `http://localhost:5173/html/login.html`
+- Admin dashboard page: `http://localhost:5173/html/admin-dashboard.html`
 
-  subgraph DBs["Data and ML"]
-    PG[(PostgreSQL)]
-    subgraph ML["Python Flask ML Service"]
-      CB[Content-Based]
-      CF[Collaborative]
-      HY[Hybrid Merger]
-    end
-  end
+### 8. Build And Run The Production Bundle Locally
 
-  Cloudinary[(Cloudinary / S3)]
-  FCM[(Firebase Cloud Messaging)]
-
-  Mobile -- HTTPS/JSON --> API
-  AdminPanel -- HTTPS/JSON --> API
-  API -- SQL --> PG
-  API -- Fetch --> Cloudinary
-  API -- Push --> FCM
-  API -- HTTP --> ML
+```bash
+npm run build
+npm run start:with-build
 ```
 
----
+Then open `http://localhost:3000`.
 
-## 7) Deployment Diagram
+### 9. Create An Admin User
 
-```mermaid
-flowchart LR
-  subgraph Clients[Client Devices]
-    Android["Android Device - Flutter APK"]
-    iOS["iOS Device - Flutter IPA"]
-  end
+The application does not create an admin account automatically.
 
-  subgraph Cloud["CLOUD INFRASTRUCTURE - Railway/Render"]
-    subgraph NodeC["Docker: Node.js/Express API"]
-      NPort[Port 3000]
-      NEnv["Env: Production"]
-    end
-    subgraph FlaskC["Docker: Python/Flask ML"]
-      FPort[Port 5000]
-    end
-    PG[("Managed PostgreSQL<br/>Port 5432<br/>Backups, Pooling")]
-  end
+Recommended options:
 
-  Cloudinary[(Cloudinary / AWS S3)]
-  FCM[(Firebase Cloud Messaging)]
-  SMTP[(SMTP Email Service)]
+- use Prisma Studio: `npm run prisma:studio`
+- or run a database update manually
 
-  Android -- HTTPS --> NodeC
-  iOS -- HTTPS --> NodeC
-  NodeC -- internal net --> FlaskC
-  NodeC -- SQL --> PG
-  NodeC -- HTTPS --> Cloudinary
-  NodeC -- HTTPS --> FCM
-  NodeC -- SMTP --> SMTP
+Example SQL:
+
+```sql
+UPDATE "User"
+SET "role" = 'admin'
+WHERE "email" = 'admin@example.com';
 ```
 
----
+## Environment Variables
 
-## 8) ERD (Entity‑Relationship Diagram)
+The current codebase uses the following variables:
 
-```mermaid
-erDiagram
-  USERS ||--o{ PRODUCTS : owns
-  USERS ||--o{ RENTALS : rents
-  USERS ||--o{ REVIEWS : writes
-  USERS ||--o{ WISHLISTS : saves
-  USERS ||--o{ NOTIFICATIONS : receives
-  USERS ||--o{ USER_BEHAVIORS : generates
-  USERS ||--o{ RECOMMENDATIONS : gets
+| Variable | Required | Example | Purpose |
+| --- | --- | --- | --- |
+| `DATABASE_URL` | Yes | `postgresql://postgres:password@localhost:5432/Rent?schema=public` | PostgreSQL connection string |
+| `PORT` | No | `3000` | API server port |
+| `NODE_ENV` | Yes | `development` or `production` | Environment mode |
+| `JWT_SECRET` | Yes | long random secret | Access token signing secret |
+| `REFRESH_TOKEN_SECRET` | Yes | different long random secret | Refresh token signing secret |
+| `ACCESS_TOKEN_EXPIRATION` | Yes | `15d` | Access token TTL |
+| `REFRESH_TOKEN_EXPIRATION` | Yes | `7d` | Refresh token TTL |
+| `APP_BASE_URL` | Recommended | `https://your-domain.com` | Base URL for verification and reset links |
+| `SMTP_HOST` | Optional but needed for real email | `smtp.gmail.com` | SMTP host |
+| `SMTP_PORT` | Optional but needed for real email | `587` | SMTP port |
+| `SMTP_USER` | Optional but needed for real email | `user@example.com` | SMTP username |
+| `SMTP_PASS` | Optional but needed for real email | `app-password` | SMTP password |
+| `SMTP_FROM` | Optional but needed for real email | `AI Rent <noreply@example.com>` | Sender address |
+| `SMTP_SECURE` | Optional | `false` or `true` | SMTP TLS mode |
 
-  CATEGORIES ||--o{ PRODUCTS : categorizes
-  PRODUCTS ||--o{ PRODUCT_IMAGES : has
-  PRODUCTS ||--o{ RENTALS : for
-  PRODUCTS ||--o{ REVIEWS : receives
-  PRODUCTS ||--o{ WISHLISTS : appears_in
-  RENTALS ||--|| REVIEWS : has_one
+Important production notes:
 
-  USERS {
-    UUID id PK
-    VARCHAR email
-    TEXT password
-    VARCHAR full_name
-    VARCHAR phone
-    TEXT avatar_url
-    TEXT address
-    ENUM role
-    ENUM status
-    TIMESTAMP created_at
-    TIMESTAMP updated_at
-  }
-  CATEGORIES {
-    UUID id PK
-    VARCHAR name
-    TEXT description
-    VARCHAR icon
-    BOOLEAN is_active
-    TIMESTAMP created_at
-    TIMESTAMP updated_at
-  }
-  PRODUCTS {
-    UUID id PK
-    UUID owner_id FK
-    UUID category_id FK
-    VARCHAR title
-    TEXT description
-    DECIMAL price_per_hour
-    DECIMAL price_per_day
-    DECIMAL price_per_week
-    DECIMAL price_per_month
-    ENUM condition
-    VARCHAR city
-    DECIMAL latitude
-    DECIMAL longitude
-    TEXT terms
-    ENUM moderation_status
-    ENUM availability_status
-    DECIMAL average_rating
-    INTEGER total_reviews
-    TIMESTAMP created_at
-    TIMESTAMP updated_at
-  }
-  PRODUCT_IMAGES {
-    UUID id PK
-    UUID product_id FK
-    TEXT image_url
-    BOOLEAN is_primary
-    INT display_order
-    TIMESTAMP created_at
-  }
-  WISHLISTS {
-    UUID id PK
-    UUID user_id FK
-    UUID product_id FK
-    TIMESTAMP created_at
-  }
-  REVIEWS {
-    UUID id PK
-    UUID product_id FK
-    UUID renter_id FK
-    UUID rental_id FK
-    INT rating
-    TEXT comment
-    TEXT owner_reply
-    TIMESTAMP created_at
-  }
-  RENTALS {
-    UUID id PK
-    UUID product_id FK
-    UUID renter_id FK
-    UUID owner_id FK
-    TIMESTAMP start_at
-    TIMESTAMP end_at
-    ENUM pricing_tier
-    DECIMAL total_price
-    ENUM status
-    TEXT cancellation_reason
-    ENUM cancelled_by
-    TIMESTAMP created_at
-    TIMESTAMP updated_at
-  }
-  NOTIFICATIONS {
-    UUID id PK
-    UUID user_id FK
-    VARCHAR title
-    TEXT message
-    ENUM type
-    BOOLEAN is_read
-    TIMESTAMP created_at
-  }
-  USER_BEHAVIORS {
-    UUID id PK
-    UUID user_id FK
-    UUID product_id FK
-    ENUM event_type
-    VARCHAR search_query
-    INT weight
-    TIMESTAMP created_at
-  }
-  RECOMMENDATIONS {
-    UUID id PK
-    UUID user_id FK
-    UUID product_id FK
-    DECIMAL score
-    ENUM algorithm
-    TIMESTAMP created_at
-  }
+- set `NODE_ENV=production`
+- use strong secrets for both JWT variables
+- set `APP_BASE_URL` to your real public domain
+- configure SMTP if you want real email verification and password reset delivery
+
+## Available Scripts
+
+| Script | Purpose |
+| --- | --- |
+| `npm run dev` | Start the backend with nodemon |
+| `npm run build` | Build the frontend bundle |
+| `npm run start` | Start the backend server |
+| `npm run start:with-build` | Build frontend, then start backend |
+| `npm run client:dev` | Start the Vite development server |
+| `npm run client:build` | Build only the client |
+| `npm run client:preview` | Preview the built client |
+| `npm run prisma:generate` | Generate Prisma client |
+| `npm run prisma:migrate` | Run development migrations |
+| `npm run prisma:deploy` | Apply production migrations |
+| `npm run prisma:studio` | Open Prisma Studio |
+| `npm run test` | Run unit, integration, and smoke tests |
+| `npm run test:unit` | Run unit tests |
+| `npm run test:integration` | Run integration tests |
+| `npm run test:system` | Run the end-to-end smoke test |
+| `npm run test:smoke` | Alias of the smoke test |
+| `npm run check` | Build and run the smoke test |
+
+## Testing And Quality Assurance
+
+### Automated Validation
+
+- `npm run build` validates the frontend bundle
+- `npm run test:unit` validates isolated logic
+- `npm run test:integration` validates API behavior
+- `npm run test:smoke` validates the critical end-to-end marketplace path
+
+### Smoke Test Coverage
+
+The smoke test currently checks:
+
+- API docs availability
+- registration and login
+- category creation
+- product creation and image upload
+- admin approval
+- public product listing
+- rental availability
+- booking creation
+- rental approval, start, and completion
+- review creation
+- notifications
+- admin dashboard
+
+### Manual QA Checklist
+
+Before release, manually verify:
+
+- responsive layout on home, browse, profile, my listings, bookings, rentals, wishlist, and admin pages
+- product image uploads and avatar uploads
+- owner public profile links from product details
+- notifications badge updates
+- booking and rental state transitions
+- email verification flow when SMTP is enabled
+
+## Deployment Guide
+
+### Recommended Production Topology
+
+For the current codebase, the simplest production setup is:
+
+- one Node/Express service
+- one PostgreSQL database
+- one persistent volume mounted for `uploads/`
+- one public HTTPS domain serving both frontend and backend on the same origin
+
+Using the same origin is strongly recommended because:
+
+- frontend API calls are currently relative
+- refresh authentication depends on cookies
+- production cookies use secure settings
+
+### Production Checklist
+
+- create a production PostgreSQL database
+- set all required environment variables
+- use `NODE_ENV=production`
+- set `APP_BASE_URL` to the deployed domain
+- configure SMTP for real email delivery
+- apply database migrations with `npm run prisma:deploy`
+- persist the `uploads/` directory with server storage or a mounted volume
+- terminate traffic over HTTPS
+- run `npm run check` before release
+
+### Standard Node Deployment
+
+1. Upload the project to your server
+2. Install dependencies with `npm ci`
+3. Create `.env` from `.env.example`
+4. Set production variables
+5. Run `npm run prisma:generate`
+6. Run `npm run prisma:deploy`
+7. Run `npm run build`
+8. Start the server with `npm run start`
+
+### Docker Deployment
+
+Build the image:
+
+```bash
+docker build -t ai-rent .
 ```
 
----
+Run the container:
 
-## 9) Package Diagram (Backend)
-
-```mermaid
-flowchart TB
-  subgraph srcDir["src/"]
-    subgraph configDir["config/"]
-      DB[database.js]
-      ENV[env.js]
-      CDN[cloudinary.js]
-      FCM[firebase.js]
-    end
-    subgraph middlewareDir["middleware/"]
-      MAuth[auth.js]
-      MVal[validate.js]
-      MRate[rateLimiter.js]
-      MErr[errorHandler.js]
-      MRole[roleGuard.js]
-    end
-    subgraph utilsDir["utils/"]
-      UResp[response.js]
-      UJwt[jwt.js]
-      UHash[hash.js]
-      UPag[pagination.js]
-      UEmail[email.js]
-    end
-
-    subgraph modulesDir["modules/"]
-      subgraph authDir["auth/"]
-        A1[auth.routes.js]
-        A2[auth.controller.js]
-        A3[auth.service.js]
-        A4[auth.repository.js]
-        A5[auth.validation.js]
-      end
-      subgraph productDir["product/"]
-        P1[product.routes.js]
-        P2[product.controller.js]
-        P3[product.service.js]
-        P4[product.repository.js]
-        P5[product.validation.js]
-      end
-      subgraph rentalDir["rental/"]
-        R1[rental.routes.js]
-        R2[rental.controller.js]
-        R3[rental.service.js]
-        R4[rental.repository.js]
-        R5[rental.validation.js]
-      end
-      subgraph othersDir["review / wishlist / notification / category / user / recommendation / behavior"]
-        OStruct["same 5-file structure"]
-      end
-    end
-
-    subgraph prismaDir["prisma/"]
-      PS[schema.prisma]
-      PM["migrations/"]
-      PSeed[seed.js]
-    end
-    subgraph testsDir["tests/"]
-      T1[auth.test.js]
-      T2[product.test.js]
-      T3[rental.test.js]
-    end
-    App[app.js]
-    Server[server.js]
-  end
+```bash
+docker run -p 3000:3000 --env-file .env ai-rent
 ```
 
----
+Important note:
 
-## 10) Data Flow Diagrams
+- the runtime Docker image is optimized for serving the app
+- database migrations are not automatically executed by the container
+- run `npm run prisma:deploy` as a separate release step before or during deployment
 
-### Level 0 — Context
+### Reverse Proxy Notes
 
-```mermaid
-flowchart LR
-  Renter[[Renter]] -- Browse/Search/Book/Review/Wishlist --> System[AI RENT SYSTEM]
-  Owner[[Owner]] -- "List/Manage/Approve" --> System
-  Admin[[Admin]] -- "Manage Users/Approve Listings" --> System
-  System -- Stats/Notifications --> Owner
-  System --- DB[(PostgreSQL)]
-  System --- CDN[(Cloudinary / AWS S3)]
-  System --- FCM[(Firebase FCM)]
-```
+If you deploy behind Nginx, Caddy, Render, Railway, or a similar platform:
 
-### Level 1 — Major Processes
+- forward the real HTTPS requests to Node
+- keep `/uploads` publicly reachable
+- keep the frontend and backend under the same domain when possible
+- do not strip cookies on `/api/v1/auth/refresh-token`
 
-```mermaid
-flowchart TB
-  R["Renter"]
-  subgraph P1["1.0 Authentication"]
-    Login["Register/Login - JWT Tokens"]
-  end
-  subgraph P2[2.0 Product Discovery]
-    Search[Search/Browse/Filter/View]
-  end
-  subgraph P3[3.0 Rental Management]
-    Rent[Book/Approve/Cancel/Complete]
-  end
-  subgraph P4[4.0 Review Management]
-    Rev[Rate/Comment/Reply]
-  end
-  subgraph P5[5.0 AI Recommendation]
-    Recs[Track Behavior/Generate Recs]
-  end
-  subgraph P6[6.0 Notification]
-    Notif[Push/Email Alerts]
-  end
+### Post-Deployment Verification
 
-  D1[(D1: Users)]
-  D2[(D2: Products)]
-  D3[(D3: Rentals)]
-  D4[(D4: Reviews)]
-  D5[("D5: Behaviors and Recommendations")]
-  D6[(D6: Notifications)]
+After going live, verify:
 
-  R --> P1 --> D1
-  R --> P2 --> D2
-  P3 --> D3
-  P4 --> D4
-  P5 --> D5
-  P6 --> D6
-```
+- `GET /healthz` returns `200`
+- `GET /api/v1/docs` loads Swagger UI
+- registration works
+- login works
+- refresh token flow works
+- file uploads are saved and still available after restart
+- admin moderation works
+- booking state transitions work
 
----
+## Engineering Standards Followed In This Project
 
+This repository follows these implementation standards:
+
+- REST-style route grouping by resource
+- layered backend organization with routes, controllers, middlewares, docs, and utilities
+- relational database modeling with Prisma schema + migrations
+- explicit role-based authorization
+- JWT access tokens plus secure refresh-cookie flow
+- OpenAPI documentation for backend endpoints
+- automated unit, integration, and smoke coverage
+- environment-based configuration with `.env` and `.env.example`
+- responsive frontend layouts with shared design tokens and page-level CSS
+- static build output served by the same Express application in production
+
+## Known Constraints And Recommended Next Steps
+
+The application is release-ready for academic/demo deployment, but these are the next improvements I recommend for a more robust production launch:
+
+- move uploads from local disk to cloud object storage such as S3 or Cloudinary
+- add a rate limiter for auth and sensitive endpoints
+- add CI/CD for build, tests, and deployment
+- add centralized logging and error monitoring
+- add database backup automation
+- add seed or bootstrap tooling for admin creation
+- add more explicit observability around emails and rental transitions
+- add end-to-end browser UI tests
+
+## GitHub Upload Checklist
+
+Before publishing this repository:
+
+- make sure `.env` is not committed
+- keep `.env.example` updated
+- review any tracked media files in `uploads/`
+- run `npm run check`
+- confirm production values are not hardcoded anywhere
+- confirm the README matches the deployed behavior
+- verify screenshots, reports, or private notes are not accidentally included
+
+## License
+
+This project uses the `ISC` license as declared in `package.json`.
