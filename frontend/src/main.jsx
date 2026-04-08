@@ -17,7 +17,6 @@ import { LoginPage, RegisterPage } from "./pages/LoginRegisterPages";
 import {
   ForgotPasswordPage,
   ResetPasswordPage,
-  VerifyEmailPage,
 } from "./pages/RecoveryPages";
 import { ProfilePage } from "./pages/ProfilePage";
 import { MyListingsPage } from "./pages/MyListingsPage";
@@ -33,7 +32,6 @@ const pages = {
   register: RegisterPage,
   "forgot-password": ForgotPasswordPage,
   "reset-password": ResetPasswordPage,
-  "verify-email": VerifyEmailPage,
   profile: ProfilePage,
   wishlist: WishlistPage,
   "my-listings": MyListingsPage,

@@ -18,7 +18,6 @@ const USER_SUMMARY_SELECT = {
   avatarUrl: true,
   role: true,
   city: true,
-  isVerified: true,
 };
 
 const REVIEW_SUMMARY_SELECT = {

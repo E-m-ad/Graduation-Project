@@ -283,7 +283,6 @@ The domain is centered around users, products, rentals, reviews, and recommendat
 | `AvailabilityCalendar` | Explicit blocked dates | belongs to one product |
 | `RefreshToken` | Long-lived auth refresh session | belongs to one user |
 | `PasswordResetToken` | Password reset security token | belongs to one user |
-| `EmailVerificationToken` | Email verification security token | belongs to one user |
 
 ### Important Enums
 
@@ -313,7 +312,6 @@ erDiagram
   User ||--o{ UserBehavior : generates
   User ||--o{ RefreshToken : has
   User ||--o{ PasswordResetToken : has
-  User ||--o{ EmailVerificationToken : has
 
   Category ||--o{ Product : classifies
   Category ||--o{ UserBehavior : context
@@ -340,7 +338,6 @@ classDiagram
     +String email
     +String role
     +Boolean isActive
-    +Boolean isVerified
   }
 
   class Category {
@@ -661,20 +658,11 @@ The current codebase uses the following variables:
 | `REFRESH_TOKEN_SECRET` | Yes | different long random secret | Refresh token signing secret |
 | `ACCESS_TOKEN_EXPIRATION` | Yes | `15d` | Access token TTL |
 | `REFRESH_TOKEN_EXPIRATION` | Yes | `7d` | Refresh token TTL |
-| `APP_BASE_URL` | Recommended | `https://your-domain.com` | Base URL for verification and reset links |
-| `SMTP_HOST` | Optional but needed for real email | `smtp.gmail.com` | SMTP host |
-| `SMTP_PORT` | Optional but needed for real email | `587` | SMTP port |
-| `SMTP_USER` | Optional but needed for real email | `user@example.com` | SMTP username |
-| `SMTP_PASS` | Optional but needed for real email | `app-password` | SMTP password |
-| `SMTP_FROM` | Optional but needed for real email | `AI Rent <noreply@example.com>` | Sender address |
-| `SMTP_SECURE` | Optional | `false` or `true` | SMTP TLS mode |
 
 Important production notes:
 
 - set `NODE_ENV=production`
 - use strong secrets for both JWT variables
-- set `APP_BASE_URL` to your real public domain
-- configure SMTP if you want real email verification and password reset delivery
 
 ## Available Scripts
 
@@ -757,8 +745,6 @@ Using the same origin is strongly recommended because:
 - create a production PostgreSQL database
 - set all required environment variables
 - use `NODE_ENV=production`
-- set `APP_BASE_URL` to the deployed domain
-- configure SMTP for real email delivery
 - apply database migrations with `npm run prisma:deploy`
 - persist the `uploads/` directory with server storage or a mounted volume
 - terminate traffic over HTTPS

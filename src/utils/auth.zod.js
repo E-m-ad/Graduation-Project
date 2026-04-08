@@ -48,24 +48,11 @@ const resetPasswordSchema = zod
     path: ["confirmPassword"],
   });
 
-const verifyEmailSchema = zod.object({
-  token: zod
-    .string("Verification token is required")
-    .min(1, "Verification token is required"),
-});
-
 const envProcessSchema = zod.object({
   JWT_SECRET: zod.string("JWT_SECRET is required"),
   REFRESH_TOKEN_SECRET: zod.string("REFRESH_TOKEN_SECRET is required"),
   ACCESS_TOKEN_EXPIRATION: zod.string("ACCESS_TOKEN_EXPIRATION is required"),
   REFRESH_TOKEN_EXPIRATION: zod.string("REFRESH_TOKEN_EXPIRATION is required"),
-  APP_BASE_URL: zod.string().url().optional(),
-  SMTP_HOST: zod.string().optional(),
-  SMTP_PORT: zod.string().optional(),
-  SMTP_USER: zod.string().optional(),
-  SMTP_PASS: zod.string().optional(),
-  SMTP_FROM: zod.string().optional(),
-  SMTP_SECURE: zod.string().optional(),
 });
 
 export default {
@@ -74,5 +61,4 @@ export default {
   loginSchema,
   registerSchema,
   resetPasswordSchema,
-  verifyEmailSchema,
 };

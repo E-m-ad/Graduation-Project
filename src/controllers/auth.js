@@ -2,11 +2,9 @@ import bcrypt from "bcrypt";
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import db from "../database/db.js";
-import { sendEmail } from "../utils/email.js";
 import z from "../utils/auth.zod.js";
 
 const RESET_TOKEN_TTL_MS = 2 * 60 * 1000;
-const EMAIL_VERIFICATION_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
 const REFRESH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 z.envProcessSchema.parse(process.env);
@@ -26,105 +24,6 @@ function hashToken(value) {
   return crypto.createHash("sha256").update(value).digest("hex");
 }
 
-function buildAppBaseUrl(req) {
-  const configuredBaseUrl = process.env.APP_BASE_URL?.trim();
-  if (configuredBaseUrl) {
-    return configuredBaseUrl.replace(/\/+$/, "");
-  }
-
-  const origin = req.get("origin")?.trim();
-  if (origin) {
-    return origin.replace(/\/+$/, "");
-  }
-
-  return `${req.protocol}://${req.get("host")}`;
-}
-
-function buildVerificationLink(req, rawToken) {
-  return `${buildAppBaseUrl(req)}/html/verify-email.html?token=${encodeURIComponent(rawToken)}`;
-}
-
-async function createEmailVerificationToken(userId) {
-  const rawToken = crypto.randomBytes(32).toString("hex");
-
-  await db.emailVerificationToken.deleteMany({
-    where: { userId },
-  });
-
-  await db.emailVerificationToken.create({
-    data: {
-      token: hashToken(rawToken),
-      userId,
-      expiresAt: new Date(Date.now() + EMAIL_VERIFICATION_TOKEN_TTL_MS),
-    },
-  });
-
-  return rawToken;
-}
-
-async function sendVerificationEmail({ req, user, rawToken }) {
-  const verificationLink = buildVerificationLink(req, rawToken);
-  const text = [
-    `Hi ${user.name || "there"},`,
-    "",
-    "Welcome to AI Rent.",
-    "Verify your email address by opening the link below:",
-    verificationLink,
-    "",
-    "If you did not request this, you can ignore this email.",
-  ].join("\n");
-
-  const html = `
-    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827;">
-      <p>Hi ${user.name || "there"},</p>
-      <p>Welcome to AI Rent.</p>
-      <p>Please verify your email address by using the link below:</p>
-      <p>
-        <a href="${verificationLink}" style="color: #da291c; font-weight: 700;">
-          Verify your email
-        </a>
-      </p>
-      <p>If you did not request this, you can ignore this email.</p>
-    </div>
-  `;
-
-  const result = await sendEmail({
-    to: user.email,
-    subject: "Verify your AI Rent email",
-    text,
-    html,
-  });
-
-  if (result.skipped) {
-    console.info(
-      `Email delivery is not configured. Verification link for ${user.email}: ${verificationLink}`,
-    );
-  }
-
-  return {
-    emailSent: result.sent,
-    verificationLink,
-  };
-}
-
-function buildVerificationRequestResponse({
-  message,
-  rawToken,
-  verificationLink,
-}) {
-  const responseBody = {
-    success: true,
-    message,
-  };
-
-  if (process.env.NODE_ENV === "development") {
-    responseBody.verificationToken = rawToken;
-    responseBody.verificationLink = verificationLink;
-  }
-
-  return responseBody;
-}
-
 async function register(req, res) {
   const data = z.registerSchema.safeParse(req.body);
   if (!data.success) {
@@ -142,23 +41,13 @@ async function register(req, res) {
   try {
     const existingUser = await db.user.findUnique({ where: { email } });
     if (existingUser) {
-      if (existingUser.isActive && !existingUser.isVerified) {
-        const rawToken = await createEmailVerificationToken(existingUser.id);
-        await sendVerificationEmail({
-          req,
-          user: existingUser,
-          rawToken,
-        });
-      }
-
-      return res.status(201).json({
-        success: true,
-        message:
-          "If this email is not registered, you will receive a confirmation email shortly",
+      return res.status(409).json({
+        success: false,
+        message: "Email is already registered",
       });
     }
 
-    const user = await db.user.create({
+    await db.user.create({
       data: {
         name,
         email,
@@ -171,26 +60,10 @@ async function register(req, res) {
       },
     });
 
-    const rawToken = await createEmailVerificationToken(user.id);
-    const { emailSent, verificationLink } = await sendVerificationEmail({
-      req,
-      user,
-      rawToken,
+    return res.status(201).json({
+      success: true,
+      message: "User registered successfully",
     });
-
-    const message = emailSent
-      ? "User registered successfully. Check your email to verify your account."
-      : process.env.NODE_ENV === "development"
-        ? "User registered successfully. Use the verification link below while testing locally."
-        : "User registered successfully. Email verification delivery is not configured yet.";
-
-    return res.status(201).json(
-      buildVerificationRequestResponse({
-        message,
-        rawToken,
-        verificationLink,
-      }),
-    );
   } catch (error) {
     console.error(error);
     return res.status(500).json({
@@ -352,148 +225,6 @@ async function logOut(req, res) {
   }
 }
 
-async function requestEmailVerification(req, res) {
-  try {
-    const user = await db.user.findUnique({
-      where: { id: req.user.id },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        isActive: true,
-        isVerified: true,
-      },
-    });
-
-    if (!user || !user.isActive) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
-    }
-
-    if (user.isVerified) {
-      return res.status(409).json({
-        success: false,
-        message: "Your email is already verified",
-      });
-    }
-
-    const rawToken = await createEmailVerificationToken(user.id);
-    const { emailSent, verificationLink } = await sendVerificationEmail({
-      req,
-      user,
-      rawToken,
-    });
-
-    const message = emailSent
-      ? "Verification email sent successfully"
-      : process.env.NODE_ENV === "development"
-        ? "Verification link generated for local testing"
-        : "Email delivery is not configured on this server yet";
-
-    return res.status(200).json(
-      buildVerificationRequestResponse({
-        message,
-        rawToken,
-        verificationLink,
-      }),
-    );
-  } catch (error) {
-    console.error("requestEmailVerification error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
-  }
-}
-
-async function verifyEmail(req, res) {
-  const data = z.verifyEmailSchema.safeParse(req.body);
-  if (!data.success) {
-    return res.status(400).json({
-      success: false,
-      error: {
-        path: data.error.issues[0].path.join("."),
-        message: data.error.issues[0].message,
-      },
-    });
-  }
-
-  try {
-    const verificationToken = await db.emailVerificationToken.findUnique({
-      where: {
-        token: hashToken(data.data.token),
-      },
-      select: {
-        id: true,
-        userId: true,
-        expiresAt: true,
-        isUsed: true,
-        user: {
-          select: {
-            id: true,
-            email: true,
-            isVerified: true,
-          },
-        },
-      },
-    });
-
-    if (
-      !verificationToken ||
-      verificationToken.isUsed ||
-      verificationToken.expiresAt < new Date()
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid or expired verification token",
-      });
-    }
-
-    const user = await db.$transaction(async (tx) => {
-      const updatedUser = await tx.user.update({
-        where: { id: verificationToken.userId },
-        data: { isVerified: true },
-        select: {
-          id: true,
-          email: true,
-          isVerified: true,
-        },
-      });
-
-      await tx.emailVerificationToken.update({
-        where: { id: verificationToken.id },
-        data: {
-          isUsed: true,
-          usedAt: new Date(),
-        },
-      });
-
-      await tx.emailVerificationToken.deleteMany({
-        where: {
-          userId: verificationToken.userId,
-          id: { not: verificationToken.id },
-        },
-      });
-
-      return updatedUser;
-    });
-
-    return res.status(200).json({
-      success: true,
-      message: "Email verified successfully",
-      data: user,
-    });
-  } catch (error) {
-    console.error("verifyEmail error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
-  }
-}
-
 async function forgotPassword(req, res) {
   const data = z.forgotPasswordSchema.safeParse(req.body);
   if (!data.success) {
@@ -610,8 +341,6 @@ export default {
   login,
   refreshToken,
   logOut,
-  requestEmailVerification,
-  verifyEmail,
   forgotPassword,
   resetPassword,
 };

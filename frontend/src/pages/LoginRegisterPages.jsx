@@ -224,7 +224,6 @@ export function RegisterPage({ page }) {
   });
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
-  const [verificationPreview, setVerificationPreview] = useState(null);
   const [message, showMessage] = useMessageState("");
 
   useEffect(() => {
@@ -264,7 +263,6 @@ export function RegisterPage({ page }) {
   async function handleSubmit(event) {
     event.preventDefault();
     showMessage("");
-    setVerificationPreview(null);
     if (!validateForm()) return;
 
     setSubmitting(true);
@@ -295,14 +293,6 @@ export function RegisterPage({ page }) {
       result.data.message || "Account created successfully. Redirecting to login...",
       "success",
     );
-
-    if (result.data.verificationLink || result.data.verificationToken) {
-      setVerificationPreview({
-        verificationLink: result.data.verificationLink || "",
-        verificationToken: result.data.verificationToken || "",
-      });
-      return;
-    }
 
     window.setTimeout(() => {
       window.location.href = "/html/login.html";
@@ -405,30 +395,6 @@ export function RegisterPage({ page }) {
           </button>
           <MessageText message={message} />
         </form>
-
-        {verificationPreview ? (
-          <section className="token-box">
-            <h3>Verification link</h3>
-            <p>
-              Email delivery is in development mode right now, so you can finish
-              verification directly from this page.
-            </p>
-            {verificationPreview.verificationToken ? (
-              <code>{verificationPreview.verificationToken}</code>
-            ) : null}
-            {verificationPreview.verificationLink ? (
-              <a
-                className="btn btn--secondary btn--small"
-                href={verificationPreview.verificationLink}
-              >
-                Open Verify Page
-              </a>
-            ) : null}
-            <a className="btn btn--ghost btn--small" href="/html/login.html">
-              Continue to Login
-            </a>
-          </section>
-        ) : null}
 
         <p className="auth-footer">
           Already registered? <a href="/html/login.html">Login here</a>

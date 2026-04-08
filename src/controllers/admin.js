@@ -18,7 +18,6 @@ const ADMIN_USER_SELECT = {
   city: true,
   bio: true,
   isActive: true,
-  isVerified: true,
   createdAt: true,
   updatedAt: true,
   _count: {
@@ -67,7 +66,6 @@ const ADMIN_PRODUCT_SELECT = {
       avatarUrl: true,
       city: true,
       isActive: true,
-      isVerified: true,
     },
   },
   category: {

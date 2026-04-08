@@ -29,7 +29,6 @@ const WISHLIST_PRODUCT_SELECT = {
       name: true,
       avatarUrl: true,
       city: true,
-      isVerified: true,
     },
   },
   category: {
@@ -66,7 +65,6 @@ const WISHLIST_USER_SELECT = {
   avatarUrl: true,
   city: true,
   role: true,
-  isVerified: true,
 };
 
 function createOwnerWishlistSelect(ownerId) {

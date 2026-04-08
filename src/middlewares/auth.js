@@ -26,7 +26,6 @@ async function auth(req, res, next) {
         email: true,
         role: true,
         isActive: true,
-        isVerified: true,
       },
     });
     if (!user) {
@@ -66,7 +65,6 @@ async function optionalAuth(req, res, next) {
         email: true,
         role: true,
         isActive: true,
-        isVerified: true,
       },
     });
 

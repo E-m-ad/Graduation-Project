@@ -11,7 +11,6 @@ const USER_SUMMARY_SELECT = {
   id: true,
   name: true,
   avatarUrl: true,
-  isVerified: true,
 };
 
 const REVIEW_DETAIL_SELECT = {

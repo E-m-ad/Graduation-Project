@@ -56,7 +56,6 @@ const MANAGE_PRODUCT_SELECT = {
       avatarUrl: true,
       role: true,
       city: true,
-      isVerified: true,
     },
   },
   category: {
@@ -282,7 +281,6 @@ async function getProducts(req, res) {
               name: true,
               avatarUrl: true,
               city: true,
-              isVerified: true,
             },
           },
           category: {
@@ -417,7 +415,6 @@ async function getProductDetails(req, res) {
             avatarUrl: true,
             city: true,
             bio: true,
-            isVerified: true,
           },
         },
         category: {

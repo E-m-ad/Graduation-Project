@@ -35,7 +35,6 @@ const PRODUCT_CARD_SELECT = {
       name: true,
       avatarUrl: true,
       city: true,
-      isVerified: true,
     },
   },
   category: {

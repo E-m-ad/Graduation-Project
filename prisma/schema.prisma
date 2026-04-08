@@ -96,9 +96,8 @@ model User {
   latitude  Decimal? @db.Decimal(10, 8)
   longitude Decimal? @db.Decimal(11, 8)
 
-  bio        String? @db.Text
-  isActive   Boolean @default(true)
-  isVerified Boolean @default(false)
+  bio      String? @db.Text
+  isActive Boolean @default(true)
 
   createdAt DateTime @default(now()) @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @db.Timestamptz(6)
@@ -109,12 +108,11 @@ model User {
   rentalsAsOwner  Rental[]  @relation("UserRentalsAsOwner")
   reviewsWritten  Review[]  @relation("UserReviewsWritten")
 
-  wishlists               Wishlist[]
-  notifications           Notification[]
-  behaviors               UserBehavior[]
-  refreshTokens           RefreshToken[]
-  passwordResetTokens     PasswordResetToken[]
-  emailVerificationTokens EmailVerificationToken[]
+  wishlists           Wishlist[]
+  notifications       Notification[]
+  behaviors           UserBehavior[]
+  refreshTokens       RefreshToken[]
+  passwordResetTokens PasswordResetToken[]
 
   @@index([role])
   @@index([city])
@@ -412,18 +410,3 @@ model PasswordResetToken {
   @@index([expiresAt])
 }
 
-model EmailVerificationToken {
-  id     String @id @default(uuid())
-  token  String @unique @db.VarChar(512)
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  expiresAt DateTime  @db.Timestamptz(6)
-  isUsed    Boolean   @default(false)
-  usedAt    DateTime? @db.Timestamptz(6)
-
-  createdAt DateTime @default(now()) @db.Timestamptz(6)
-
-  @@index([userId])
-  @@index([expiresAt])
-}

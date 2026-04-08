@@ -108,7 +108,6 @@ function WishlistWatcher({ wishlist, product, busyKey, onNotify, onRemove }) {
         <div className="wishlist-watcher__copy">
           <div className="wishlist-watcher__headline">
             <strong>{user.name || "Unknown user"}</strong>
-            {user.isVerified ? <span className="tag tag--light">Verified</span> : null}
           </div>
           <p className="compact-text">
             {user.city || "City not added"} | Role: {user.role || "user"}

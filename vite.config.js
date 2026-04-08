@@ -10,7 +10,6 @@ const htmlEntries = {
   register: path.resolve("frontend/html/register.html"),
   forgotPassword: path.resolve("frontend/html/forgot-password.html"),
   resetPassword: path.resolve("frontend/html/reset-password.html"),
-  verifyEmail: path.resolve("frontend/html/verify-email.html"),
   profile: path.resolve("frontend/html/profile.html"),
   wishlist: path.resolve("frontend/html/wishlist.html"),
   myListings: path.resolve("frontend/html/my-listings.html"),
