@@ -15,7 +15,6 @@ The project is built with:
 - `React + Vite` for the frontend
 - `PostgreSQL + Prisma` for persistence
 - `JWT + refresh cookies` for authentication
-- `Nodemailer` for email delivery
 
 ## Table Of Contents
 
@@ -49,7 +48,7 @@ This repository currently delivers:
 - public browsing for categories and products
 - product details with reviews and similar-product recommendations
 - owner public profile pages with related listings
-- profile management, avatar uploads, email verification, and notifications
+- profile management, avatar uploads, and notifications
 - wishlist management
 - dedicated `Bookings` and `Rentals` pages
 - owner listing management and moderation feedback handling
@@ -71,7 +70,6 @@ This repository currently delivers:
 - user registration and login
 - access token + refresh cookie authentication flow
 - password reset flow
-- email verification flow
 - profile update and avatar upload
 
 ### Renter Features
@@ -114,7 +112,6 @@ This repository currently delivers:
 | ORM | Prisma 7 | Schema, migrations, typed database client |
 | Authentication | JWT, httpOnly refresh cookie, bcrypt | Login, session refresh, password protection |
 | Uploads | Multer, local filesystem | Product and avatar uploads |
-| Email | Nodemailer | Verification and password reset delivery |
 | Documentation | OpenAPI, Swagger UI | Interactive API docs |
 | Testing | Node-based unit, integration, and smoke scripts | Regression protection |
 | Deployment | Docker, standard Node hosting | Production delivery options |
@@ -131,7 +128,6 @@ flowchart LR
   API --> Prisma[Prisma ORM]
   Prisma --> Postgres[(PostgreSQL)]
   API --> Uploads[Local Upload Storage]
-  API --> Mail[SMTP / Nodemailer]
   API --> Docs[OpenAPI + Swagger UI]
 ```
 
@@ -174,7 +170,7 @@ Notes:
 ### Main Business Use Cases
 
 - Guest browses categories and available products
-- User registers, logs in, and verifies email
+- User registers and logs in
 - Owner creates a listing and uploads images
 - Admin reviews and approves or rejects listings
 - Renter requests a rental for an approved listing
@@ -237,7 +233,7 @@ flowchart LR
 
 1. A visitor opens the home page and explores recommended and public listings.
 2. A user registers an account and logs in.
-3. The user updates the profile, uploads an avatar, and optionally verifies email.
+3. The user updates the profile and uploads an avatar.
 4. An owner creates a listing from `My Listings`.
 5. The admin reviews the listing and approves it.
 6. A renter opens the product details page and submits a rental request.
@@ -679,6 +675,8 @@ Important production notes:
 | `npm run prisma:migrate` | Run development migrations |
 | `npm run prisma:deploy` | Apply production migrations |
 | `npm run prisma:studio` | Open Prisma Studio |
+| `npm run verify:schema` | Confirm required production schema columns exist |
+| `npm run start:production` | Generate Prisma client, apply migrations, verify schema, then start the API |
 | `npm run test` | Run unit, integration, and smoke tests |
 | `npm run test:unit` | Run unit tests |
 | `npm run test:integration` | Run integration tests |
@@ -721,8 +719,6 @@ Before release, manually verify:
 - owner public profile links from product details
 - notifications badge updates
 - booking and rental state transitions
-- email verification flow when SMTP is enabled
-
 ## Deployment Guide
 
 ### Recommended Production Topology
@@ -746,6 +742,7 @@ Using the same origin is strongly recommended because:
 - set all required environment variables
 - use `NODE_ENV=production`
 - apply database migrations with `npm run prisma:deploy`
+- verify schema compatibility with `npm run verify:schema`
 - persist the `uploads/` directory with server storage or a mounted volume
 - terminate traffic over HTTPS
 - run `npm run check` before release
@@ -758,8 +755,9 @@ Using the same origin is strongly recommended because:
 4. Set production variables
 5. Run `npm run prisma:generate`
 6. Run `npm run prisma:deploy`
-7. Run `npm run build`
-8. Start the server with `npm run start`
+7. Run `npm run verify:schema`
+8. Run `npm run build`
+9. Start the server with `npm run start:production`
 
 ### Docker Deployment
 
@@ -778,8 +776,46 @@ docker run -p 8080:8080 --env-file .env ai-rent
 Important note:
 
 - the runtime Docker image is optimized for serving the app
-- database migrations are not automatically executed by the container
-- run `npm run prisma:deploy` as a separate release step before or during deployment
+- the container now runs Prisma generate, Prisma migrate deploy, and schema verification before starting the API
+- if a required migration is missing, the container should fail fast instead of starting with partially broken endpoints
+
+### Railway Deployment
+
+For Railway, use the repository root with the included [Dockerfile](./Dockerfile).
+
+Recommended Railway setup:
+
+1. Create a PostgreSQL database service.
+2. Attach the app service to that database and set `DATABASE_URL`.
+3. Set:
+   - `NODE_ENV=production`
+   - `JWT_SECRET`
+   - `REFRESH_TOKEN_SECRET`
+   - `ACCESS_TOKEN_EXPIRATION`
+   - `REFRESH_TOKEN_EXPIRATION`
+4. Deploy the latest commit so Railway uses the current Dockerfile.
+5. After deploy, open `/healthz`.
+
+Expected healthy response:
+
+- `status: "ok"`
+- `database: "up"`
+- `schema: "up"`
+
+If Railway shows a healthy container but app pages like `My Listings` fail, check:
+
+- the service is on the latest commit
+- Railway did not reuse an old build cache
+- the production database received the latest Prisma migrations
+- `/healthz` does not report `schema: "mismatch"`
+
+If `/healthz` returns `schema: "mismatch"`, redeploy after the latest image starts or run:
+
+```bash
+npm run prisma:deploy
+```
+
+against the Railway production database.
 
 ### Reverse Proxy Notes
 
@@ -795,6 +831,7 @@ If you deploy behind Nginx, Caddy, Render, Railway, or a similar platform:
 After going live, verify:
 
 - `GET /healthz` returns `200`
+- `GET /healthz` includes `schema: "up"`
 - `GET /api/v1/docs` loads Swagger UI
 - registration works
 - login works

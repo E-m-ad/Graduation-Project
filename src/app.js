@@ -22,6 +22,7 @@ import behavior from "./routes/behavior.js";
 import notification from "./routes/notification.js";
 import admin from "./routes/admin.js";
 import docs from "./routes/docs.js";
+import { getSchemaHealth } from "./utils/schema-health.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -45,9 +46,22 @@ export function createApp() {
   app.get("/healthz", async (req, res) => {
     try {
       await db.$queryRaw`SELECT 1`;
+      const schema = await getSchemaHealth(db);
+
+      if (!schema.ok) {
+        return res.status(503).json({
+          status: "degraded",
+          database: "up",
+          schema: "mismatch",
+          missingColumns: schema.missing,
+          timestamp: new Date().toISOString(),
+        });
+      }
+
       res.status(200).json({
         status: "ok",
         database: "up",
+        schema: "up",
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
