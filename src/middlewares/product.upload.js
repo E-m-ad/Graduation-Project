@@ -1,11 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import multer from "multer";
+import { getProductUploadsDir } from "../utils/runtime-config.js";
 
-const productImagesDir = fileURLToPath(
-  new URL("../../uploads/products", import.meta.url),
-);
+const productImagesDir = getProductUploadsDir();
 const maxProductImageFileSize = 5 * 1024 * 1024;
 const maxProductImageCount = 10;
 

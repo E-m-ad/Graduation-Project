@@ -44,6 +44,7 @@
     "jsonwebtoken": "^9.0.3",
     "morgan": "^1.10.1",
     "multer": "^2.1.1",
+    "nodemailer": "^8.0.5",
     "path": "^0.12.7",
     "pg": "^8.18.0",
     "react": "^19.2.4",
@@ -55,6 +56,7 @@
     "@vitejs/plugin-react": "^6.0.1",
     "nodemon": "^3.1.11",
     "prisma": "^7.4.1",
+    "smtp-server": "^3.18.4",
     "vite": "^8.0.3"
   }
 }

@@ -100,6 +100,40 @@
   line-height: 1.6;
 }
 
+.profile-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.profile-status-badge--verified {
+  color: #047857;
+  background: rgba(1, 164, 123, 0.12);
+  border-color: rgba(1, 164, 123, 0.18);
+}
+
+.profile-status-badge--pending {
+  color: #b45309;
+  background: rgba(243, 185, 0, 0.16);
+  border-color: rgba(180, 83, 9, 0.16);
+}
+
+.profile-status-badge__icon {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.72);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
 .profile-content {
   display: flex;
   flex-direction: column;
@@ -112,6 +146,11 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 10px;
+}
+
+.profile-verification {
+  display: grid;
+  gap: 14px;
 }
 
 .profile-summary-grid {
@@ -164,7 +203,7 @@
 
 .profile-public-summary {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
 }
 
@@ -224,7 +263,8 @@
     grid-template-columns: 1fr;
   }
 
-  .profile-card__meta-item {
+  .profile-card__meta-item,
+  .profile-status-badge {
     width: 100%;
     justify-content: center;
   }

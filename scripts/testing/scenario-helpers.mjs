@@ -6,6 +6,7 @@ import {
   loginUser,
   makeImagesForm,
   registerUser,
+  verifyEmailToken,
   db,
 } from "./test-harness.mjs";
 
@@ -41,13 +42,26 @@ export async function createDefaultActors(context) {
     },
   };
 
+  const registrationResponses = {};
+
   for (const [label, user] of Object.entries(users)) {
-    await registerUser(guest, {
+    registrationResponses[label] = await registerUser(guest, {
       label,
       name: user.name,
       email: user.email,
       password: PASSWORDS.primary,
     });
+
+    assert(
+      registrationResponses[label]?.verificationToken,
+      `Register ${label} user should return a development verification token`,
+      registrationResponses[label],
+    );
+    await verifyEmailToken(
+      guest,
+      registrationResponses[label].verificationToken,
+      `Verify ${label} user email`,
+    );
   }
 
   await db.user.update({

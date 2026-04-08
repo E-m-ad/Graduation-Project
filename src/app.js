@@ -22,6 +22,11 @@ import behavior from "./routes/behavior.js";
 import notification from "./routes/notification.js";
 import admin from "./routes/admin.js";
 import docs from "./routes/docs.js";
+import { hasEmailTransportConfig, verifyEmailTransport } from "./utils/email.js";
+import {
+  getUploadsRootDir,
+  isOriginAllowed,
+} from "./utils/runtime-config.js";
 import { getSchemaHealth } from "./utils/schema-health.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -29,7 +34,24 @@ const __dirname = path.dirname(__filename);
 const frontendDistDir = path.resolve(__dirname, "../frontend/dist");
 const publicDir = path.resolve(__dirname, "../public");
 const staticDir = fs.existsSync(frontendDistDir) ? frontendDistDir : publicDir;
-const uploadsDir = path.resolve(__dirname, "../uploads");
+const uploadsDir = getUploadsRootDir();
+
+function buildCorsOptions() {
+  if (process.env.NODE_ENV !== "production") {
+    return {
+      origin: true,
+      credentials: true,
+    };
+  }
+
+  return {
+    origin(origin, callback) {
+      callback(null, isOriginAllowed(origin));
+    },
+    credentials: true,
+    optionsSuccessStatus: 204,
+  };
+}
 
 export function createApp() {
   const app = express();
@@ -38,7 +60,7 @@ export function createApp() {
 
   app.use(morgan("dev"));
   app.use(helmet());
-  app.use(cors({ origin: true, credentials: true }));
+  app.use(cors(buildCorsOptions()));
   app.use(express.urlencoded({ extended: true }));
   app.use(express.json());
   app.use(cookieParser());
@@ -47,13 +69,36 @@ export function createApp() {
     try {
       await db.$queryRaw`SELECT 1`;
       const schema = await getSchemaHealth(db);
+      const emailConfigPresent = hasEmailTransportConfig();
+      let emailStatus = emailConfigPresent ? "configured" : "not_configured";
+
+      if (emailConfigPresent) {
+        try {
+          await verifyEmailTransport();
+          emailStatus = "up";
+        } catch (error) {
+          console.error("healthz email verify error:", error);
+          emailStatus = "down";
+        }
+      }
 
       if (!schema.ok) {
         return res.status(503).json({
           status: "degraded",
           database: "up",
           schema: "mismatch",
+          email: emailStatus,
           missingColumns: schema.missing,
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      if (process.env.NODE_ENV === "production" && emailStatus !== "up") {
+        return res.status(503).json({
+          status: "degraded",
+          database: "up",
+          schema: "up",
+          email: emailStatus,
           timestamp: new Date().toISOString(),
         });
       }
@@ -62,6 +107,7 @@ export function createApp() {
         status: "ok",
         database: "up",
         schema: "up",
+        email: emailStatus,
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
@@ -69,6 +115,7 @@ export function createApp() {
       res.status(503).json({
         status: "degraded",
         database: "down",
+        email: "unknown",
       });
     }
   });
@@ -103,9 +150,23 @@ export function createApp() {
 export function startServer(port = Number(process.env.PORT || 8080)) {
   const app = createApp();
 
-  return app.listen(port, "0.0.0.0", () => {
+  const server = app.listen(port, "0.0.0.0", async () => {
     console.log(`Server is running on port ${port}`);
+
+    if (process.env.NODE_ENV === "production") {
+      try {
+        await verifyEmailTransport();
+        console.log("SMTP transport verified");
+      } catch (error) {
+        console.error("SMTP transport verification failed:", error);
+        server.close(() => {
+          process.exit(1);
+        });
+      }
+    }
   });
+
+  return server;
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {

@@ -1,6 +1,13 @@
+import path from "node:path";
 import authSchema from "../src/utils/auth.zod.js";
 import productSchema from "../src/utils/product.zod.js";
 import rentalSchema from "../src/utils/rental.zod.js";
+import {
+  getAllowedCorsOrigins,
+  getAppBaseUrl,
+  getUploadsRootDir,
+  isOriginAllowed,
+} from "../src/utils/runtime-config.js";
 import wishlistSchema from "../src/utils/wishlist.zod.js";
 
 const VALID_ID = "11111111-1111-4111-8111-111111111111";
@@ -52,6 +59,92 @@ async function run() {
     ),
     "Register schema should report the confirmPassword mismatch",
     mismatchedPasswords.error.issues,
+  );
+
+  const verifyEmailPayload = authSchema.verifyEmailSchema.parse({
+    token: "verification-token-value",
+  });
+  assert(
+    verifyEmailPayload.token === "verification-token-value",
+    "Verify email schema should accept a non-empty token",
+    verifyEmailPayload,
+  );
+
+  const missingVerifyEmailToken = authSchema.verifyEmailSchema.safeParse({
+    token: "",
+  });
+  assert(
+    missingVerifyEmailToken.success === false,
+    "Verify email schema should reject an empty token",
+  );
+
+  const requestEmailVerificationPayload =
+    authSchema.requestEmailVerificationSchema.parse({
+      email: "verify.me@example.com",
+    });
+  assert(
+    requestEmailVerificationPayload.email === "verify.me@example.com",
+    "Request email verification schema should accept a valid email payload",
+    requestEmailVerificationPayload,
+  );
+
+  const railwayRuntimeBaseUrl = getAppBaseUrl({
+    RAILWAY_PUBLIC_DOMAIN: "demo-market.up.railway.app",
+  });
+  assert(
+    railwayRuntimeBaseUrl === "https://demo-market.up.railway.app",
+    "Runtime config should build the Railway public app URL automatically",
+    railwayRuntimeBaseUrl,
+  );
+
+  const explicitBaseUrl = getAppBaseUrl({
+    APP_BASE_URL: "https://rent.example.com/",
+    RAILWAY_PUBLIC_DOMAIN: "demo-market.up.railway.app",
+  });
+  assert(
+    explicitBaseUrl === "https://rent.example.com",
+    "Runtime config should prefer APP_BASE_URL over Railway fallback",
+    explicitBaseUrl,
+  );
+
+  const allowedOrigins = getAllowedCorsOrigins({
+    NODE_ENV: "production",
+    APP_BASE_URL: "https://rent.example.com",
+    CORS_ALLOWED_ORIGINS: "https://admin.example.com/, https://portal.example.com/app",
+  });
+  assert(
+    allowedOrigins.includes("https://rent.example.com") &&
+      allowedOrigins.includes("https://admin.example.com") &&
+      allowedOrigins.includes("https://portal.example.com"),
+    "Runtime config should normalize allowed CORS origins",
+    allowedOrigins,
+  );
+
+  assert(
+    isOriginAllowed("https://rent.example.com", {
+      NODE_ENV: "production",
+      APP_BASE_URL: "https://rent.example.com",
+    }) === true,
+    "Production CORS should allow the app base URL origin",
+  );
+
+  assert(
+    isOriginAllowed("https://blocked.example.com", {
+      NODE_ENV: "production",
+      APP_BASE_URL: "https://rent.example.com",
+    }) === false,
+    "Production CORS should reject origins outside the configured allowlist",
+  );
+
+  const platformVolumePath =
+    process.platform === "win32" ? "D:/railway-volume" : "/data/railway-volume";
+  const railwayUploadsRoot = getUploadsRootDir({
+    RAILWAY_VOLUME_MOUNT_PATH: platformVolumePath,
+  });
+  assert(
+    railwayUploadsRoot === path.resolve(platformVolumePath),
+    "Runtime config should use the Railway volume mount as the upload root",
+    railwayUploadsRoot,
   );
 
   const productPayload = productSchema.createProductSchema.parse({

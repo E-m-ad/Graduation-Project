@@ -2,9 +2,13 @@ import bcrypt from "bcrypt";
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import db from "../database/db.js";
+import { sendEmail } from "../utils/email.js";
+import { buildRequestBaseUrl } from "../utils/runtime-config.js";
 import z from "../utils/auth.zod.js";
 
+const EMAIL_NOT_VERIFIED_CODE = "EMAIL_NOT_VERIFIED";
 const RESET_TOKEN_TTL_MS = 2 * 60 * 1000;
+const EMAIL_VERIFICATION_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
 const REFRESH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 z.envProcessSchema.parse(process.env);
@@ -24,15 +28,170 @@ function hashToken(value) {
   return crypto.createHash("sha256").update(value).digest("hex");
 }
 
+function buildVerificationLink(req, rawToken) {
+  return `${buildRequestBaseUrl(req)}/html/verify-email.html?token=${encodeURIComponent(rawToken)}`;
+}
+
+async function createEmailVerificationToken(userId) {
+  const rawToken = crypto.randomBytes(32).toString("hex");
+
+  await db.emailVerificationToken.deleteMany({
+    where: { userId },
+  });
+
+  await db.emailVerificationToken.create({
+    data: {
+      token: hashToken(rawToken),
+      userId,
+      expiresAt: new Date(Date.now() + EMAIL_VERIFICATION_TOKEN_TTL_MS),
+    },
+  });
+
+  return rawToken;
+}
+
+async function sendVerificationEmail({ req, user, rawToken }) {
+  const verificationLink = buildVerificationLink(req, rawToken);
+  const text = [
+    `Hi ${user.name || "there"},`,
+    "",
+    "Welcome to AI Rent.",
+    "Verify your email address by opening the link below:",
+    verificationLink,
+    "",
+    "If you did not request this, you can ignore this email.",
+  ].join("\n");
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827;">
+      <p>Hi ${user.name || "there"},</p>
+      <p>Welcome to AI Rent.</p>
+      <p>Please verify your email address by using the link below:</p>
+      <p>
+        <a href="${verificationLink}" style="color: #da291c; font-weight: 700;">
+          Verify your email
+        </a>
+      </p>
+      <p>If you did not request this, you can ignore this email.</p>
+    </div>
+  `;
+
+  const result = await sendEmail({
+    to: user.email,
+    subject: "Verify your AI Rent email",
+    text,
+    html,
+  });
+
+  if (result.skipped) {
+    console.info(
+      `Email delivery is not configured. Verification link for ${user.email}: ${verificationLink}`,
+    );
+  }
+
+  return {
+    emailSent: result.sent,
+    verificationLink,
+  };
+}
+
+async function issueEmailVerification({ req, user }) {
+  const rawToken = await createEmailVerificationToken(user.id);
+  const { emailSent, verificationLink } = await sendVerificationEmail({
+    req,
+    user,
+    rawToken,
+  });
+
+  return {
+    rawToken,
+    emailSent,
+    verificationLink,
+  };
+}
+
+function getVerificationDeliveryMessage({
+  emailSent,
+  successMessage,
+  developmentMessage,
+  productionFallbackMessage,
+}) {
+  if (emailSent) {
+    return successMessage;
+  }
+
+  if (process.env.NODE_ENV === "development") {
+    return developmentMessage;
+  }
+
+  return productionFallbackMessage;
+}
+
+function appendDevelopmentVerificationPreview(
+  responseBody,
+  rawToken,
+  verificationLink,
+) {
+  if (process.env.NODE_ENV === "development") {
+    responseBody.verificationToken = rawToken;
+    responseBody.verificationLink = verificationLink;
+  }
+
+  return responseBody;
+}
+
+function getGenericVerificationRequestMessage() {
+  return "If an account with this email exists and still needs verification, a confirmation email will be sent shortly";
+}
+
+function buildVerificationRequestResponse({
+  message,
+  rawToken,
+  verificationLink,
+}) {
+  return appendDevelopmentVerificationPreview(
+    {
+      success: true,
+      message,
+    },
+    rawToken,
+    verificationLink,
+  );
+}
+
+function buildVerificationRequiredResponse({
+  message,
+  rawToken,
+  verificationLink,
+}) {
+  return appendDevelopmentVerificationPreview(
+    {
+      success: false,
+      code: EMAIL_NOT_VERIFIED_CODE,
+      requiresEmailVerification: true,
+      message,
+    },
+    rawToken,
+    verificationLink,
+  );
+}
+
+function buildValidationErrorResponse(data) {
+  return {
+    success: false,
+    error: {
+      path: data.error.issues[0].path.join("."),
+      message: data.error.issues[0].message,
+    },
+  };
+}
+
 async function register(req, res) {
   const data = z.registerSchema.safeParse(req.body);
   if (!data.success) {
     return res.status(400).json({
       success: false,
-      error: {
-        path: data.error.issues[0].path.join("."),
-        message: data.error.issues[0].message,
-      },
+      error: buildValidationErrorResponse(data).error,
     });
   }
 
@@ -41,13 +200,20 @@ async function register(req, res) {
   try {
     const existingUser = await db.user.findUnique({ where: { email } });
     if (existingUser) {
-      return res.status(409).json({
-        success: false,
-        message: "Email is already registered",
+      if (existingUser.isActive && !existingUser.isVerified) {
+        await issueEmailVerification({
+          req,
+          user: existingUser,
+        });
+      }
+
+      return res.status(201).json({
+        success: true,
+        message: getGenericVerificationRequestMessage(),
       });
     }
 
-    await db.user.create({
+    const user = await db.user.create({
       data: {
         name,
         email,
@@ -60,12 +226,212 @@ async function register(req, res) {
       },
     });
 
-    return res.status(201).json({
-      success: true,
-      message: "User registered successfully",
+    const { rawToken, emailSent, verificationLink } = await issueEmailVerification({
+      req,
+      user,
     });
+
+    const message = getVerificationDeliveryMessage({
+      emailSent,
+      successMessage:
+        "User registered successfully. Check your email to verify your account.",
+      developmentMessage:
+        "User registered successfully. Use the verification link below while testing locally.",
+      productionFallbackMessage:
+        "User registered successfully, but verification email delivery is unavailable right now.",
+    });
+
+    return res.status(201).json(
+      buildVerificationRequestResponse({
+        message,
+        rawToken,
+        verificationLink,
+      }),
+    );
   } catch (error) {
     console.error(error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+}
+
+async function requestEmailVerification(req, res) {
+  try {
+    const authUserId = req.user?.id;
+
+    if (authUserId) {
+      const user = await db.user.findUnique({
+        where: { id: authUserId },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          isActive: true,
+          isVerified: true,
+        },
+      });
+
+      if (!user || !user.isActive) {
+        return res.status(404).json({
+          success: false,
+          message: "User not found",
+        });
+      }
+
+      if (user.isVerified) {
+        return res.status(409).json({
+          success: false,
+          message: "Your email is already verified",
+        });
+      }
+
+      const { rawToken, emailSent, verificationLink } = await issueEmailVerification({
+        req,
+        user,
+      });
+
+      const message = getVerificationDeliveryMessage({
+        emailSent,
+        successMessage: "Verification email sent successfully",
+        developmentMessage: "Verification link generated for local testing",
+        productionFallbackMessage:
+          "Verification email delivery is unavailable on this server right now",
+      });
+
+      return res.status(200).json(
+        buildVerificationRequestResponse({
+          message,
+          rawToken,
+          verificationLink,
+        }),
+      );
+    }
+
+    const data = z.requestEmailVerificationSchema.safeParse(req.body);
+    if (!data.success) {
+      return res.status(400).json({
+        success: false,
+        error: buildValidationErrorResponse(data).error,
+      });
+    }
+
+    const user = await db.user.findUnique({
+      where: { email: data.data.email },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        isActive: true,
+        isVerified: true,
+      },
+    });
+
+    if (!user || !user.isActive || user.isVerified) {
+      return res.status(200).json({
+        success: true,
+        message: getGenericVerificationRequestMessage(),
+      });
+    }
+
+    const { rawToken, verificationLink } = await issueEmailVerification({
+      req,
+      user,
+    });
+
+    return res.status(200).json(
+      buildVerificationRequestResponse({
+        message: getGenericVerificationRequestMessage(),
+        rawToken,
+        verificationLink,
+      }),
+    );
+  } catch (error) {
+    console.error("requestEmailVerification error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+}
+
+async function verifyEmail(req, res) {
+  const data = z.verifyEmailSchema.safeParse(req.body);
+  if (!data.success) {
+    return res.status(400).json({
+      success: false,
+      error: buildValidationErrorResponse(data).error,
+    });
+  }
+
+  try {
+    const verificationToken = await db.emailVerificationToken.findUnique({
+      where: {
+        token: hashToken(data.data.token),
+      },
+      select: {
+        id: true,
+        userId: true,
+        expiresAt: true,
+        isUsed: true,
+        user: {
+          select: {
+            id: true,
+            email: true,
+            isVerified: true,
+          },
+        },
+      },
+    });
+
+    if (
+      !verificationToken ||
+      verificationToken.isUsed ||
+      verificationToken.expiresAt < new Date()
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired verification token",
+      });
+    }
+
+    const user = await db.$transaction(async (tx) => {
+      const updatedUser = await tx.user.update({
+        where: { id: verificationToken.userId },
+        data: { isVerified: true },
+        select: {
+          id: true,
+          email: true,
+          isVerified: true,
+        },
+      });
+
+      await tx.emailVerificationToken.update({
+        where: { id: verificationToken.id },
+        data: {
+          isUsed: true,
+          usedAt: new Date(),
+        },
+      });
+
+      await tx.emailVerificationToken.deleteMany({
+        where: {
+          userId: verificationToken.userId,
+          id: { not: verificationToken.id },
+        },
+      });
+
+      return updatedUser;
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Email verified successfully",
+      data: user,
+    });
+  } catch (error) {
+    console.error("verifyEmail error:", error);
     return res.status(500).json({
       success: false,
       message: "Internal server error",
@@ -78,10 +444,7 @@ async function login(req, res) {
   if (!data.success) {
     return res.status(400).json({
       success: false,
-      error: {
-        path: data.error.issues[0].path.join("."),
-        message: data.error.issues[0].message,
-      },
+      error: buildValidationErrorResponse(data).error,
     });
   }
 
@@ -107,6 +470,31 @@ async function login(req, res) {
       return res
         .status(401)
         .json({ success: false, message: "Invalid email or password" });
+    }
+
+    if (!user.isVerified) {
+      const { rawToken, emailSent, verificationLink } = await issueEmailVerification({
+        req,
+        user,
+      });
+
+      const message = getVerificationDeliveryMessage({
+        emailSent,
+        successMessage:
+          "Verify your email before logging in. We sent you a new verification email.",
+        developmentMessage:
+          "Verify your email before logging in. Use the verification link below while testing locally.",
+        productionFallbackMessage:
+          "Verify your email before logging in. Verification email delivery is unavailable right now.",
+      });
+
+      return res.status(403).json(
+        buildVerificationRequiredResponse({
+          message,
+          rawToken,
+          verificationLink,
+        }),
+      );
     }
 
     const accessToken = jwt.sign(
@@ -177,13 +565,28 @@ async function refreshToken(req, res) {
 
     const user = await db.user.findUnique({
       where: { id: checkToken.userId },
-      select: { id: true, role: true, isActive: true },
+      select: { id: true, role: true, isActive: true, isVerified: true },
     });
 
     if (!user || !user.isActive) {
       return res
         .status(401)
         .json({ success: false, message: "User not found or inactive" });
+    }
+
+    if (!user.isVerified) {
+      await db.refreshToken.updateMany({
+        where: { userId: user.id },
+        data: { isRevoked: true },
+      });
+
+      res.clearCookie("refreshToken", getRefreshCookieOptions());
+      return res.status(403).json({
+        success: false,
+        code: EMAIL_NOT_VERIFIED_CODE,
+        requiresEmailVerification: true,
+        message: "Verify your email before continuing",
+      });
     }
 
     const newAccessToken = jwt.sign(
@@ -230,10 +633,7 @@ async function forgotPassword(req, res) {
   if (!data.success) {
     return res.status(400).json({
       success: false,
-      error: {
-        path: data.error.issues[0].path.join("."),
-        message: data.error.issues[0].message,
-      },
+      error: buildValidationErrorResponse(data).error,
     });
   }
 
@@ -283,10 +683,7 @@ async function resetPassword(req, res) {
   if (!data.success) {
     return res.status(400).json({
       success: false,
-      error: {
-        path: data.error.issues[0].path.join("."),
-        message: data.error.issues[0].message,
-      },
+      error: buildValidationErrorResponse(data).error,
     });
   }
 
@@ -341,6 +738,8 @@ export default {
   login,
   refreshToken,
   logOut,
+  requestEmailVerification,
+  verifyEmail,
   forgotPassword,
   resetPassword,
 };

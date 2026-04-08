@@ -48,6 +48,9 @@ export function LoginPage({ page }) {
   const [form, setForm] = useState({ email: "", password: "", rememberMe: false });
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
+  const [resendingVerification, setResendingVerification] = useState(false);
+  const [verificationEmail, setVerificationEmail] = useState("");
+  const [verificationPreview, setVerificationPreview] = useState(null);
   const [message, showMessage] = useMessageState("");
 
   useEffect(() => {
@@ -82,6 +85,7 @@ export function LoginPage({ page }) {
   async function handleSubmit(event) {
     event.preventDefault();
     showMessage("");
+    setVerificationPreview(null);
 
     if (!validateForm()) return;
 
@@ -96,6 +100,20 @@ export function LoginPage({ page }) {
     });
 
     if (!result.ok || !result.data?.success) {
+      const normalizedEmail = form.email.trim();
+      if (
+        result.data?.requiresEmailVerification ||
+        result.data?.code === "EMAIL_NOT_VERIFIED"
+      ) {
+        setVerificationEmail(normalizedEmail);
+        if (result.data.verificationLink || result.data.verificationToken) {
+          setVerificationPreview({
+            verificationLink: result.data.verificationLink || "",
+            verificationToken: result.data.verificationToken || "",
+          });
+        }
+      }
+
       showMessage(
         result.data?.error?.message ||
           result.data?.message ||
@@ -123,6 +141,46 @@ export function LoginPage({ page }) {
 
       goToNextPage(getDefaultAuthenticatedPath(nextUser));
     }, 500);
+  }
+
+  async function handleResendVerification() {
+    const normalizedEmail = form.email.trim();
+    if (!validateEmail(normalizedEmail)) {
+      setErrors((previous) => ({
+        ...previous,
+        email: "Enter the same email you used when registering.",
+      }));
+      return;
+    }
+
+    setResendingVerification(true);
+    setVerificationPreview(null);
+
+    const result = await fetchApi("/api/v1/auth/request-email-verification", {
+      method: "POST",
+      body: {
+        email: normalizedEmail,
+      },
+    });
+
+    setResendingVerification(false);
+    setVerificationEmail(normalizedEmail);
+
+    showMessage(
+      result.data?.message || "Verification email request updated.",
+      result.ok ? "success" : "error",
+    );
+
+    if (!result.ok || !result.data?.success) {
+      return;
+    }
+
+    if (result.data.verificationLink || result.data.verificationToken) {
+      setVerificationPreview({
+        verificationLink: result.data.verificationLink || "",
+        verificationToken: result.data.verificationToken || "",
+      });
+    }
   }
 
   return (
@@ -206,6 +264,37 @@ export function LoginPage({ page }) {
           <MessageText message={message} />
         </form>
 
+        {verificationEmail ? (
+          <section className="token-box">
+            <h3>Need a fresh verification email?</h3>
+            <p>
+              If this account is waiting for email verification, we can send a new
+              verification link to <strong>{verificationEmail}</strong>.
+            </p>
+            <button
+              type="button"
+              className="btn btn--secondary btn--small"
+              onClick={handleResendVerification}
+              disabled={resendingVerification}
+            >
+              {resendingVerification
+                ? "Sending verification..."
+                : "Resend verification email"}
+            </button>
+            {verificationPreview?.verificationToken ? (
+              <code>{verificationPreview.verificationToken}</code>
+            ) : null}
+            {verificationPreview?.verificationLink ? (
+              <a
+                className="btn btn--ghost btn--small"
+                href={verificationPreview.verificationLink}
+              >
+                Open Verify Page
+              </a>
+            ) : null}
+          </section>
+        ) : null}
+
         <p className="auth-footer">
           New to AI Rent? <a href="/html/register.html">Create an account</a>
         </p>
@@ -224,6 +313,7 @@ export function RegisterPage({ page }) {
   });
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
+  const [verificationPreview, setVerificationPreview] = useState(null);
   const [message, showMessage] = useMessageState("");
 
   useEffect(() => {
@@ -263,6 +353,7 @@ export function RegisterPage({ page }) {
   async function handleSubmit(event) {
     event.preventDefault();
     showMessage("");
+    setVerificationPreview(null);
     if (!validateForm()) return;
 
     setSubmitting(true);
@@ -293,6 +384,14 @@ export function RegisterPage({ page }) {
       result.data.message || "Account created successfully. Redirecting to login...",
       "success",
     );
+
+    if (result.data.verificationLink || result.data.verificationToken) {
+      setVerificationPreview({
+        verificationLink: result.data.verificationLink || "",
+        verificationToken: result.data.verificationToken || "",
+      });
+      return;
+    }
 
     window.setTimeout(() => {
       window.location.href = "/html/login.html";
@@ -395,6 +494,30 @@ export function RegisterPage({ page }) {
           </button>
           <MessageText message={message} />
         </form>
+
+        {verificationPreview ? (
+          <section className="token-box">
+            <h3>Verification link</h3>
+            <p>
+              Check your inbox first. In development mode, the verification link is
+              also shown here so you can finish testing locally.
+            </p>
+            {verificationPreview.verificationToken ? (
+              <code>{verificationPreview.verificationToken}</code>
+            ) : null}
+            {verificationPreview.verificationLink ? (
+              <a
+                className="btn btn--secondary btn--small"
+                href={verificationPreview.verificationLink}
+              >
+                Open Verify Page
+              </a>
+            ) : null}
+            <a className="btn btn--ghost btn--small" href="/html/login.html">
+              Continue to Login
+            </a>
+          </section>
+        ) : null}
 
         <p className="auth-footer">
           Already registered? <a href="/html/login.html">Login here</a>

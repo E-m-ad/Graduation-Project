@@ -25,6 +25,7 @@ function createProfileForm(user) {
   };
 }
 
+const CHECK_MARK = "\u2713";
 const PROFILE_TAB_VALUES = ["account", "notifications"];
 
 function getInitialProfileTab() {
@@ -179,7 +180,7 @@ function NotificationListItem({ notification, onMarkRead, onDelete }) {
 }
 
 export function ProfilePage({ page }) {
-  const { user, loading, setUser, logout } = useSession();
+  const { user, loading, setUser, refreshUser, logout } = useSession();
   const [message, showMessage] = useMessageState("");
   const [activeTab, setActiveTab] = useState(getInitialProfileTab);
   const [profileUser, setProfileUser] = useState(user);
@@ -195,6 +196,8 @@ export function ProfilePage({ page }) {
   const [avatarFile, setAvatarFile] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [notificationsUnreadCount, setNotificationsUnreadCount] = useState(0);
+  const [verificationPreview, setVerificationPreview] = useState(null);
+  const [sendingVerification, setSendingVerification] = useState(false);
   const [publicProfileUser, setPublicProfileUser] = useState(null);
   const [publicProducts, setPublicProducts] = useState([]);
   const [loadingPublicProfile, setLoadingPublicProfile] = useState(false);
@@ -598,6 +601,42 @@ export function ProfilePage({ page }) {
     }
   }
 
+  async function handleSendVerificationEmail() {
+    setSendingVerification(true);
+    setVerificationPreview(null);
+
+    const result = await fetchApi("/api/v1/auth/request-email-verification", {
+      method: "POST",
+      auth: true,
+    });
+
+    setSendingVerification(false);
+
+    showMessage(
+      result.data?.message || "Verification request updated.",
+      result.ok ? "success" : "error",
+    );
+
+    if (!result.ok || !result.data?.success) {
+      return;
+    }
+
+    if (result.data.verificationLink || result.data.verificationToken) {
+      setVerificationPreview({
+        verificationLink: result.data.verificationLink || "",
+        verificationToken: result.data.verificationToken || "",
+      });
+    }
+
+    if (profileUser?.isVerified === false) {
+      try {
+        await refreshUser(true);
+      } catch (error) {
+        console.error("refreshUser after requestEmailVerification error:", error);
+      }
+    }
+  }
+
   const publicProfileAvatar = publicProfileUser?.avatarUrl || AVATAR_PLACEHOLDER;
   const publicProfileName = publicProfileUser?.name || "Owner profile";
   const publicListingCount = publicProducts.length;
@@ -654,11 +693,24 @@ export function ProfilePage({ page }) {
             <p className="profile-card__hint">Click the image to preview it larger.</p>
             <div className="profile-card__headline">
               <h1>{publicProfileName}</h1>
+              {publicProfileUser?.isVerified ? (
+                <span className="profile-status-badge profile-status-badge--verified">
+                  <span className="profile-status-badge__icon" aria-hidden="true">
+                    {CHECK_MARK}
+                  </span>
+                  <span>Verified owner</span>
+                </span>
+              ) : null}
             </div>
             <p>Public owner profile</p>
             <div className="profile-card__meta">
               <span className="profile-card__meta-item">
                 {publicProfileUser?.city || "City not added"}
+              </span>
+              <span className="profile-card__meta-item">
+                {publicProfileUser?.isVerified
+                  ? "Verified account"
+                  : "Verification pending"}
               </span>
               <span className="profile-card__meta-item">
                 {loadingPublicProfile
@@ -693,9 +745,11 @@ export function ProfilePage({ page }) {
                     <span>{publicProfileUser.city || "City not added"}</span>
                   </div>
                   <div className="profile-public-summary__item">
-                    <strong>Listings</strong>
+                    <strong>Verification</strong>
                     <span>
-                      {publicListingCount} public listing{publicListingCount === 1 ? "" : "s"}
+                      {publicProfileUser.isVerified
+                        ? "Verified account"
+                        : "Verification pending"}
                     </span>
                   </div>
                 </div>
@@ -762,6 +816,22 @@ export function ProfilePage({ page }) {
             <p className="profile-card__hint">Click the image to preview it larger.</p>
             <div className="profile-card__headline">
               <h1>{profileUser?.name || "Your profile"}</h1>
+              <span
+                className={`profile-status-badge ${
+                  profileUser?.isVerified
+                    ? "profile-status-badge--verified"
+                    : "profile-status-badge--pending"
+                }`}
+              >
+                <span className="profile-status-badge__icon" aria-hidden="true">
+                  {profileUser?.isVerified ? CHECK_MARK : "!"}
+                </span>
+                <span>
+                  {profileUser?.isVerified
+                    ? "Email verified"
+                    : "Verification pending"}
+                </span>
+              </span>
             </div>
 
             <form className="stack-form" onSubmit={handleAvatarSubmit}>
@@ -1000,6 +1070,55 @@ export function ProfilePage({ page }) {
                   </div>
                 </form>
               </article>
+
+              {!profileUser?.isVerified ? (
+                <article className="surface-panel">
+                  <SectionHeading
+                    eyebrow="Email verification"
+                    title="Verify your email"
+                    compact
+                  />
+
+                  <div className="profile-verification">
+                    <p className="compact-text">
+                      Your account is not verified yet. Send yourself a verification
+                      email and open the link to finish this step.
+                    </p>
+
+                    <button
+                      type="button"
+                      className="btn btn--secondary"
+                      onClick={handleSendVerificationEmail}
+                      disabled={sendingVerification}
+                    >
+                      {sendingVerification
+                        ? "Sending verification..."
+                        : "Send verification email"}
+                    </button>
+
+                    {verificationPreview ? (
+                      <div className="token-box">
+                        <h3>Development link</h3>
+                        <p>
+                          Local development mode is active, so you can verify
+                          directly from this generated link.
+                        </p>
+                        {verificationPreview.verificationToken ? (
+                          <code>{verificationPreview.verificationToken}</code>
+                        ) : null}
+                        {verificationPreview.verificationLink ? (
+                          <a
+                            className="btn btn--secondary btn--small"
+                            href={verificationPreview.verificationLink}
+                          >
+                            Open Verify Page
+                          </a>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </div>
+                </article>
+              ) : null}
 
               <article className="surface-panel">
                 <SectionHeading

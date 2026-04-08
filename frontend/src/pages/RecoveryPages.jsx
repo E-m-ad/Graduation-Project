@@ -296,3 +296,124 @@ export function ResetPasswordPage({ page }) {
     </RecoveryShell>
   );
 }
+
+export function VerifyEmailPage({ page }) {
+  const { user, logout, refreshUser } = useSession();
+  const [token, setToken] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [hasVerified, setHasVerified] = useState(false);
+  const [message, showMessage] = useMessageState("");
+
+  useEffect(() => {
+    document.title = "Verify Email | AI Rent";
+
+    const params = new URLSearchParams(window.location.search);
+    const nextToken = params.get("token") || "";
+    setToken(nextToken);
+
+    if (nextToken) {
+      void handleVerify(nextToken);
+    }
+  }, []);
+
+  async function handleVerify(tokenOverride) {
+    const verificationToken = String(tokenOverride ?? token).trim();
+    showMessage("");
+
+    if (!verificationToken) {
+      showMessage("Verification token is required.", "error");
+      return;
+    }
+
+    setSubmitting(true);
+
+    const result = await fetchApi("/api/v1/auth/verify-email", {
+      method: "POST",
+      body: {
+        token: verificationToken,
+      },
+    });
+
+    setSubmitting(false);
+
+    if (!result.ok || !result.data?.success) {
+      showMessage(
+        result.data?.error?.message ||
+          result.data?.message ||
+          "Unable to verify your email.",
+        "error",
+      );
+      return;
+    }
+
+    setHasVerified(true);
+    showMessage(result.data.message || "Email verified successfully.", "success");
+
+    try {
+      await refreshUser(true);
+    } catch (error) {
+      console.error("refreshUser after verifyEmail error:", error);
+    }
+  }
+
+  return (
+    <RecoveryShell
+      page={page}
+      user={user}
+      logout={logout}
+      intro={
+        <AuthIntro
+          eyebrow="Email verification"
+          title="Confirm your account email."
+          description="Open the verification link from your email, or paste the token here if you are testing locally in development."
+        />
+      }
+    >
+      <section className="auth-card">
+        <div className="auth-card__header">
+          <h2>Verify Email</h2>
+          <p>Complete this step to mark your account as verified.</p>
+        </div>
+
+        <form
+          className="stack-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void handleVerify();
+          }}
+          noValidate
+        >
+          <div className="field">
+            <label htmlFor="verifyEmailToken">Verification token</label>
+            <input
+              id="verifyEmailToken"
+              type="text"
+              className="input"
+              placeholder="Paste your verification token"
+              value={token}
+              onChange={(event) => setToken(event.target.value)}
+            />
+          </div>
+
+          <button type="submit" className="btn btn--primary btn--full" disabled={submitting}>
+            {submitting ? "Verifying..." : "Verify Email"}
+          </button>
+          <MessageText message={message} />
+        </form>
+
+        {hasVerified ? (
+          <div className="token-box">
+            <h3>Account verified</h3>
+            <p>Your email is now verified. You can continue in your account.</p>
+            <a
+              className="btn btn--secondary btn--small"
+              href={user ? "/html/profile.html" : "/html/login.html"}
+            >
+              {user ? "Open Profile" : "Go to Login"}
+            </a>
+          </div>
+        ) : null}
+      </section>
+    </RecoveryShell>
+  );
+}

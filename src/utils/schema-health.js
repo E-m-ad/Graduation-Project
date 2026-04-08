@@ -3,6 +3,8 @@ export const requiredSchemaColumns = [
   { table: "Product", column: "adminReviewedAt" },
   { table: "Product", column: "ownerReviewReply" },
   { table: "Product", column: "ownerRepliedAt" },
+  { table: "User", column: "isVerified" },
+  { table: "EmailVerificationToken", column: "token" },
 ];
 
 export async function getSchemaHealth(client) {

@@ -1,8 +1,8 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import db from "../database/db.js";
 import { maxProductImageCount } from "../middlewares/product.upload.js";
+import { getUploadsRootDir } from "../utils/runtime-config.js";
 import {
   createAdminNotifications,
   createWishlistAvailabilityNotifications,
@@ -21,7 +21,7 @@ const ADMIN_ALLOWED_STATUS_UPDATES = [
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 12;
 const MAX_LIMIT = 50;
-const uploadsRootDir = fileURLToPath(new URL("../../uploads", import.meta.url));
+const uploadsRootDir = getUploadsRootDir();
 const MANAGE_PRODUCT_SELECT = {
   id: true,
   title: true,

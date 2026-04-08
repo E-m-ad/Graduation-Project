@@ -16,6 +16,7 @@ async function getPublicUserProfile(req, res) {
         avatarUrl: true,
         city: true,
         bio: true,
+        isVerified: true,
         isActive: true,
       },
     });

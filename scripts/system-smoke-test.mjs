@@ -1,8 +1,10 @@
 import {
   assert,
   createTestContext,
+  extractVerificationLink,
   expectStatus,
   makeImageForm,
+  verifyEmailToken,
   withTestServer,
   db,
 } from "./testing/test-harness.mjs";
@@ -26,7 +28,9 @@ async function run() {
     );
     const docsJson = await docsJsonResponse.json();
     assert(
-      docsJson?.openapi === "3.0.3" && docsJson?.paths?.["/products"],
+      docsJson?.openapi === "3.0.3" &&
+        docsJson?.paths?.["/products"] &&
+        docsJson?.paths?.["/auth/verify-email"],
       "OpenAPI JSON should expose the documented paths",
       docsJson,
     );
@@ -40,6 +44,71 @@ async function run() {
     );
 
     const actors = await createDefaultActors(runtime);
+
+    const smokeMailboxEmail = `${runtime.runPrefix}-smoke-mailbox@example.com`;
+    const registerMailboxUser = await actors.guest.request("POST", "/auth/register", {
+      json: {
+        name: `${runtime.runPrefix} Smoke Mailbox`,
+        email: smokeMailboxEmail,
+        password: "Password1",
+        confirmPassword: "Password1",
+      },
+      useCookies: false,
+      useAccessToken: false,
+    });
+    expectStatus(registerMailboxUser, 201, "Register smoke mailbox user");
+
+    const deliveredVerificationEmail = await runtime.emailInbox.waitForMessage(
+      (message) => message.envelope.to.includes(smokeMailboxEmail),
+    );
+    assert(
+      deliveredVerificationEmail,
+      "Smoke register flow should deliver a verification email",
+      runtime.emailInbox.messages,
+    );
+    const verificationLink = extractVerificationLink(deliveredVerificationEmail.raw);
+    assert(
+      verificationLink,
+      "Smoke verification email should include a verification link",
+      deliveredVerificationEmail,
+    );
+
+    const blockedLogin = await actors.guest.request("POST", "/auth/login", {
+      json: {
+        email: smokeMailboxEmail,
+        password: "Password1",
+      },
+      useCookies: false,
+      useAccessToken: false,
+    });
+    expectStatus(blockedLogin, 403, "Block smoke login before verification");
+
+    await runtime.emailInbox.waitForCount(6);
+    const deliveredSmokeEmails = runtime.emailInbox.messages.filter((message) =>
+      message.envelope.to.includes(smokeMailboxEmail),
+    );
+    const latestVerificationLink = extractVerificationLink(
+      deliveredSmokeEmails[deliveredSmokeEmails.length - 1]?.raw,
+    );
+    const verificationToken = new URL(
+      latestVerificationLink || verificationLink,
+    ).searchParams.get("token");
+    assert(
+      verificationToken,
+      "Smoke verification link should contain a token",
+      latestVerificationLink || verificationLink,
+    );
+    await verifyEmailToken(actors.guest, verificationToken, "Verify smoke email");
+
+    const verifiedLogin = await actors.guest.request("POST", "/auth/login", {
+      json: {
+        email: smokeMailboxEmail,
+        password: "Password1",
+      },
+      useCookies: false,
+      useAccessToken: false,
+    });
+    expectStatus(verifiedLogin, 200, "Login smoke user after verification");
 
     const category = await createCategory(
       actors.adminUser,

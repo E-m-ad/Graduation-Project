@@ -2,8 +2,10 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { setTimeout as delay } from "node:timers/promises";
+import { SMTPServer } from "smtp-server";
 import db from "../../src/database/db.js";
 import { startServer } from "../../src/app.js";
+import { resetEmailTransport } from "../../src/utils/email.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = path.resolve(__dirname, "../..");
@@ -23,6 +25,7 @@ export function createTestContext(label) {
   const runId = `${Date.now()}-${Math.floor(Math.random() * 100000)}`;
   const runPrefix = `${QA_PREFIX}${label}-${runId}`;
   const port = 3100 + Math.floor(Math.random() * 500);
+  const smtpPort = 3600 + Math.floor(Math.random() * 500);
   const baseUrl = `http://127.0.0.1:${port}/api/v1`;
   const log = (message) => {
     console.log(`[${label}] ${message}`);
@@ -32,6 +35,7 @@ export function createTestContext(label) {
     label,
     log,
     port,
+    smtpPort,
     baseUrl,
     runPrefix,
   };
@@ -59,6 +63,110 @@ export function assert(condition, message, payload) {
   }
 }
 
+function normalizeEmailContent(raw) {
+  return String(raw || "")
+    .replace(/=\r?\n/g, "")
+    .replace(/=3D/g, "=");
+}
+
+export function extractVerificationLink(raw) {
+  const normalized = normalizeEmailContent(raw);
+  const match = normalized.match(
+    /https?:\/\/[^\s<>"']+\/html\/verify-email\.html\?token=[a-f0-9]+/i,
+  );
+
+  return match?.[0] || null;
+}
+
+async function waitForCondition(check, timeoutMs = 5000, intervalMs = 50) {
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < timeoutMs) {
+    const result = check();
+    if (result) {
+      return result;
+    }
+
+    await delay(intervalMs);
+  }
+
+  return null;
+}
+
+async function startSmtpTestServer(context) {
+  const messages = [];
+
+  const server = new SMTPServer({
+    disabledCommands: ["STARTTLS"],
+    authOptional: false,
+    onAuth(auth, session, callback) {
+      callback(null, {
+        user: auth.username || session.envelope.mailFrom?.address || "qa-user",
+      });
+    },
+    onData(stream, session, callback) {
+      const chunks = [];
+
+      stream.on("data", (chunk) => {
+        chunks.push(chunk);
+      });
+
+      stream.on("end", () => {
+        messages.push({
+          createdAt: new Date().toISOString(),
+          envelope: {
+            from: session.envelope.mailFrom?.address || "",
+            to: session.envelope.rcptTo?.map((entry) => entry.address) || [],
+          },
+          raw: Buffer.concat(chunks).toString("utf8"),
+        });
+        callback(null);
+      });
+    },
+  });
+
+  await new Promise((resolve, reject) => {
+    server.listen(context.smtpPort, "127.0.0.1", (error) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve();
+      }
+    });
+  });
+
+  const mailbox = {
+    messages,
+    async waitForMessage(predicate, timeoutMs = 5000) {
+      return waitForCondition(
+        () => messages.find((message) => predicate(message)) || null,
+        timeoutMs,
+      );
+    },
+    async waitForCount(count, timeoutMs = 5000) {
+      return waitForCondition(
+        () => (messages.length >= count ? messages.length : null),
+        timeoutMs,
+      );
+    },
+  };
+
+  return {
+    mailbox,
+    async close() {
+      await new Promise((resolve, reject) => {
+        server.close((error) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve();
+          }
+        });
+      });
+    },
+  };
+}
+
 async function removeUpload(uploadUrl) {
   if (!uploadUrl || !uploadUrl.startsWith("/uploads/")) {
     return;
@@ -81,6 +189,15 @@ async function deleteManyIf(model, where) {
   }
 
   await model.deleteMany({ where });
+}
+
+function setEnvValue(key, value) {
+  if (value === undefined) {
+    delete process.env[key];
+    return;
+  }
+
+  process.env[key] = value;
 }
 
 export async function cleanupQaData(prefix = QA_PREFIX) {
@@ -333,6 +450,16 @@ export async function cleanupQaData(prefix = QA_PREFIX) {
       : null,
   );
   await deleteManyIf(
+    db.emailVerificationToken,
+    userIds.length > 0
+      ? {
+          userId: {
+            in: userIds,
+          },
+        }
+      : null,
+  );
+  await deleteManyIf(
     db.user,
     userIds.length > 0
       ? {
@@ -505,18 +632,46 @@ async function closeServer(server) {
 
 export async function withTestServer(context, run) {
   let server = null;
+  let smtpServer = null;
   let runError = null;
+  const previousEmailEnv = {
+    APP_BASE_URL: process.env.APP_BASE_URL,
+    SMTP_CONNECTION_URL: process.env.SMTP_CONNECTION_URL,
+    SMTP_HOST: process.env.SMTP_HOST,
+    SMTP_PORT: process.env.SMTP_PORT,
+    SMTP_USER: process.env.SMTP_USER,
+    SMTP_PASS: process.env.SMTP_PASS,
+    SMTP_FROM: process.env.SMTP_FROM,
+    SMTP_SECURE: process.env.SMTP_SECURE,
+  };
 
   try {
     context.log("Cleaning old QA fixtures");
     await cleanupQaData();
+
+    context.log(`Starting SMTP test server on port ${context.smtpPort}`);
+    smtpServer = await startSmtpTestServer(context);
+
+    setEnvValue("APP_BASE_URL", `http://127.0.0.1:${context.port}`);
+    setEnvValue("SMTP_CONNECTION_URL", undefined);
+    setEnvValue("SMTP_HOST", "127.0.0.1");
+    setEnvValue("SMTP_PORT", String(context.smtpPort));
+    setEnvValue("SMTP_USER", "qa-mailer");
+    setEnvValue("SMTP_PASS", "qa-mailer-pass");
+    setEnvValue("SMTP_FROM", "AI Rent QA <no-reply@example.com>");
+    setEnvValue("SMTP_SECURE", "false");
+    resetEmailTransport();
 
     context.log(`Starting server on port ${context.port}`);
     server = startServer(context.port);
     await waitForServer(context.baseUrl);
     context.log("Server is ready");
 
-    return await run({ ...context, server });
+    return await run({
+      ...context,
+      server,
+      emailInbox: smtpServer.mailbox,
+    });
   } catch (error) {
     runError = error;
     throw error;
@@ -532,6 +687,28 @@ export async function withTestServer(context, run) {
         }
       }
     }
+
+    if (smtpServer) {
+      try {
+        await smtpServer.close();
+      } catch (closeError) {
+        if (runError) {
+          console.error(`[${context.label}] SMTP shutdown error:`, closeError);
+        } else {
+          throw closeError;
+        }
+      }
+    }
+
+    setEnvValue("APP_BASE_URL", previousEmailEnv.APP_BASE_URL);
+    setEnvValue("SMTP_CONNECTION_URL", previousEmailEnv.SMTP_CONNECTION_URL);
+    setEnvValue("SMTP_HOST", previousEmailEnv.SMTP_HOST);
+    setEnvValue("SMTP_PORT", previousEmailEnv.SMTP_PORT);
+    setEnvValue("SMTP_USER", previousEmailEnv.SMTP_USER);
+    setEnvValue("SMTP_PASS", previousEmailEnv.SMTP_PASS);
+    setEnvValue("SMTP_FROM", previousEmailEnv.SMTP_FROM);
+    setEnvValue("SMTP_SECURE", previousEmailEnv.SMTP_SECURE);
+    resetEmailTransport();
 
     try {
       context.log("Cleaning QA fixtures");
@@ -561,6 +738,21 @@ export async function registerUser(
     useAccessToken: false,
   });
   expectStatus(result, 201, `Register ${label ?? email} user`);
+  return result.body;
+}
+
+export async function verifyEmailToken(
+  guestClient,
+  token,
+  label = "Verify email token",
+) {
+  const result = await guestClient.request("POST", "/auth/verify-email", {
+    json: { token },
+    useCookies: false,
+    useAccessToken: false,
+  });
+
+  expectStatus(result, 200, label);
   return result.body;
 }
 

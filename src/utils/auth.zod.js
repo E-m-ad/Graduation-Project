@@ -29,6 +29,10 @@ const forgotPasswordSchema = zod.object({
   email: zod.email("Invalid email address"),
 });
 
+const requestEmailVerificationSchema = zod.object({
+  email: zod.email("Invalid email address"),
+});
+
 const resetPasswordSchema = zod
   .object({
     token: zod
@@ -48,17 +52,121 @@ const resetPasswordSchema = zod
     path: ["confirmPassword"],
   });
 
-const envProcessSchema = zod.object({
-  JWT_SECRET: zod.string("JWT_SECRET is required"),
-  REFRESH_TOKEN_SECRET: zod.string("REFRESH_TOKEN_SECRET is required"),
-  ACCESS_TOKEN_EXPIRATION: zod.string("ACCESS_TOKEN_EXPIRATION is required"),
-  REFRESH_TOKEN_EXPIRATION: zod.string("REFRESH_TOKEN_EXPIRATION is required"),
+const verifyEmailSchema = zod.object({
+  token: zod
+    .string("Verification token is required")
+    .min(1, "Verification token is required"),
 });
+
+const envProcessSchema = zod
+  .object({
+    NODE_ENV: zod.string().optional(),
+    JWT_SECRET: zod.string("JWT_SECRET is required"),
+    REFRESH_TOKEN_SECRET: zod.string("REFRESH_TOKEN_SECRET is required"),
+    ACCESS_TOKEN_EXPIRATION: zod.string("ACCESS_TOKEN_EXPIRATION is required"),
+    REFRESH_TOKEN_EXPIRATION: zod.string("REFRESH_TOKEN_EXPIRATION is required"),
+    APP_BASE_URL: zod.string().trim().optional(),
+    RAILWAY_PUBLIC_DOMAIN: zod.string().trim().optional(),
+    CORS_ALLOWED_ORIGINS: zod.string().trim().optional(),
+    UPLOADS_DIR: zod.string().trim().optional(),
+    SMTP_CONNECTION_URL: zod.string().trim().optional(),
+    SMTP_HOST: zod.string().trim().optional(),
+    SMTP_PORT: zod
+      .string()
+      .trim()
+      .regex(/^\d+$/, "SMTP_PORT must be a valid number")
+      .optional()
+      .or(zod.literal("")),
+    SMTP_USER: zod.string().trim().optional(),
+    SMTP_PASS: zod.string().trim().optional(),
+    SMTP_FROM: zod.string().trim().optional(),
+    SMTP_SECURE: zod
+      .string()
+      .trim()
+      .regex(/^(true|false)$/i, "SMTP_SECURE must be true or false")
+      .optional()
+      .or(zod.literal("")),
+  })
+  .superRefine((env, ctx) => {
+    const hasConnectionUrl = Boolean(env.SMTP_CONNECTION_URL?.trim());
+    const hasSmtpFields = Boolean(
+      env.SMTP_HOST?.trim() &&
+        env.SMTP_PORT?.trim() &&
+        env.SMTP_USER?.trim() &&
+        env.SMTP_PASS?.trim(),
+    );
+    const hasFrom = Boolean(env.SMTP_FROM?.trim());
+    const isProduction = env.NODE_ENV === "production";
+    const hasAppBaseUrl = Boolean(env.APP_BASE_URL?.trim());
+    const hasRailwayPublicDomain = Boolean(env.RAILWAY_PUBLIC_DOMAIN?.trim());
+
+    if (hasAppBaseUrl) {
+      const urlCheck = zod.string().url().safeParse(env.APP_BASE_URL.trim());
+      if (!urlCheck.success) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["APP_BASE_URL"],
+          message: "APP_BASE_URL must be a valid URL",
+        });
+      }
+    }
+
+    if (env.CORS_ALLOWED_ORIGINS?.trim()) {
+      env.CORS_ALLOWED_ORIGINS.split(",")
+        .map((origin) => origin.trim())
+        .filter(Boolean)
+        .forEach((origin) => {
+          const originCheck = zod.string().url().safeParse(origin);
+          if (!originCheck.success) {
+            ctx.addIssue({
+              code: "custom",
+              path: ["CORS_ALLOWED_ORIGINS"],
+              message: "CORS_ALLOWED_ORIGINS must contain comma-separated absolute URLs",
+            });
+          }
+        });
+    }
+
+    if ((hasConnectionUrl || hasSmtpFields) && !hasFrom) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["SMTP_FROM"],
+        message: "SMTP_FROM is required when email delivery is configured",
+      });
+    }
+
+    if (isProduction && !hasAppBaseUrl && !hasRailwayPublicDomain) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["APP_BASE_URL"],
+        message: "APP_BASE_URL or RAILWAY_PUBLIC_DOMAIN is required in production",
+      });
+    }
+
+    if (isProduction && !hasConnectionUrl && !hasSmtpFields) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["SMTP_CONNECTION_URL"],
+        message:
+          "Production requires either SMTP_CONNECTION_URL or SMTP_HOST/SMTP_PORT/SMTP_USER/SMTP_PASS",
+      });
+    }
+
+    if (isProduction && !hasFrom) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["SMTP_FROM"],
+        message: "SMTP_FROM is required in production",
+      });
+    }
+  });
 
 export default {
   envProcessSchema,
   forgotPasswordSchema,
   loginSchema,
+  requestEmailVerificationSchema,
   registerSchema,
   resetPasswordSchema,
+  verifyEmailSchema,
 };

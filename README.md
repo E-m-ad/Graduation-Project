@@ -48,7 +48,7 @@ This repository currently delivers:
 - public browsing for categories and products
 - product details with reviews and similar-product recommendations
 - owner public profile pages with related listings
-- profile management, avatar uploads, and notifications
+- profile management, avatar uploads, email verification, and notifications
 - wishlist management
 - dedicated `Bookings` and `Rentals` pages
 - owner listing management and moderation feedback handling
@@ -68,6 +68,8 @@ This repository currently delivers:
 ### Account Features
 
 - user registration and login
+- email verification with resend support
+- verified-email gate before first successful login
 - access token + refresh cookie authentication flow
 - password reset flow
 - profile update and avatar upload
@@ -170,7 +172,7 @@ Notes:
 ### Main Business Use Cases
 
 - Guest browses categories and available products
-- User registers and logs in
+- User registers, verifies email, and logs in
 - Owner creates a listing and uploads images
 - Admin reviews and approves or rejects listings
 - Renter requests a rental for an approved listing
@@ -190,7 +192,7 @@ flowchart LR
 
   UC1[Browse listings]
   UC2[View product details]
-  UC3[Register / Login]
+  UC3[Register / Verify / Login]
   UC4[Manage profile]
   UC5[Save wishlist]
   UC6[Request rental]
@@ -232,7 +234,7 @@ flowchart LR
 ### Standard Marketplace Walkthrough
 
 1. A visitor opens the home page and explores recommended and public listings.
-2. A user registers an account and logs in.
+2. A user registers an account, receives a verification email, and verifies the email address.
 3. The user updates the profile and uploads an avatar.
 4. An owner creates a listing from `My Listings`.
 5. The admin reviews the listing and approves it.
@@ -278,6 +280,7 @@ The domain is centered around users, products, rentals, reviews, and recommendat
 | `UserBehavior` | Analytics and recommendation signal | belongs to a user and optionally a product/category |
 | `AvailabilityCalendar` | Explicit blocked dates | belongs to one product |
 | `RefreshToken` | Long-lived auth refresh session | belongs to one user |
+| `EmailVerificationToken` | Email confirmation security token | belongs to one user |
 | `PasswordResetToken` | Password reset security token | belongs to one user |
 
 ### Important Enums
@@ -307,6 +310,7 @@ erDiagram
   User ||--o{ Notification : receives
   User ||--o{ UserBehavior : generates
   User ||--o{ RefreshToken : has
+  User ||--o{ EmailVerificationToken : has
   User ||--o{ PasswordResetToken : has
 
   Category ||--o{ Product : classifies
@@ -334,6 +338,7 @@ classDiagram
     +String email
     +String role
     +Boolean isActive
+    +Boolean isVerified
   }
 
   class Category {
@@ -401,6 +406,13 @@ classDiagram
     +String reason
   }
 
+  class EmailVerificationToken {
+    +String id
+    +String token
+    +DateTime expiresAt
+    +Boolean isUsed
+  }
+
   User "1" --> "*" Product : owns
   User "1" --> "*" Rental : rents
   User "1" --> "*" Rental : fulfills
@@ -408,6 +420,7 @@ classDiagram
   User "1" --> "*" Wishlist : saves
   User "1" --> "*" Notification : receives
   User "1" --> "*" UserBehavior : generates
+  User "1" --> "*" EmailVerificationToken : verifies
   Category "1" --> "*" Product : groups
   Product "1" --> "*" ProductImage : has
   Product "1" --> "*" Rental : booked_in
@@ -484,7 +497,7 @@ sequenceDiagram
 
 | Group | Example Routes | Access |
 | --- | --- | --- |
-| Auth | `/auth/register`, `/auth/login`, `/auth/refresh-token` | Public / cookie-based refresh |
+| Auth | `/auth/register`, `/auth/request-email-verification`, `/auth/verify-email`, `/auth/login` | Public plus optional authenticated resend support |
 | Users | `/users/me`, `/users/change-password`, `/users/upload-avatar` | Authenticated |
 | Public Users | `/public/users/:id`, `/public/users/:id/products` | Public |
 | Categories | `/categories`, `/categories/:id` | Public read, admin write |
@@ -499,6 +512,10 @@ sequenceDiagram
 
 ### Authentication Model
 
+- Registration creates the user and issues an email verification token.
+- The user must verify the email address before the first successful login.
+- In development, register and resend-verification responses also include the raw verification token and verification link for local testing.
+- The verification UI is available at `/html/verify-email.html`.
 - Login returns a short-lived access token in JSON.
 - Login also sets a `refreshToken` httpOnly cookie.
 - The frontend stores the access token in browser storage.
@@ -613,6 +630,7 @@ Vite is already configured to proxy:
 
 - Home page: `http://localhost:5173/`
 - Login page: `http://localhost:5173/html/login.html`
+- Verify email page: `http://localhost:5173/html/verify-email.html`
 - Admin dashboard page: `http://localhost:5173/html/admin-dashboard.html`
 
 ### 8. Build And Run The Production Bundle Locally
@@ -654,11 +672,29 @@ The current codebase uses the following variables:
 | `REFRESH_TOKEN_SECRET` | Yes | different long random secret | Refresh token signing secret |
 | `ACCESS_TOKEN_EXPIRATION` | Yes | `15d` | Access token TTL |
 | `REFRESH_TOKEN_EXPIRATION` | Yes | `7d` | Refresh token TTL |
+| `APP_BASE_URL` | Recommended | `http://localhost:8080` | Base URL used inside verification links and production CORS |
+| `RAILWAY_PUBLIC_DOMAIN` | Railway auto-provided | `example.up.railway.app` | Railway public hostname used as a fallback when `APP_BASE_URL` is not set |
+| `CORS_ALLOWED_ORIGINS` | Optional | `https://www.example.com,https://admin.example.com` | Extra allowed browser origins in production |
+| `UPLOADS_DIR` | Optional | `/app/uploads` | Absolute directory used for avatar and product uploads |
+| `SMTP_CONNECTION_URL` | Optional alternative | `smtps://user:pass@smtp.example.com:465` | Full SMTP connection URL if your provider gives one |
+| `SMTP_HOST` | Recommended for production | `smtp.gmail.com` | SMTP host for email delivery |
+| `SMTP_PORT` | Recommended for production | `465` | SMTP port |
+| `SMTP_USER` | Recommended for production | `yourgmail@gmail.com` | SMTP username |
+| `SMTP_PASS` | Recommended for production | Google app password | SMTP password |
+| `SMTP_FROM` | Recommended for production | `AI Rent <yourgmail@gmail.com>` | Sender used for verification emails |
+| `SMTP_SECURE` | No | `true` | Whether the SMTP transport should use TLS from connect time |
 
 Important production notes:
 
 - set `NODE_ENV=production`
 - use strong secrets for both JWT variables
+- set `APP_BASE_URL` to your public app URL so verification links and CORS are correct
+- on Railway, `RAILWAY_PUBLIC_DOMAIN` is provided automatically and can be used as the fallback public URL
+- set `CORS_ALLOWED_ORIGINS` only if you need extra browser origins beyond the main app URL
+- set `UPLOADS_DIR` only if you want to override the Railway volume mount path
+- configure either `SMTP_CONNECTION_URL` or the full `SMTP_HOST`/`SMTP_PORT`/`SMTP_USER`/`SMTP_PASS` set
+- set `SMTP_FROM` so verification emails have a valid sender identity
+- for Gmail SMTP, use a Google App Password instead of your normal mailbox password
 
 ## Available Scripts
 
@@ -698,7 +734,7 @@ Important production notes:
 The smoke test currently checks:
 
 - API docs availability
-- registration and login
+- registration, email verification, and login
 - category creation
 - product creation and image upload
 - admin approval
@@ -787,20 +823,39 @@ Recommended Railway setup:
 
 1. Create a PostgreSQL database service.
 2. Attach the app service to that database and set `DATABASE_URL`.
-3. Set:
+3. Add a Railway volume and mount it to `/app/uploads`.
+4. Set:
    - `NODE_ENV=production`
    - `JWT_SECRET`
    - `REFRESH_TOKEN_SECRET`
    - `ACCESS_TOKEN_EXPIRATION`
    - `REFRESH_TOKEN_EXPIRATION`
-4. Deploy the latest commit so Railway uses the current Dockerfile.
-5. After deploy, open `/healthz`.
+   - `APP_BASE_URL`
+   - `CORS_ALLOWED_ORIGINS` if you need extra allowed origins
+   - `UPLOADS_DIR` only if you want to override the mounted volume path
+   - `SMTP_HOST`
+   - `SMTP_PORT`
+   - `SMTP_USER`
+   - `SMTP_PASS`
+   - `SMTP_FROM`
+   - `SMTP_SECURE`
+5. For Gmail, enable 2-Step Verification on the Google account and create an App Password.
+6. Use the Gmail mailbox address for both `SMTP_USER` and the email inside `SMTP_FROM`.
+7. Set:
+   - `SMTP_HOST=smtp.gmail.com`
+   - `SMTP_PORT=465`
+   - `SMTP_SECURE=true`
+   - `SMTP_PASS=<your Google App Password>`
+8. Set `APP_BASE_URL=https://<your Railway public domain or custom domain>`.
+9. Deploy the latest commit so Railway uses the current Dockerfile.
+10. After deploy, open `/healthz`.
 
 Expected healthy response:
 
 - `status: "ok"`
 - `database: "up"`
 - `schema: "up"`
+- `email: "up"`
 
 If Railway shows a healthy container but app pages like `My Listings` fail, check:
 
@@ -808,6 +863,9 @@ If Railway shows a healthy container but app pages like `My Listings` fail, chec
 - Railway did not reuse an old build cache
 - the production database received the latest Prisma migrations
 - `/healthz` does not report `schema: "mismatch"`
+- the volume is mounted and the app can write to the uploads directory
+- `APP_BASE_URL` matches the actual HTTPS domain users open in the browser
+- Gmail credentials use an App Password, not the normal account password
 
 If `/healthz` returns `schema: "mismatch"`, redeploy after the latest image starts or run:
 
@@ -816,6 +874,12 @@ npm run prisma:deploy
 ```
 
 against the Railway production database.
+
+Railway runtime behavior already supported by this codebase:
+
+- if `APP_BASE_URL` is missing, the server falls back to Railway's `RAILWAY_PUBLIC_DOMAIN`
+- if `UPLOADS_DIR` is missing, the server falls back to Railway's `RAILWAY_VOLUME_MOUNT_PATH`
+- uploaded avatars and product images remain available after redeploy when the volume is mounted
 
 ### Reverse Proxy Notes
 
@@ -834,6 +898,7 @@ After going live, verify:
 - `GET /healthz` includes `schema: "up"`
 - `GET /api/v1/docs` loads Swagger UI
 - registration works
+- email verification links open the verify page and succeed
 - login works
 - refresh token flow works
 - file uploads are saved and still available after restart

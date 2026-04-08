@@ -13,6 +13,7 @@ const userProfileSelect = {
   city: true,
   bio: true,
   isActive: true,
+  isVerified: true,
   createdAt: true,
   updatedAt: true,
 };

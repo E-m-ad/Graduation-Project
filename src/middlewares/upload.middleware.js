@@ -1,11 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import multer from "multer";
+import { getAvatarUploadsDir } from "../utils/runtime-config.js";
 
-const avatarDir = fileURLToPath(
-  new URL("../../uploads/avatars", import.meta.url)
-);
+const avatarDir = getAvatarUploadsDir();
 const maxAvatarFileSize = 2 * 1024 * 1024;
 
 fs.mkdirSync(avatarDir, { recursive: true });

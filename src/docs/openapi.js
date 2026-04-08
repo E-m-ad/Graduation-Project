@@ -184,10 +184,12 @@ const openApiDocument = {
       post: operation({
         tag: "Auth",
         summary: "Register a user",
+        description:
+          "Creates an account and issues an email verification email. In development, the response also includes the raw verification token and link for local testing. The account must verify the email address before the first successful login.",
         requestBody: jsonRequestBody(refSchema("AuthRegisterRequest")),
         successStatus: 201,
         successDescription: "User registered successfully",
-        successSchema: "MessageResponse",
+        successSchema: "AuthRegisterResponse",
         extraResponses: ["ValidationError", "ServerError"],
       }),
     },
@@ -201,6 +203,7 @@ const openApiDocument = {
         responses: buildResponses(200, "Login successful", "LoginResponse", [
           "ValidationError",
           "Unauthorized",
+          "Forbidden",
           "ServerError",
         ]),
       },
@@ -232,6 +235,28 @@ const openApiDocument = {
         requestBody: jsonRequestBody(refSchema("ForgotPasswordRequest")),
         successSchema: "ForgotPasswordResponse",
         successDescription: "Reset instructions issued",
+        extraResponses: ["ValidationError", "ServerError"],
+      }),
+    },
+    "/auth/request-email-verification": {
+      post: operation({
+        tag: "Auth",
+        summary: "Send or resend verification email",
+        description:
+          "Accepts either an authenticated request for the current user or a public request with an email address. In development, the response includes the raw verification token and link for local testing.",
+        requestBody: jsonRequestBody(refSchema("RequestEmailVerificationRequest"), false),
+        successSchema: "EmailVerificationRequestResponse",
+        successDescription: "Verification email issued successfully",
+        extraResponses: ["ValidationError", "Unauthorized", "Forbidden", "NotFound", "Conflict", "ServerError"],
+      }),
+    },
+    "/auth/verify-email": {
+      post: operation({
+        tag: "Auth",
+        summary: "Verify email address",
+        requestBody: jsonRequestBody(refSchema("VerifyEmailRequest")),
+        successSchema: "EmailVerifiedResponse",
+        successDescription: "Email verified successfully",
         extraResponses: ["ValidationError", "ServerError"],
       }),
     },
@@ -1036,6 +1061,56 @@ const openApiDocument = {
           },
         },
       },
+      AuthRegisterResponse: {
+        type: "object",
+        required: ["success", "message"],
+        properties: {
+          success: { type: "boolean", example: true },
+          message: {
+            type: "string",
+            example: "User registered successfully. Check your email to verify your account.",
+          },
+          verificationToken: {
+            type: "string",
+            nullable: true,
+            description: "Returned only in development mode for local verification testing.",
+          },
+          verificationLink: {
+            type: "string",
+            nullable: true,
+            description: "Returned only in development mode for local verification testing.",
+          },
+        },
+      },
+      EmailVerificationRequestResponse: {
+        type: "object",
+        required: ["success", "message"],
+        properties: {
+          success: { type: "boolean", example: true },
+          message: {
+            type: "string",
+            example: "Verification email sent successfully",
+          },
+          verificationToken: {
+            type: "string",
+            nullable: true,
+            description: "Returned only in development mode for local verification testing.",
+          },
+          verificationLink: {
+            type: "string",
+            nullable: true,
+            description: "Returned only in development mode for local verification testing.",
+          },
+        },
+      },
+      RequestEmailVerificationRequest: {
+        type: "object",
+        description:
+          "Public callers provide `email`. Authenticated callers can omit the body and resend verification for the current account.",
+        properties: {
+          email: { type: "string", format: "email" },
+        },
+      },
       AuthRegisterRequest: {
         type: "object",
         required: ["name", "email", "password", "confirmPassword"],
@@ -1072,6 +1147,30 @@ const openApiDocument = {
           token: { type: "string" },
           password: { type: "string", minLength: 6 },
           confirmPassword: { type: "string", minLength: 6 },
+        },
+      },
+      VerifyEmailRequest: {
+        type: "object",
+        required: ["token"],
+        properties: {
+          token: { type: "string", minLength: 1 },
+        },
+      },
+      EmailVerifiedResponse: {
+        type: "object",
+        required: ["success", "message", "data"],
+        properties: {
+          success: { type: "boolean", example: true },
+          message: { type: "string", example: "Email verified successfully" },
+          data: {
+            type: "object",
+            required: ["id", "email", "isVerified"],
+            properties: {
+              id: { type: "string", format: "uuid" },
+              email: { type: "string", format: "email" },
+              isVerified: { type: "boolean", example: true },
+            },
+          },
         },
       },
       UpdateProfileRequest: {
