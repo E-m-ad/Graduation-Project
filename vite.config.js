@@ -22,7 +22,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const backendOrigin =
     env.VITE_API_ORIGIN?.trim() ||
-    `http://localhost:${env.PORT?.trim() || "3000"}`;
+    `http://localhost:${env.PORT?.trim() || "8080"}`;
 
   return {
     root: "frontend",

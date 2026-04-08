@@ -596,7 +596,7 @@ npm run prisma:deploy
 npm run dev
 ```
 
-The API runs on `http://localhost:3000` by default.
+The API runs on `http://localhost:8080` by default.
 
 ### 6. Start The Frontend Dev Server
 
@@ -610,8 +610,8 @@ The Vite UI runs on `http://localhost:5173`.
 
 Vite is already configured to proxy:
 
-- `/api` -> `http://localhost:3000`
-- `/uploads` -> `http://localhost:3000`
+- `/api` -> `http://localhost:8080`
+- `/uploads` -> `http://localhost:8080`
 
 ### 7. Open The Application
 
@@ -626,7 +626,7 @@ npm run build
 npm run start:with-build
 ```
 
-Then open `http://localhost:3000`.
+Then open `http://localhost:8080`.
 
 ### 9. Create An Admin User
 
@@ -652,7 +652,7 @@ The current codebase uses the following variables:
 | Variable | Required | Example | Purpose |
 | --- | --- | --- | --- |
 | `DATABASE_URL` | Yes | `postgresql://postgres:password@localhost:5432/Rent?schema=public` | PostgreSQL connection string |
-| `PORT` | No | `3000` | API server port |
+| `PORT` | No | `8080` | API server port |
 | `NODE_ENV` | Yes | `development` or `production` | Environment mode |
 | `JWT_SECRET` | Yes | long random secret | Access token signing secret |
 | `REFRESH_TOKEN_SECRET` | Yes | different long random secret | Refresh token signing secret |
@@ -772,7 +772,7 @@ docker build -t ai-rent .
 Run the container:
 
 ```bash
-docker run -p 3000:3000 --env-file .env ai-rent
+docker run -p 8080:8080 --env-file .env ai-rent
 ```
 
 Important note:
