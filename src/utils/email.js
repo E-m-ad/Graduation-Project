@@ -2,7 +2,8 @@ import nodemailer from "nodemailer";
 
 let transporterPromise = null;
 let transportVerificationPromise = null;
-const EMAIL_OPERATION_TIMEOUT_MS = 10000;
+const SMTP_VERIFY_TIMEOUT_MS = 10000;
+const SMTP_SEND_TIMEOUT_MS = 30000;
 
 function parseBoolean(value) {
   return String(value || "").trim().toLowerCase() === "true";
@@ -23,13 +24,13 @@ function getSmtpFieldConfig() {
   };
 }
 
-function createTimeoutError(label) {
-  const error = new Error(`${label} timed out after ${EMAIL_OPERATION_TIMEOUT_MS}ms`);
+function createTimeoutError(label, timeoutMs) {
+  const error = new Error(`${label} timed out after ${timeoutMs}ms`);
   error.code = "ETIMEDOUT";
   return error;
 }
 
-async function withTimeout(promise, label) {
+async function withTimeout(promise, label, timeoutMs) {
   let timeoutId;
 
   try {
@@ -37,8 +38,8 @@ async function withTimeout(promise, label) {
       promise,
       new Promise((_, reject) => {
         timeoutId = setTimeout(
-          () => reject(createTimeoutError(label)),
-          EMAIL_OPERATION_TIMEOUT_MS,
+          () => reject(createTimeoutError(label, timeoutMs)),
+          timeoutMs,
         );
       }),
     ]);
@@ -108,7 +109,11 @@ export async function verifyEmailTransport() {
     transportVerificationPromise = withTimeout(
       transporter.verify().then(() => true),
       "SMTP transport verification",
-    );
+      SMTP_VERIFY_TIMEOUT_MS,
+    ).catch((error) => {
+      resetEmailTransport();
+      throw error;
+    });
   }
 
   await transportVerificationPromise;
@@ -138,6 +143,7 @@ export async function sendEmail({ to, subject, text, html }) {
         html,
       }),
       `SMTP send to ${to}`,
+      SMTP_SEND_TIMEOUT_MS,
     );
 
     return {
@@ -148,6 +154,7 @@ export async function sendEmail({ to, subject, text, html }) {
     };
   } catch (error) {
     console.error("sendEmail error:", error);
+    resetEmailTransport();
 
     return {
       sent: false,
