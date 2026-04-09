@@ -24,6 +24,7 @@ COPY --from=build /app/frontend/dist ./frontend/dist
 COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/prisma.config.js ./prisma.config.js
 COPY --from=build /app/scripts/verify-schema.mjs ./scripts/verify-schema.mjs
+COPY --from=build /app/scripts/start-production.mjs ./scripts/start-production.mjs
 
 RUN apt-get update -y && apt-get install -y --no-install-recommends openssl && rm -rf /var/lib/apt/lists/*
 RUN mkdir -p scripts uploads/products uploads/avatars
@@ -33,4 +34,4 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
     CMD node -e "fetch('http://127.0.0.1:' + (process.env.PORT || 8080) + '/healthz').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"
 
-CMD ["npm", "run", "start:production"]
+CMD ["node", "scripts/start-production.mjs"]

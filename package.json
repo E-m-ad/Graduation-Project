@@ -22,7 +22,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "verify:schema": "npm run prisma:generate && node scripts/verify-schema.mjs",
-    "start:production": "npm run prisma:deploy && npm run verify:schema && node src/app.js"
+    "start:production": "node scripts/start-production.mjs"
   },
   "keywords": [],
   "author": "",
