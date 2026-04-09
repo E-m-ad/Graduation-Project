@@ -89,6 +89,13 @@ async function sendVerificationEmail({ req, user, rawToken }) {
     );
   }
 
+  if (!result.sent) {
+    console.error(
+      `Verification email delivery failed for ${user.email}. Continuing without blocking auth flow.`,
+      result.error,
+    );
+  }
+
   return {
     emailSent: result.sent,
     verificationLink,

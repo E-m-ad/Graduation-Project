@@ -2,6 +2,7 @@ import nodemailer from "nodemailer";
 
 let transporterPromise = null;
 let transportVerificationPromise = null;
+const EMAIL_OPERATION_TIMEOUT_MS = 10000;
 
 function parseBoolean(value) {
   return String(value || "").trim().toLowerCase() === "true";
@@ -20,6 +21,30 @@ function getSmtpFieldConfig() {
     from: process.env.SMTP_FROM?.trim() || "",
     secure: parseBoolean(process.env.SMTP_SECURE),
   };
+}
+
+function createTimeoutError(label) {
+  const error = new Error(`${label} timed out after ${EMAIL_OPERATION_TIMEOUT_MS}ms`);
+  error.code = "ETIMEDOUT";
+  return error;
+}
+
+async function withTimeout(promise, label) {
+  let timeoutId;
+
+  try {
+    return await Promise.race([
+      promise,
+      new Promise((_, reject) => {
+        timeoutId = setTimeout(
+          () => reject(createTimeoutError(label)),
+          EMAIL_OPERATION_TIMEOUT_MS,
+        );
+      }),
+    ]);
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 export function hasEmailTransportConfig() {
@@ -80,7 +105,10 @@ export async function verifyEmailTransport() {
   }
 
   if (!transportVerificationPromise) {
-    transportVerificationPromise = transporter.verify().then(() => true);
+    transportVerificationPromise = withTimeout(
+      transporter.verify().then(() => true),
+      "SMTP transport verification",
+    );
   }
 
   await transportVerificationPromise;
@@ -100,17 +128,32 @@ export async function sendEmail({ to, subject, text, html }) {
     };
   }
 
-  const info = await transporter.sendMail({
-    from: process.env.SMTP_FROM,
-    to,
-    subject,
-    text,
-    html,
-  });
+  try {
+    const info = await withTimeout(
+      transporter.sendMail({
+        from: process.env.SMTP_FROM,
+        to,
+        subject,
+        text,
+        html,
+      }),
+      `SMTP send to ${to}`,
+    );
 
-  return {
-    sent: true,
-    skipped: false,
-    messageId: info.messageId || null,
-  };
+    return {
+      sent: true,
+      skipped: false,
+      messageId: info.messageId || null,
+      error: null,
+    };
+  } catch (error) {
+    console.error("sendEmail error:", error);
+
+    return {
+      sent: false,
+      skipped: false,
+      messageId: null,
+      error,
+    };
+  }
 }
