@@ -8,19 +8,25 @@ WORKDIR /app
 COPY . .
 RUN npm run build
 
+FROM node:22-bookworm-slim AS runtime-deps
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
+
 FROM node:22-bookworm-slim AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 
-COPY --from=deps /app/node_modules ./node_modules
+COPY --from=runtime-deps /app/node_modules ./node_modules
 COPY package.json package-lock.json ./
 COPY --from=build /app/src ./src
 COPY --from=build /app/frontend/dist ./frontend/dist
 COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/prisma.config.js ./prisma.config.js
+COPY --from=build /app/scripts/verify-schema.mjs ./scripts/verify-schema.mjs
 
-RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
-RUN mkdir -p uploads/products uploads/avatars
+RUN apt-get update -y && apt-get install -y --no-install-recommends openssl && rm -rf /var/lib/apt/lists/*
+RUN mkdir -p scripts uploads/products uploads/avatars
 
 EXPOSE 8080
 

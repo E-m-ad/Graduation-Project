@@ -8,25 +8,25 @@ export const requiredSchemaColumns = [
 ];
 
 export async function getSchemaHealth(client) {
-  const checks = await Promise.all(
-    requiredSchemaColumns.map(async ({ table, column }) => {
-      const rows = await client.$queryRaw`
-        SELECT EXISTS (
-          SELECT 1
-          FROM information_schema.columns
-          WHERE table_schema = 'public'
-            AND table_name = ${table}
-            AND column_name = ${column}
-        ) AS "exists"
-      `;
+  const checks = [];
 
-      return {
-        table,
-        column,
-        exists: Boolean(rows?.[0]?.exists),
-      };
-    }),
-  );
+  for (const { table, column } of requiredSchemaColumns) {
+    const rows = await client.$queryRaw`
+      SELECT EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = ${table}
+          AND column_name = ${column}
+      ) AS "exists"
+    `;
+
+    checks.push({
+      table,
+      column,
+      exists: Boolean(rows?.[0]?.exists),
+    });
+  }
 
   const missing = checks.filter((check) => !check.exists);
 
