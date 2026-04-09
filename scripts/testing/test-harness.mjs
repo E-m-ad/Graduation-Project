@@ -6,6 +6,7 @@ import { SMTPServer } from "smtp-server";
 import db from "../../src/database/db.js";
 import { startServer } from "../../src/app.js";
 import { resetEmailTransport } from "../../src/utils/email.js";
+import { isEmailVerificationEnabled } from "../../src/utils/runtime-config.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = path.resolve(__dirname, "../..");
@@ -634,7 +635,9 @@ export async function withTestServer(context, run) {
   let server = null;
   let smtpServer = null;
   let runError = null;
+  const emailVerificationEnabled = isEmailVerificationEnabled();
   const previousEmailEnv = {
+    EMAIL_VERIFICATION_ENABLED: process.env.EMAIL_VERIFICATION_ENABLED,
     APP_BASE_URL: process.env.APP_BASE_URL,
     SMTP_CONNECTION_URL: process.env.SMTP_CONNECTION_URL,
     SMTP_HOST: process.env.SMTP_HOST,
@@ -649,17 +652,32 @@ export async function withTestServer(context, run) {
     context.log("Cleaning old QA fixtures");
     await cleanupQaData();
 
-    context.log(`Starting SMTP test server on port ${context.smtpPort}`);
-    smtpServer = await startSmtpTestServer(context);
-
     setEnvValue("APP_BASE_URL", `http://127.0.0.1:${context.port}`);
+    setEnvValue(
+      "EMAIL_VERIFICATION_ENABLED",
+      previousEmailEnv.EMAIL_VERIFICATION_ENABLED,
+    );
     setEnvValue("SMTP_CONNECTION_URL", undefined);
-    setEnvValue("SMTP_HOST", "127.0.0.1");
-    setEnvValue("SMTP_PORT", String(context.smtpPort));
-    setEnvValue("SMTP_USER", "qa-mailer");
-    setEnvValue("SMTP_PASS", "qa-mailer-pass");
-    setEnvValue("SMTP_FROM", "AI Rent QA <no-reply@example.com>");
-    setEnvValue("SMTP_SECURE", "false");
+
+    if (emailVerificationEnabled) {
+      context.log(`Starting SMTP test server on port ${context.smtpPort}`);
+      smtpServer = await startSmtpTestServer(context);
+
+      setEnvValue("SMTP_HOST", "127.0.0.1");
+      setEnvValue("SMTP_PORT", String(context.smtpPort));
+      setEnvValue("SMTP_USER", "qa-mailer");
+      setEnvValue("SMTP_PASS", "qa-mailer-pass");
+      setEnvValue("SMTP_FROM", "AI Rent QA <no-reply@example.com>");
+      setEnvValue("SMTP_SECURE", "false");
+    } else {
+      setEnvValue("SMTP_HOST", undefined);
+      setEnvValue("SMTP_PORT", undefined);
+      setEnvValue("SMTP_USER", undefined);
+      setEnvValue("SMTP_PASS", undefined);
+      setEnvValue("SMTP_FROM", undefined);
+      setEnvValue("SMTP_SECURE", undefined);
+    }
+
     resetEmailTransport();
 
     context.log(`Starting server on port ${context.port}`);
@@ -670,7 +688,8 @@ export async function withTestServer(context, run) {
     return await run({
       ...context,
       server,
-      emailInbox: smtpServer.mailbox,
+      emailInbox: smtpServer?.mailbox ?? null,
+      emailVerificationEnabled,
     });
   } catch (error) {
     runError = error;
@@ -700,6 +719,10 @@ export async function withTestServer(context, run) {
       }
     }
 
+    setEnvValue(
+      "EMAIL_VERIFICATION_ENABLED",
+      previousEmailEnv.EMAIL_VERIFICATION_ENABLED,
+    );
     setEnvValue("APP_BASE_URL", previousEmailEnv.APP_BASE_URL);
     setEnvValue("SMTP_CONNECTION_URL", previousEmailEnv.SMTP_CONNECTION_URL);
     setEnvValue("SMTP_HOST", previousEmailEnv.SMTP_HOST);

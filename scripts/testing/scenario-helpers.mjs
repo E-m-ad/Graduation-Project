@@ -52,16 +52,13 @@ export async function createDefaultActors(context) {
       password: PASSWORDS.primary,
     });
 
-    assert(
-      registrationResponses[label]?.verificationToken,
-      `Register ${label} user should return a development verification token`,
-      registrationResponses[label],
-    );
-    await verifyEmailToken(
-      guest,
-      registrationResponses[label].verificationToken,
-      `Verify ${label} user email`,
-    );
+    if (registrationResponses[label]?.verificationToken) {
+      await verifyEmailToken(
+        guest,
+        registrationResponses[label].verificationToken,
+        `Verify ${label} user email`,
+      );
+    }
   }
 
   await db.user.update({

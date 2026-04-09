@@ -35,6 +35,31 @@ function normalizeOrigin(value) {
   return new URL(normalizedUrl).origin;
 }
 
+function parseBooleanEnv(value) {
+  const normalizedValue = trimEnv(value).toLowerCase();
+
+  if (!normalizedValue) {
+    return false;
+  }
+
+  return ["1", "true", "yes", "on"].includes(normalizedValue);
+}
+
+export function isEmailVerificationEnabled(env = process.env) {
+  return parseBooleanEnv(env.EMAIL_VERIFICATION_ENABLED);
+}
+
+export function normalizeUserVerification(user, env = process.env) {
+  if (!user || isEmailVerificationEnabled(env)) {
+    return user;
+  }
+
+  return {
+    ...user,
+    isVerified: true,
+  };
+}
+
 export function getAppBaseUrl(env = process.env) {
   const configuredBaseUrl = normalizeUrl(env.APP_BASE_URL);
   if (configuredBaseUrl) {

@@ -1,5 +1,6 @@
 import db from "../database/db.js";
 import z from "../utils/user.zod.js";
+import { normalizeUserVerification } from "../utils/runtime-config.js";
 async function getPublicUserProfile(req, res) {
   const data = z.getPublicProfile.safeParse(req.params);
   if (!data.success) {
@@ -25,7 +26,10 @@ async function getPublicUserProfile(req, res) {
         .status(404)
         .json({ success: false, message: "User not exist or not active" });
     }
-    return res.status(200).json({ success: true, user });
+    return res.status(200).json({
+      success: true,
+      user: normalizeUserVerification(user),
+    });
   } catch (error) {
     {
       console.error("Error fetching user profile:", error);
@@ -58,6 +62,7 @@ async function getPublicUserProducts(req, res) {
         id: true,
         name: true,
         avatarUrl: true,
+        isVerified: true,
       },
     });
 
@@ -118,7 +123,7 @@ async function getPublicUserProducts(req, res) {
     return res.status(200).json({
       success: true,
       data: {
-        user,
+        user: normalizeUserVerification(user),
         products,
       },
     });

@@ -58,47 +58,71 @@ async function run() {
     });
     expectStatus(registerMailboxUser, 201, "Register smoke mailbox user");
 
-    const deliveredVerificationEmail = await runtime.emailInbox.waitForMessage(
-      (message) => message.envelope.to.includes(smokeMailboxEmail),
-    );
-    assert(
-      deliveredVerificationEmail,
-      "Smoke register flow should deliver a verification email",
-      runtime.emailInbox.messages,
-    );
-    const verificationLink = extractVerificationLink(deliveredVerificationEmail.raw);
-    assert(
-      verificationLink,
-      "Smoke verification email should include a verification link",
-      deliveredVerificationEmail,
-    );
+    if (runtime.emailVerificationEnabled) {
+      const deliveredVerificationEmail = await runtime.emailInbox.waitForMessage(
+        (message) => message.envelope.to.includes(smokeMailboxEmail),
+      );
+      assert(
+        deliveredVerificationEmail,
+        "Smoke register flow should deliver a verification email",
+        runtime.emailInbox.messages,
+      );
+      const verificationLink = extractVerificationLink(
+        deliveredVerificationEmail.raw,
+      );
+      assert(
+        verificationLink,
+        "Smoke verification email should include a verification link",
+        deliveredVerificationEmail,
+      );
 
-    const blockedLogin = await actors.guest.request("POST", "/auth/login", {
-      json: {
-        email: smokeMailboxEmail,
-        password: "Password1",
-      },
-      useCookies: false,
-      useAccessToken: false,
-    });
-    expectStatus(blockedLogin, 403, "Block smoke login before verification");
+      const blockedLogin = await actors.guest.request("POST", "/auth/login", {
+        json: {
+          email: smokeMailboxEmail,
+          password: "Password1",
+        },
+        useCookies: false,
+        useAccessToken: false,
+      });
+      expectStatus(blockedLogin, 403, "Block smoke login before verification");
 
-    await runtime.emailInbox.waitForCount(6);
-    const deliveredSmokeEmails = runtime.emailInbox.messages.filter((message) =>
-      message.envelope.to.includes(smokeMailboxEmail),
-    );
-    const latestVerificationLink = extractVerificationLink(
-      deliveredSmokeEmails[deliveredSmokeEmails.length - 1]?.raw,
-    );
-    const verificationToken = new URL(
-      latestVerificationLink || verificationLink,
-    ).searchParams.get("token");
-    assert(
-      verificationToken,
-      "Smoke verification link should contain a token",
-      latestVerificationLink || verificationLink,
-    );
-    await verifyEmailToken(actors.guest, verificationToken, "Verify smoke email");
+      await runtime.emailInbox.waitForCount(6);
+      const deliveredSmokeEmails = runtime.emailInbox.messages.filter((message) =>
+        message.envelope.to.includes(smokeMailboxEmail),
+      );
+      const latestVerificationLink = extractVerificationLink(
+        deliveredSmokeEmails[deliveredSmokeEmails.length - 1]?.raw,
+      );
+      const verificationToken = new URL(
+        latestVerificationLink || verificationLink,
+      ).searchParams.get("token");
+      assert(
+        verificationToken,
+        "Smoke verification link should contain a token",
+        latestVerificationLink || verificationLink,
+      );
+      await verifyEmailToken(actors.guest, verificationToken, "Verify smoke email");
+    } else {
+      const pausedVerificationRequest = await actors.guest.request(
+        "POST",
+        "/auth/request-email-verification",
+        {
+          json: { email: smokeMailboxEmail },
+          useCookies: false,
+          useAccessToken: false,
+        },
+      );
+      expectStatus(
+        pausedVerificationRequest,
+        200,
+        "Paused verification endpoint should remain reachable",
+      );
+      assert(
+        pausedVerificationRequest.body?.emailVerificationRequired === false,
+        "Paused verification response should declare that verification is not required",
+        pausedVerificationRequest.body,
+      );
+    }
 
     const verifiedLogin = await actors.guest.request("POST", "/auth/login", {
       json: {
@@ -108,7 +132,13 @@ async function run() {
       useCookies: false,
       useAccessToken: false,
     });
-    expectStatus(verifiedLogin, 200, "Login smoke user after verification");
+    expectStatus(
+      verifiedLogin,
+      200,
+      runtime.emailVerificationEnabled
+        ? "Login smoke user after verification"
+        : "Login smoke user while verification is paused",
+    );
 
     const category = await createCategory(
       actors.adminUser,

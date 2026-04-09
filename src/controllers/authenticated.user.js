@@ -1,6 +1,7 @@
 import z from "../utils/user.zod.js";
 import bcrypt from "bcrypt";
 import db from "../database/db.js";
+import { normalizeUserVerification } from "../utils/runtime-config.js";
 
 const userProfileSelect = {
   id: true,
@@ -31,7 +32,10 @@ async function getProfile(req, res) {
         .json({ success: false, message: "User not found" });
     }
 
-    return res.status(200).json({ success: true, data: user });
+    return res.status(200).json({
+      success: true,
+      data: normalizeUserVerification(user),
+    });
   } catch (error) {
     console.error(error);
     return res
@@ -64,7 +68,7 @@ async function updateProfile(req, res) {
     return res.status(200).json({
       success: true,
       message: "Profile updated successfully",
-      data: user,
+      data: normalizeUserVerification(user),
     });
   } catch (error) {
     console.error("updateProfile error:", error);

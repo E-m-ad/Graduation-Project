@@ -25,6 +25,7 @@ import docs from "./routes/docs.js";
 import { hasEmailTransportConfig, verifyEmailTransport } from "./utils/email.js";
 import {
   getUploadsRootDir,
+  isEmailVerificationEnabled,
   isOriginAllowed,
 } from "./utils/runtime-config.js";
 import { getSchemaHealth } from "./utils/schema-health.js";
@@ -69,8 +70,10 @@ export function createApp() {
     try {
       await db.$queryRaw`SELECT 1`;
       const schema = await getSchemaHealth(db);
-      const emailConfigPresent = hasEmailTransportConfig();
-      let emailStatus = emailConfigPresent ? "configured" : "not_configured";
+      const emailVerificationEnabled = isEmailVerificationEnabled();
+      const emailConfigPresent =
+        emailVerificationEnabled && hasEmailTransportConfig();
+      let emailStatus = emailVerificationEnabled ? "not_configured" : "disabled";
 
       if (emailConfigPresent) {
         try {
@@ -93,7 +96,11 @@ export function createApp() {
         });
       }
 
-      if (process.env.NODE_ENV === "production" && emailStatus !== "up") {
+      if (
+        process.env.NODE_ENV === "production" &&
+        emailVerificationEnabled &&
+        emailStatus !== "up"
+      ) {
         return res.status(200).json({
           status: "degraded",
           database: "up",
@@ -153,7 +160,11 @@ export function startServer(port = Number(process.env.PORT || 8080)) {
   const server = app.listen(port, "0.0.0.0", async () => {
     console.log(`Server is running on port ${port}`);
 
-    if (process.env.NODE_ENV === "production" && hasEmailTransportConfig()) {
+    if (
+      process.env.NODE_ENV === "production" &&
+      isEmailVerificationEnabled() &&
+      hasEmailTransportConfig()
+    ) {
       try {
         await verifyEmailTransport();
         console.log("SMTP transport verified");

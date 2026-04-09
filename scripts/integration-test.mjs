@@ -46,85 +46,112 @@ async function runAuthAndProfileTests(context, actors) {
   });
   expectStatus(registerUnverified, 201, "Register unverified mailbox user");
 
-  const registrationEmail = await context.emailInbox.waitForMessage(
-    (message) => message.envelope.to.includes(unverifiedEmail),
-  );
-  assert(
-    registrationEmail,
-    "Registering a new user should deliver a verification email to the mailbox",
-    context.emailInbox.messages,
-  );
-  const registrationVerificationLink = extractVerificationLink(registrationEmail.raw);
-  assert(
-    registrationVerificationLink,
-    "The delivered verification email should contain a verification link",
-    registrationEmail,
-  );
+  if (context.emailVerificationEnabled) {
+    const registrationEmail = await context.emailInbox.waitForMessage(
+      (message) => message.envelope.to.includes(unverifiedEmail),
+    );
+    assert(
+      registrationEmail,
+      "Registering a new user should deliver a verification email to the mailbox",
+      context.emailInbox.messages,
+    );
+    const registrationVerificationLink = extractVerificationLink(
+      registrationEmail.raw,
+    );
+    assert(
+      registrationVerificationLink,
+      "The delivered verification email should contain a verification link",
+      registrationEmail,
+    );
 
-  const blockedLoginResult = await actors.guest.request("POST", "/auth/login", {
-    json: {
-      email: unverifiedEmail,
-      password: PASSWORDS.primary,
-    },
-    useCookies: false,
-    useAccessToken: false,
-  });
-  expectStatus(blockedLoginResult, 403, "Block login for unverified user");
-  assert(
-    blockedLoginResult.body?.code === "EMAIL_NOT_VERIFIED",
-    "Blocked login should return the email-verification error code",
-    blockedLoginResult.body,
-  );
-
-  const resendVerificationResult = await actors.guest.request(
-    "POST",
-    "/auth/request-email-verification",
-    {
-      json: { email: unverifiedEmail },
+    const blockedLoginResult = await actors.guest.request("POST", "/auth/login", {
+      json: {
+        email: unverifiedEmail,
+        password: PASSWORDS.primary,
+      },
       useCookies: false,
       useAccessToken: false,
-    },
-  );
-  expectStatus(
-    resendVerificationResult,
-    200,
-    "Resend verification email publicly",
-  );
+    });
+    expectStatus(blockedLoginResult, 403, "Block login for unverified user");
+    assert(
+      blockedLoginResult.body?.code === "EMAIL_NOT_VERIFIED",
+      "Blocked login should return the email-verification error code",
+      blockedLoginResult.body,
+    );
 
-  const latestVerificationEmail = await context.emailInbox.waitForMessage(
-    (message) =>
-      message.envelope.to.includes(unverifiedEmail) &&
-      context.emailInbox.messages.filter((entry) => entry.envelope.to.includes(unverifiedEmail))
-        .length >= 3,
-  );
-  assert(
-    latestVerificationEmail,
-    "The resend flow should deliver another verification email",
-    context.emailInbox.messages,
-  );
+    const resendVerificationResult = await actors.guest.request(
+      "POST",
+      "/auth/request-email-verification",
+      {
+        json: { email: unverifiedEmail },
+        useCookies: false,
+        useAccessToken: false,
+      },
+    );
+    expectStatus(
+      resendVerificationResult,
+      200,
+      "Resend verification email publicly",
+    );
 
-  const allVerificationEmails = context.emailInbox.messages.filter((message) =>
-    message.envelope.to.includes(unverifiedEmail),
-  );
-  const resendEmail = allVerificationEmails[allVerificationEmails.length - 1];
-  const resendVerificationLink = extractVerificationLink(resendEmail.raw);
-  assert(
-    resendVerificationLink,
-    "The resent verification email should include a verification link",
-    resendEmail,
-  );
-  const verificationToken = new URL(resendVerificationLink).searchParams.get("token");
-  assert(
-    verificationToken,
-    "The resent verification link should include a token",
-    resendVerificationLink,
-  );
+    const latestVerificationEmail = await context.emailInbox.waitForMessage(
+      (message) =>
+        message.envelope.to.includes(unverifiedEmail) &&
+        context.emailInbox.messages.filter((entry) =>
+          entry.envelope.to.includes(unverifiedEmail),
+        ).length >= 3,
+    );
+    assert(
+      latestVerificationEmail,
+      "The resend flow should deliver another verification email",
+      context.emailInbox.messages,
+    );
 
-  await verifyEmailToken(
-    actors.guest,
-    verificationToken,
-    "Verify email from delivered mailbox link",
-  );
+    const allVerificationEmails = context.emailInbox.messages.filter((message) =>
+      message.envelope.to.includes(unverifiedEmail),
+    );
+    const resendEmail = allVerificationEmails[allVerificationEmails.length - 1];
+    const resendVerificationLink = extractVerificationLink(resendEmail.raw);
+    assert(
+      resendVerificationLink,
+      "The resent verification email should include a verification link",
+      resendEmail,
+    );
+    const verificationToken = new URL(resendVerificationLink).searchParams.get(
+      "token",
+    );
+    assert(
+      verificationToken,
+      "The resent verification link should include a token",
+      resendVerificationLink,
+    );
+
+    await verifyEmailToken(
+      actors.guest,
+      verificationToken,
+      "Verify email from delivered mailbox link",
+    );
+  } else {
+    const resendVerificationResult = await actors.guest.request(
+      "POST",
+      "/auth/request-email-verification",
+      {
+        json: { email: unverifiedEmail },
+        useCookies: false,
+        useAccessToken: false,
+      },
+    );
+    expectStatus(
+      resendVerificationResult,
+      200,
+      "Verification request should succeed while verification is paused",
+    );
+    assert(
+      resendVerificationResult.body?.emailVerificationRequired === false,
+      "Paused verification flow should declare that verification is not required",
+      resendVerificationResult.body,
+    );
+  }
 
   const verifiedLoginResult = await actors.guest.request("POST", "/auth/login", {
     json: {
@@ -187,16 +214,29 @@ async function runAuthAndProfileTests(context, actors) {
     "POST",
     "/auth/request-email-verification",
   );
-  expectStatus(
-    requestVerificationResult,
-    409,
-    "Verified user should not request another verification email",
-  );
-  assert(
-    requestVerificationResult.body?.message === "Your email is already verified",
-    "Verified users should be told their email is already verified",
-    requestVerificationResult.body,
-  );
+  if (context.emailVerificationEnabled) {
+    expectStatus(
+      requestVerificationResult,
+      409,
+      "Verified user should not request another verification email",
+    );
+    assert(
+      requestVerificationResult.body?.message === "Your email is already verified",
+      "Verified users should be told their email is already verified",
+      requestVerificationResult.body,
+    );
+  } else {
+    expectStatus(
+      requestVerificationResult,
+      200,
+      "Verification request should stay successful while verification is paused",
+    );
+    assert(
+      requestVerificationResult.body?.emailVerificationRequired === false,
+      "Paused verification flow should keep reporting that verification is not required",
+      requestVerificationResult.body,
+    );
+  }
 
   const updateProfileResult = await actors.authUser.request("PUT", "/users/me", {
     json: {

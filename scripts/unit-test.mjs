@@ -88,6 +88,20 @@ async function run() {
     requestEmailVerificationPayload,
   );
 
+  const productionEnvWithoutEmailVerification = authSchema.envProcessSchema.parse({
+    NODE_ENV: "production",
+    JWT_SECRET: "jwt-secret",
+    REFRESH_TOKEN_SECRET: "refresh-secret",
+    ACCESS_TOKEN_EXPIRATION: "15d",
+    REFRESH_TOKEN_EXPIRATION: "7d",
+    EMAIL_VERIFICATION_ENABLED: "false",
+  });
+  assert(
+    productionEnvWithoutEmailVerification.EMAIL_VERIFICATION_ENABLED === "false",
+    "Production env parsing should allow email verification to be disabled without SMTP settings",
+    productionEnvWithoutEmailVerification,
+  );
+
   const railwayRuntimeBaseUrl = getAppBaseUrl({
     RAILWAY_PUBLIC_DOMAIN: "demo-market.up.railway.app",
   });

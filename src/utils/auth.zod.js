@@ -1,5 +1,14 @@
 import zod from "zod";
 
+function parseBooleanEnv(value) {
+  const normalizedValue = String(value ?? "").trim().toLowerCase();
+  if (!normalizedValue) {
+    return false;
+  }
+
+  return ["1", "true", "yes", "on"].includes(normalizedValue);
+}
+
 const registerSchema = zod
   .object({
     name: zod
@@ -65,6 +74,15 @@ const envProcessSchema = zod
     REFRESH_TOKEN_SECRET: zod.string("REFRESH_TOKEN_SECRET is required"),
     ACCESS_TOKEN_EXPIRATION: zod.string("ACCESS_TOKEN_EXPIRATION is required"),
     REFRESH_TOKEN_EXPIRATION: zod.string("REFRESH_TOKEN_EXPIRATION is required"),
+    EMAIL_VERIFICATION_ENABLED: zod
+      .string()
+      .trim()
+      .regex(/^(true|false|1|0|yes|no|on|off)$/i, {
+        message:
+          "EMAIL_VERIFICATION_ENABLED must be true, false, 1, 0, yes, no, on, or off",
+      })
+      .optional()
+      .or(zod.literal("")),
     APP_BASE_URL: zod.string().trim().optional(),
     RAILWAY_PUBLIC_DOMAIN: zod.string().trim().optional(),
     CORS_ALLOWED_ORIGINS: zod.string().trim().optional(),
@@ -99,6 +117,9 @@ const envProcessSchema = zod
     const isProduction = env.NODE_ENV === "production";
     const hasAppBaseUrl = Boolean(env.APP_BASE_URL?.trim());
     const hasRailwayPublicDomain = Boolean(env.RAILWAY_PUBLIC_DOMAIN?.trim());
+    const emailVerificationEnabled = parseBooleanEnv(
+      env.EMAIL_VERIFICATION_ENABLED,
+    );
 
     if (hasAppBaseUrl) {
       const urlCheck = zod.string().url().safeParse(env.APP_BASE_URL.trim());
@@ -135,7 +156,12 @@ const envProcessSchema = zod
       });
     }
 
-    if (isProduction && !hasAppBaseUrl && !hasRailwayPublicDomain) {
+    if (
+      isProduction &&
+      emailVerificationEnabled &&
+      !hasAppBaseUrl &&
+      !hasRailwayPublicDomain
+    ) {
       ctx.addIssue({
         code: "custom",
         path: ["APP_BASE_URL"],
@@ -143,7 +169,12 @@ const envProcessSchema = zod
       });
     }
 
-    if (isProduction && !hasConnectionUrl && !hasSmtpFields) {
+    if (
+      isProduction &&
+      emailVerificationEnabled &&
+      !hasConnectionUrl &&
+      !hasSmtpFields
+    ) {
       ctx.addIssue({
         code: "custom",
         path: ["SMTP_CONNECTION_URL"],
@@ -152,7 +183,7 @@ const envProcessSchema = zod
       });
     }
 
-    if (isProduction && !hasFrom) {
+    if (isProduction && emailVerificationEnabled && !hasFrom) {
       ctx.addIssue({
         code: "custom",
         path: ["SMTP_FROM"],

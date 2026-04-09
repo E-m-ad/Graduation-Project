@@ -302,6 +302,7 @@ export function VerifyEmailPage({ page }) {
   const [token, setToken] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [hasVerified, setHasVerified] = useState(false);
+  const [verificationPaused, setVerificationPaused] = useState(false);
   const [message, showMessage] = useMessageState("");
 
   useEffect(() => {
@@ -347,6 +348,7 @@ export function VerifyEmailPage({ page }) {
     }
 
     setHasVerified(true);
+    setVerificationPaused(result.data?.emailVerificationRequired === false);
     showMessage(result.data.message || "Email verified successfully.", "success");
 
     try {
@@ -363,16 +365,28 @@ export function VerifyEmailPage({ page }) {
       logout={logout}
       intro={
         <AuthIntro
-          eyebrow="Email verification"
-          title="Confirm your account email."
-          description="Open the verification link from your email, or paste the token here if you are testing locally in development."
+          eyebrow={verificationPaused ? "Verification paused" : "Email verification"}
+          title={
+            verificationPaused
+              ? "This step is temporarily disabled."
+              : "Confirm your account email."
+          }
+          description={
+            verificationPaused
+              ? "Email verification is turned off for now, so you can continue using the app without this step."
+              : "Open the verification link from your email, or paste the token here if you are testing locally in development."
+          }
         />
       }
     >
       <section className="auth-card">
         <div className="auth-card__header">
           <h2>Verify Email</h2>
-          <p>Complete this step to mark your account as verified.</p>
+          <p>
+            {verificationPaused
+              ? "You can return to the app now."
+              : "Complete this step to mark your account as verified."}
+          </p>
         </div>
 
         <form
@@ -403,8 +417,12 @@ export function VerifyEmailPage({ page }) {
 
         {hasVerified ? (
           <div className="token-box">
-            <h3>Account verified</h3>
-            <p>Your email is now verified. You can continue in your account.</p>
+            <h3>{verificationPaused ? "Verification paused" : "Account verified"}</h3>
+            <p>
+              {verificationPaused
+                ? "Email verification is off for now. You can continue in the app without it."
+                : "Your email is now verified. You can continue in your account."}
+            </p>
             <a
               className="btn btn--secondary btn--small"
               href={user ? "/html/profile.html" : "/html/login.html"}

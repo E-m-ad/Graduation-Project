@@ -3,10 +3,16 @@ import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import db from "../database/db.js";
 import { sendEmail } from "../utils/email.js";
-import { buildRequestBaseUrl } from "../utils/runtime-config.js";
+import {
+  buildRequestBaseUrl,
+  isEmailVerificationEnabled,
+} from "../utils/runtime-config.js";
 import z from "../utils/auth.zod.js";
 
 const EMAIL_NOT_VERIFIED_CODE = "EMAIL_NOT_VERIFIED";
+const EMAIL_VERIFICATION_PAUSED_MESSAGE =
+  "Email verification is currently paused. You can continue without it.";
+const READY_TO_SIGN_IN_MESSAGE = "Your account is ready. You can sign in now.";
 const RESET_TOKEN_TTL_MS = 2 * 60 * 1000;
 const EMAIL_VERIFICATION_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
 const REFRESH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -193,6 +199,30 @@ function buildValidationErrorResponse(data) {
   };
 }
 
+async function markUserVerifiedIfNeeded(userId) {
+  if (isEmailVerificationEnabled()) {
+    return false;
+  }
+
+  const result = await db.user.updateMany({
+    where: {
+      id: userId,
+      isVerified: false,
+    },
+    data: {
+      isVerified: true,
+    },
+  });
+
+  if (result.count > 0) {
+    await db.emailVerificationToken.deleteMany({
+      where: { userId },
+    });
+  }
+
+  return result.count > 0;
+}
+
 async function register(req, res) {
   const data = z.registerSchema.safeParse(req.body);
   if (!data.success) {
@@ -203,11 +233,14 @@ async function register(req, res) {
   }
 
   const { name, email, password } = data.data;
+  const emailVerificationEnabled = isEmailVerificationEnabled();
 
   try {
     const existingUser = await db.user.findUnique({ where: { email } });
     if (existingUser) {
-      if (existingUser.isActive && !existingUser.isVerified) {
+      if (!emailVerificationEnabled && existingUser.isActive) {
+        await markUserVerifiedIfNeeded(existingUser.id);
+      } else if (existingUser.isActive && !existingUser.isVerified) {
         await issueEmailVerification({
           req,
           user: existingUser,
@@ -216,7 +249,9 @@ async function register(req, res) {
 
       return res.status(201).json({
         success: true,
-        message: getGenericVerificationRequestMessage(),
+        message: emailVerificationEnabled
+          ? getGenericVerificationRequestMessage()
+          : READY_TO_SIGN_IN_MESSAGE,
       });
     }
 
@@ -225,6 +260,7 @@ async function register(req, res) {
         name,
         email,
         password: await bcrypt.hash(password, 10),
+        isVerified: !emailVerificationEnabled,
       },
       select: {
         id: true,
@@ -232,6 +268,13 @@ async function register(req, res) {
         email: true,
       },
     });
+
+    if (!emailVerificationEnabled) {
+      return res.status(201).json({
+        success: true,
+        message: READY_TO_SIGN_IN_MESSAGE,
+      });
+    }
 
     const { rawToken, emailSent, verificationLink } = await issueEmailVerification({
       req,
@@ -265,6 +308,18 @@ async function register(req, res) {
 }
 
 async function requestEmailVerification(req, res) {
+  if (!isEmailVerificationEnabled()) {
+    if (req.user?.id) {
+      await markUserVerifiedIfNeeded(req.user.id);
+    }
+
+    return res.status(200).json({
+      success: true,
+      emailVerificationRequired: false,
+      message: EMAIL_VERIFICATION_PAUSED_MESSAGE,
+    });
+  }
+
   try {
     const authUserId = req.user?.id;
 
@@ -364,6 +419,14 @@ async function requestEmailVerification(req, res) {
 }
 
 async function verifyEmail(req, res) {
+  if (!isEmailVerificationEnabled()) {
+    return res.status(200).json({
+      success: true,
+      emailVerificationRequired: false,
+      message: EMAIL_VERIFICATION_PAUSED_MESSAGE,
+    });
+  }
+
   const data = z.verifyEmailSchema.safeParse(req.body);
   if (!data.success) {
     return res.status(400).json({
@@ -479,7 +542,9 @@ async function login(req, res) {
         .json({ success: false, message: "Invalid email or password" });
     }
 
-    if (!user.isVerified) {
+    if (!isEmailVerificationEnabled()) {
+      await markUserVerifiedIfNeeded(user.id);
+    } else if (!user.isVerified) {
       const { rawToken, emailSent, verificationLink } = await issueEmailVerification({
         req,
         user,
@@ -581,7 +646,9 @@ async function refreshToken(req, res) {
         .json({ success: false, message: "User not found or inactive" });
     }
 
-    if (!user.isVerified) {
+    if (!isEmailVerificationEnabled()) {
+      await markUserVerifiedIfNeeded(user.id);
+    } else if (!user.isVerified) {
       await db.refreshToken.updateMany({
         where: { userId: user.id },
         data: { isRevoked: true },
