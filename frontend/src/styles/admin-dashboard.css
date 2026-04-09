@@ -19,6 +19,7 @@
 }
 
 .admin-badge {
+  flex: 1 1 160px;
   min-width: 150px;
   padding: 16px;
   border-radius: 20px;
@@ -239,6 +240,18 @@
   display: flex;
   align-items: center;
   gap: 14px;
+  flex-wrap: wrap;
+}
+
+.admin-item__inline > div {
+  min-width: 0;
+}
+
+.admin-item strong,
+.admin-item__summary,
+.admin-item__meta,
+.admin-item__footer {
+  overflow-wrap: anywhere;
 }
 
 .admin-bars {
@@ -289,6 +302,23 @@
   }
 }
 
+@media (max-width: 860px) {
+  .admin-hero,
+  .admin-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .admin-hero__actions,
+  .admin-toolbar__actions {
+    width: 100%;
+  }
+
+  .admin-badge {
+    min-width: min(150px, 100%);
+  }
+}
+
 @media (max-width: 720px) {
   .admin-hero,
   .admin-toolbar,
@@ -312,5 +342,23 @@
 
   .admin-pagination {
     justify-content: flex-start;
+  }
+
+  .admin-nav__button {
+    justify-content: center;
+    text-align: center;
+  }
+}
+
+@media (max-width: 560px) {
+  .admin-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-item__actions .btn,
+  .admin-hero__actions .btn,
+  .admin-toolbar__actions .btn,
+  .admin-hero__actions .admin-badge {
+    width: 100%;
   }
 }

@@ -1,5 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { fetchApi, getDefaultAuthenticatedPath } from "../lib/airent";
+
+const MOBILE_NAV_BREAKPOINT = 720;
 
 function toBadgeCount(value) {
   const nextValue = Number(value);
@@ -159,12 +161,14 @@ export function SiteLayout({
   const mainClassName =
     page === "home" ? "page-shell page-shell--landing" : "page-shell";
   const brandHref = page === "admin" ? getDefaultAuthenticatedPath(user) : "/";
+  const headerRef = useRef(null);
   const [layoutBadgeCounts, setLayoutBadgeCounts] = useState(
     normalizeNotificationBadgeCounts({
       notifications: notificationBadgeCount,
       ...(notificationBadgeCounts || {}),
     }),
   );
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
   useEffect(() => {
     if (
@@ -237,13 +241,94 @@ export function SiteLayout({
     };
   }, [isAdmin, notificationBadgeCounts, user]);
 
+  useEffect(() => {
+    setIsMobileNavOpen(false);
+  }, [activeNav, isAdmin, page, user]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return undefined;
+    }
+
+    function handleResize() {
+      if (window.innerWidth > MOBILE_NAV_BREAKPOINT) {
+        setIsMobileNavOpen(false);
+      }
+    }
+
+    window.addEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isMobileNavOpen) {
+      return undefined;
+    }
+
+    function handlePointerDown(event) {
+      if (!headerRef.current?.contains(event.target)) {
+        setIsMobileNavOpen(false);
+      }
+    }
+
+    function handleKeyDown(event) {
+      if (event.key === "Escape") {
+        setIsMobileNavOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isMobileNavOpen]);
+
+  function handleNavItemClick(event) {
+    if (!event.target.closest("a, button")) {
+      return;
+    }
+
+    setIsMobileNavOpen(false);
+  }
+
   return (
     <>
-      <header className="site-header">
-        <a className="brand" href={brandHref}>
-          AI <span className="rent">Rent</span>
-        </a>
-        <nav className="site-nav">
+      <header
+        ref={headerRef}
+        className={`site-header${isMobileNavOpen ? " is-nav-open" : ""}`}
+      >
+        <div className="site-header__top">
+          <a className="brand" href={brandHref}>
+            AI <span className="rent">Rent</span>
+          </a>
+          <button
+            type="button"
+            className={`site-nav-toggle${isMobileNavOpen ? " is-open" : ""}`}
+            aria-expanded={isMobileNavOpen}
+            aria-controls="site-navigation"
+            aria-label={isMobileNavOpen ? "Close navigation menu" : "Open navigation menu"}
+            onClick={() => setIsMobileNavOpen((previous) => !previous)}
+          >
+            <span className="site-nav-toggle__label">
+              {isMobileNavOpen ? "Close" : "Menu"}
+            </span>
+            <span className="site-nav-toggle__icon" aria-hidden="true">
+              <span />
+              <span />
+              <span />
+            </span>
+          </button>
+        </div>
+        <nav
+          id="site-navigation"
+          className={`site-nav${isMobileNavOpen ? " is-open" : ""}`}
+          onClick={handleNavItemClick}
+        >
           {page === "admin" ? (
             <>
               <a href={getDefaultAuthenticatedPath(user)} className="is-active">

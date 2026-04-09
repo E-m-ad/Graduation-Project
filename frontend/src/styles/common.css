@@ -18,6 +18,7 @@
   --radius-lg: 30px;
   --radius-md: 22px;
   --radius-sm: 16px;
+  --site-header-offset: 88px;
 }
 
 * {
@@ -26,6 +27,7 @@
 
 html {
   scroll-behavior: smooth;
+  overflow-x: hidden;
 }
 
 body {
@@ -47,6 +49,7 @@ body {
       transparent 22%
     ),
     linear-gradient(180deg, var(--bg-top), var(--bg-bottom));
+  overflow-x: hidden;
 }
 
 img {
@@ -96,8 +99,10 @@ ul {
 }
 
 .site-header {
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: 20;
   display: flex;
   align-items: center;
@@ -108,6 +113,78 @@ ul {
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(14px);
   box-shadow: 0 10px 24px rgba(17, 24, 39, 0.04);
+  overflow-x: clip;
+}
+
+.site-header__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.site-nav-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 46px;
+  padding: 11px 16px;
+  border: 1px solid rgba(218, 41, 28, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--text);
+  box-shadow: 0 14px 24px rgba(17, 24, 39, 0.08);
+  cursor: pointer;
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease;
+}
+
+.site-nav-toggle:hover,
+.site-nav-toggle:focus-visible {
+  color: var(--primary);
+  border-color: rgba(218, 41, 28, 0.18);
+  box-shadow: 0 18px 28px rgba(17, 24, 39, 0.1);
+}
+
+.site-nav-toggle:hover {
+  transform: translateY(-1px);
+}
+
+.site-nav-toggle__label {
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.site-nav-toggle__icon {
+  display: inline-grid;
+  gap: 4px;
+}
+
+.site-nav-toggle__icon span {
+  display: block;
+  width: 18px;
+  height: 2px;
+  border-radius: 999px;
+  background: currentColor;
+  transition:
+    transform 0.22s ease,
+    opacity 0.18s ease;
+}
+
+.site-nav-toggle.is-open .site-nav-toggle__icon span:nth-child(1) {
+  transform: translateY(6px) rotate(45deg);
+}
+
+.site-nav-toggle.is-open .site-nav-toggle__icon span:nth-child(2) {
+  opacity: 0;
+}
+
+.site-nav-toggle.is-open .site-nav-toggle__icon span:nth-child(3) {
+  transform: translateY(-6px) rotate(-45deg);
 }
 
 .brand {
@@ -201,7 +278,21 @@ ul {
   width: min(1280px, calc(100% - 32px));
   margin: 0 auto;
   flex: 1 0 auto;
-  padding: 30px 0 56px;
+  padding: calc(var(--site-header-offset) + 30px) 0 56px;
+  min-width: 0;
+}
+
+.page-shell > *,
+.hero > *,
+.form-grid > *,
+.filters-grid > *,
+.card-grid > *,
+.listing-layout > *,
+.detail-layout > *,
+.profile-grid > *,
+.profile-panels > *,
+.site-footer__layout > * {
+  min-width: 0;
 }
 
 .page-hero,
@@ -216,6 +307,7 @@ ul {
 .surface-panel {
   border-radius: var(--radius-lg);
   padding: 28px;
+  min-width: 0;
 }
 
 .hero {
@@ -224,6 +316,7 @@ ul {
   gap: 24px;
   padding: 32px;
   border-radius: 34px;
+  min-width: 0;
 }
 
 .hero__content,
@@ -284,6 +377,7 @@ ul {
   padding: 32px;
   border-radius: 32px;
   margin-bottom: 28px;
+  min-width: 0;
 }
 
 .section {
@@ -329,11 +423,13 @@ ul {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  max-width: 100%;
   gap: 10px;
   border: 1px solid transparent;
   border-radius: 999px;
   padding: 13px 20px;
   font-weight: 700;
+  text-align: center;
   cursor: pointer;
   transition:
     transform 0.18s ease,
@@ -636,6 +732,7 @@ ul {
 
 .product-card__title {
   font-size: 1.18rem;
+  overflow-wrap: anywhere;
 }
 
 .product-card__title a {
@@ -1008,6 +1105,7 @@ ul {
     box-shadow 0.18s ease,
     border-color 0.18s ease,
     background 0.18s ease;
+  min-width: 0;
 }
 
 .list-item:hover,
@@ -1023,6 +1121,10 @@ ul {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.list-item__title-row > * {
+  min-width: 0;
 }
 
 .list-item__meta--accent {
@@ -1068,6 +1170,7 @@ ul {
   width: min(1280px, calc(100% - 32px));
   margin: 0 auto;
   padding: 34px 0 40px;
+  min-width: 0;
 }
 
 .site-footer__layout {
@@ -1212,15 +1315,28 @@ ul {
 }
 
 @media (max-width: 720px) {
+  :root {
+    --site-header-offset: 78px;
+  }
+
   .site-header {
     padding: 16px;
-    align-items: flex-start;
+    align-items: stretch;
     flex-direction: column;
+    gap: 12px;
+  }
+
+  .site-header__top {
+    width: 100%;
+  }
+
+  .site-nav-toggle {
+    display: inline-flex;
   }
 
   .page-shell {
     width: calc(100% - 20px);
-    padding-top: 20px;
+    padding-top: calc(var(--site-header-offset) + 20px);
   }
 
   .site-footer__inner {
@@ -1232,6 +1348,55 @@ ul {
   .page-hero,
   .surface-panel {
     padding: 20px;
+  }
+
+  .site-nav {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 0;
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    pointer-events: none;
+    transform: translateY(-10px);
+    transition:
+      max-height 0.28s ease,
+      opacity 0.22s ease,
+      transform 0.22s ease,
+      padding 0.22s ease;
+  }
+
+  .site-header.is-nav-open .site-nav,
+  .site-nav.is-open {
+    max-height: 720px;
+    padding: 8px 0 4px;
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+  }
+
+  .site-nav a,
+  .site-nav button {
+    width: 100%;
+    justify-content: flex-start;
+    text-align: left;
+    padding: 14px 16px;
+    border-radius: 18px;
+    border: 1px solid rgba(17, 24, 39, 0.08);
+    background: rgba(255, 255, 255, 0.88);
+    box-shadow: 0 14px 22px rgba(17, 24, 39, 0.06);
+    min-width: 0;
+  }
+
+  .site-nav__link--with-badge {
+    justify-content: flex-start;
+  }
+
+  .site-nav__badge {
+    top: 8px;
+    right: 10px;
   }
 
   .hero__content h1,
@@ -1297,21 +1462,17 @@ ul {
 }
 
 @media (max-width: 560px) {
-  .site-header {
-    gap: 12px;
-    padding: 14px 12px;
+  :root {
+    --site-header-offset: 70px;
   }
 
-  .site-nav {
-    width: 100%;
-    gap: 8px;
+  .site-header {
+    padding: 14px 12px;
   }
 
   .site-nav a,
   .site-nav button {
-    flex: 1 1 calc(50% - 8px);
-    justify-content: center;
-    text-align: center;
+    border-radius: 16px;
   }
 
   .site-nav__link--with-badge {
@@ -1320,7 +1481,7 @@ ul {
 
   .page-shell {
     width: calc(100% - 16px);
-    padding-top: 16px;
+    padding-top: calc(var(--site-header-offset) + 16px);
   }
 
   .hero,
@@ -1349,6 +1510,10 @@ ul {
   }
 
   .pagination-bar .btn {
+    width: 100%;
+  }
+
+  .btn--small {
     width: 100%;
   }
 
