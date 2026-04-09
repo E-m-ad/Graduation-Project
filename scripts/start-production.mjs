@@ -1,5 +1,4 @@
 import { spawn } from "node:child_process";
-import { startServer } from "../src/app.js";
 
 const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
 let activeChild = null;
@@ -74,7 +73,8 @@ process.on("SIGINT", () => terminateProcess("SIGINT"));
 
 try {
   await runCommand(npmCommand, ["run", "prisma:deploy"]);
-  await runCommand("node", ["scripts/verify-schema.mjs"]);
+  await runCommand(npmCommand, ["run", "verify:schema"]);
+  const { startServer } = await import("../src/app.js");
   server = startServer();
 } catch (error) {
   console.error("[start-production] Failed to boot application:", error);
