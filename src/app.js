@@ -94,7 +94,7 @@ export function createApp() {
       }
 
       if (process.env.NODE_ENV === "production" && emailStatus !== "up") {
-        return res.status(503).json({
+        return res.status(200).json({
           status: "degraded",
           database: "up",
           schema: "up",
@@ -153,15 +153,15 @@ export function startServer(port = Number(process.env.PORT || 8080)) {
   const server = app.listen(port, "0.0.0.0", async () => {
     console.log(`Server is running on port ${port}`);
 
-    if (process.env.NODE_ENV === "production") {
+    if (process.env.NODE_ENV === "production" && hasEmailTransportConfig()) {
       try {
         await verifyEmailTransport();
         console.log("SMTP transport verified");
       } catch (error) {
-        console.error("SMTP transport verification failed:", error);
-        server.close(() => {
-          process.exit(1);
-        });
+        console.error(
+          "SMTP transport verification failed. Continuing startup with email marked as degraded:",
+          error,
+        );
       }
     }
   });
