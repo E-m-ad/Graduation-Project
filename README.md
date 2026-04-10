@@ -676,12 +676,13 @@ The current codebase uses the following variables:
 | `RAILWAY_PUBLIC_DOMAIN` | Railway auto-provided | `example.up.railway.app` | Railway public hostname used as a fallback when `APP_BASE_URL` is not set |
 | `CORS_ALLOWED_ORIGINS` | Optional | `https://www.example.com,https://admin.example.com` | Extra allowed browser origins in production |
 | `UPLOADS_DIR` | Optional | `/app/uploads` | Absolute directory used for avatar and product uploads |
+| `RESEND_API_KEY` | Recommended on Railway | `re_xxxxx` | Sends mail over Resend's HTTPS API instead of direct SMTP |
 | `SMTP_CONNECTION_URL` | Optional alternative | `smtps://user:pass@smtp.example.com:465` | Full SMTP connection URL if your provider gives one |
 | `SMTP_HOST` | Recommended for production | `smtp.gmail.com` | SMTP host for email delivery |
 | `SMTP_PORT` | Recommended for production | `465` | SMTP port |
 | `SMTP_USER` | Recommended for production | `yourgmail@gmail.com` | SMTP username |
 | `SMTP_PASS` | Recommended for production | Google app password | SMTP password |
-| `SMTP_FROM` | Recommended for production | `AI Rent <yourgmail@gmail.com>` | Sender used for verification emails |
+| `SMTP_FROM` | Recommended for production | `AI Rent <yourgmail@gmail.com>` | Sender used for verification and password-reset emails |
 | `SMTP_SECURE` | No | `true` | Whether the SMTP transport should use TLS from connect time |
 
 Important production notes:
@@ -692,7 +693,8 @@ Important production notes:
 - on Railway, `RAILWAY_PUBLIC_DOMAIN` is provided automatically and can be used as the fallback public URL
 - set `CORS_ALLOWED_ORIGINS` only if you need extra browser origins beyond the main app URL
 - set `UPLOADS_DIR` only if you want to override the Railway volume mount path
-- configure either `SMTP_CONNECTION_URL` or the full `SMTP_HOST`/`SMTP_PORT`/`SMTP_USER`/`SMTP_PASS` set
+- on Railway, prefer `RESEND_API_KEY` so email is sent over HTTPS instead of direct SMTP
+- configure either `RESEND_API_KEY`, `SMTP_CONNECTION_URL`, or the full `SMTP_HOST`/`SMTP_PORT`/`SMTP_USER`/`SMTP_PASS` set
 - set `SMTP_FROM` so verification emails have a valid sender identity
 - for Gmail SMTP, use a Google App Password instead of your normal mailbox password
 
@@ -833,6 +835,7 @@ Recommended Railway setup:
    - `APP_BASE_URL`
    - `CORS_ALLOWED_ORIGINS` if you need extra allowed origins
    - `UPLOADS_DIR` only if you want to override the mounted volume path
+   - `RESEND_API_KEY` if you want Railway-safe email delivery over HTTPS
    - `SMTP_HOST`
    - `SMTP_PORT`
    - `SMTP_USER`
@@ -846,8 +849,9 @@ Recommended Railway setup:
    - `SMTP_PORT=465`
    - `SMTP_SECURE=true`
    - `SMTP_PASS=<your Google App Password>`
-8. Set `APP_BASE_URL=https://<your Railway public domain or custom domain>`.
-9. Deploy the latest commit so Railway uses the current Dockerfile.
+8. If Railway SMTP times out, set `RESEND_API_KEY=<your Resend API key>` and keep `SMTP_FROM` set to a verified sender address.
+9. Set `APP_BASE_URL=https://<your Railway public domain or custom domain>`.
+10. Deploy the latest commit so Railway uses the current Dockerfile.
 10. After deploy, open `/healthz`.
 
 Expected healthy response:

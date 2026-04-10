@@ -102,6 +102,23 @@ async function run() {
     productionEnvWithoutEmailVerification,
   );
 
+  const productionEnvWithResend = authSchema.envProcessSchema.parse({
+    NODE_ENV: "production",
+    JWT_SECRET: "jwt-secret",
+    REFRESH_TOKEN_SECRET: "refresh-secret",
+    ACCESS_TOKEN_EXPIRATION: "15d",
+    REFRESH_TOKEN_EXPIRATION: "7d",
+    EMAIL_VERIFICATION_ENABLED: "true",
+    APP_BASE_URL: "https://rent.example.com",
+    RESEND_API_KEY: "re_test_123",
+    SMTP_FROM: "AI Rent <noreply@rent.example.com>",
+  });
+  assert(
+    productionEnvWithResend.RESEND_API_KEY === "re_test_123",
+    "Production env parsing should allow Resend to satisfy email delivery requirements",
+    productionEnvWithResend,
+  );
+
   const railwayRuntimeBaseUrl = getAppBaseUrl({
     RAILWAY_PUBLIC_DOMAIN: "demo-market.up.railway.app",
   });

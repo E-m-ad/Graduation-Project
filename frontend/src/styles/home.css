@@ -10,7 +10,6 @@
   --home-border: rgba(15, 23, 42, 0.08);
   --home-glow: rgba(218, 41, 28, 0.16);
   --home-shadow: 0 30px 80px rgba(15, 23, 42, 0.1);
-  padding-top: 28px;
   display: grid;
   gap: 52px;
 }
@@ -35,7 +34,7 @@
 }
 
 .home-section-anchor {
-  scroll-margin-top: 28px;
+  scroll-margin-top: var(--site-header-offset);
 }
 
 .market-hero {
@@ -1151,7 +1150,6 @@
 
 @media (max-width: 640px) {
   .page-shell--landing {
-    padding-top: 20px;
     gap: 34px;
   }
 

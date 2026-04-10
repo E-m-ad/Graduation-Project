@@ -648,6 +648,8 @@ export async function withTestServer(context, run) {
   const previousEmailEnv = {
     EMAIL_VERIFICATION_ENABLED: process.env.EMAIL_VERIFICATION_ENABLED,
     APP_BASE_URL: process.env.APP_BASE_URL,
+    RESEND_API_KEY: process.env.RESEND_API_KEY,
+    RESEND_API_BASE_URL: process.env.RESEND_API_BASE_URL,
     SMTP_CONNECTION_URL: process.env.SMTP_CONNECTION_URL,
     SMTP_HOST: process.env.SMTP_HOST,
     SMTP_PORT: process.env.SMTP_PORT,
@@ -667,6 +669,8 @@ export async function withTestServer(context, run) {
       previousEmailEnv.EMAIL_VERIFICATION_ENABLED,
     );
     setEnvValue("SMTP_CONNECTION_URL", undefined);
+    setEnvValue("RESEND_API_KEY", undefined);
+    setEnvValue("RESEND_API_BASE_URL", undefined);
 
     context.log(`Starting SMTP test server on port ${context.smtpPort}`);
     smtpServer = await startSmtpTestServer(context);
@@ -724,6 +728,8 @@ export async function withTestServer(context, run) {
       previousEmailEnv.EMAIL_VERIFICATION_ENABLED,
     );
     setEnvValue("APP_BASE_URL", previousEmailEnv.APP_BASE_URL);
+    setEnvValue("RESEND_API_KEY", previousEmailEnv.RESEND_API_KEY);
+    setEnvValue("RESEND_API_BASE_URL", previousEmailEnv.RESEND_API_BASE_URL);
     setEnvValue("SMTP_CONNECTION_URL", previousEmailEnv.SMTP_CONNECTION_URL);
     setEnvValue("SMTP_HOST", previousEmailEnv.SMTP_HOST);
     setEnvValue("SMTP_PORT", previousEmailEnv.SMTP_PORT);

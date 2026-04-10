@@ -22,7 +22,11 @@ import behavior from "./routes/behavior.js";
 import notification from "./routes/notification.js";
 import admin from "./routes/admin.js";
 import docs from "./routes/docs.js";
-import { hasEmailTransportConfig, verifyEmailTransport } from "./utils/email.js";
+import {
+  getEmailTransportProvider,
+  hasEmailTransportConfig,
+  verifyEmailTransport,
+} from "./utils/email.js";
 import {
   getUploadsRootDir,
   isEmailVerificationEnabled,
@@ -71,9 +75,9 @@ export function createApp() {
       await db.$queryRaw`SELECT 1`;
       const schema = await getSchemaHealth(db);
       const emailVerificationEnabled = isEmailVerificationEnabled();
-      const emailConfigPresent =
-        emailVerificationEnabled && hasEmailTransportConfig();
-      let emailStatus = emailVerificationEnabled ? "not_configured" : "disabled";
+      const emailProvider = getEmailTransportProvider();
+      const emailConfigPresent = hasEmailTransportConfig();
+      let emailStatus = emailConfigPresent ? "configured" : "not_configured";
 
       if (emailConfigPresent) {
         try {
@@ -91,6 +95,7 @@ export function createApp() {
           database: "up",
           schema: "mismatch",
           email: emailStatus,
+          emailProvider,
           missingColumns: schema.missing,
           timestamp: new Date().toISOString(),
         });
@@ -98,7 +103,7 @@ export function createApp() {
 
       if (
         process.env.NODE_ENV === "production" &&
-        emailVerificationEnabled &&
+        emailConfigPresent &&
         emailStatus !== "up"
       ) {
         return res.status(200).json({
@@ -106,6 +111,8 @@ export function createApp() {
           database: "up",
           schema: "up",
           email: emailStatus,
+          emailProvider,
+          emailVerificationEnabled,
           timestamp: new Date().toISOString(),
         });
       }
@@ -115,6 +122,8 @@ export function createApp() {
         database: "up",
         schema: "up",
         email: emailStatus,
+        emailProvider,
+        emailVerificationEnabled,
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
@@ -162,15 +171,16 @@ export function startServer(port = Number(process.env.PORT || 8080)) {
 
     if (
       process.env.NODE_ENV === "production" &&
-      isEmailVerificationEnabled() &&
       hasEmailTransportConfig()
     ) {
       try {
-        await verifyEmailTransport();
-        console.log("SMTP transport verified");
+        const verification = await verifyEmailTransport();
+        console.log(
+          `Email transport verified (${verification.provider || getEmailTransportProvider()})`,
+        );
       } catch (error) {
         console.error(
-          "SMTP transport verification failed. Continuing startup with email marked as degraded:",
+          "Email transport verification failed. Continuing startup with email marked as degraded:",
           error,
         );
       }

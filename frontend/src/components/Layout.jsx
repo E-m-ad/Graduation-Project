@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { fetchApi, getDefaultAuthenticatedPath } from "../lib/airent";
 
 const MOBILE_NAV_BREAKPOINT = 720;
+const HEADER_CLEARANCE_PX = 24;
 
 function toBadgeCount(value) {
   const nextValue = Number(value);
@@ -261,6 +262,40 @@ export function SiteLayout({
       window.removeEventListener("resize", handleResize);
     };
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !headerRef.current) {
+      return undefined;
+    }
+
+    const root = document.documentElement;
+
+    function updateHeaderOffset() {
+      const measuredHeight = Math.ceil(
+        headerRef.current?.getBoundingClientRect().height || 0,
+      );
+      const nextOffset = Math.max(measuredHeight + HEADER_CLEARANCE_PX, 70);
+      root.style.setProperty("--site-header-offset", `${nextOffset}px`);
+    }
+
+    updateHeaderOffset();
+
+    const resizeObserver =
+      typeof ResizeObserver === "function"
+        ? new ResizeObserver(() => {
+            updateHeaderOffset();
+          })
+        : null;
+
+    resizeObserver?.observe(headerRef.current);
+    window.addEventListener("resize", updateHeaderOffset);
+
+    return () => {
+      resizeObserver?.disconnect();
+      window.removeEventListener("resize", updateHeaderOffset);
+      root.style.removeProperty("--site-header-offset");
+    };
+  }, [isMobileNavOpen, page, user]);
 
   useEffect(() => {
     if (!isMobileNavOpen) {

@@ -87,6 +87,7 @@ const envProcessSchema = zod
     RAILWAY_PUBLIC_DOMAIN: zod.string().trim().optional(),
     CORS_ALLOWED_ORIGINS: zod.string().trim().optional(),
     UPLOADS_DIR: zod.string().trim().optional(),
+    RESEND_API_KEY: zod.string().trim().optional(),
     SMTP_CONNECTION_URL: zod.string().trim().optional(),
     SMTP_HOST: zod.string().trim().optional(),
     SMTP_PORT: zod
@@ -106,6 +107,7 @@ const envProcessSchema = zod
       .or(zod.literal("")),
   })
   .superRefine((env, ctx) => {
+    const hasResendApiKey = Boolean(env.RESEND_API_KEY?.trim());
     const hasConnectionUrl = Boolean(env.SMTP_CONNECTION_URL?.trim());
     const hasSmtpFields = Boolean(
       env.SMTP_HOST?.trim() &&
@@ -148,7 +150,7 @@ const envProcessSchema = zod
         });
     }
 
-    if ((hasConnectionUrl || hasSmtpFields) && !hasFrom) {
+    if ((hasResendApiKey || hasConnectionUrl || hasSmtpFields) && !hasFrom) {
       ctx.addIssue({
         code: "custom",
         path: ["SMTP_FROM"],
@@ -172,14 +174,15 @@ const envProcessSchema = zod
     if (
       isProduction &&
       emailVerificationEnabled &&
+      !hasResendApiKey &&
       !hasConnectionUrl &&
       !hasSmtpFields
     ) {
       ctx.addIssue({
         code: "custom",
-        path: ["SMTP_CONNECTION_URL"],
+        path: ["RESEND_API_KEY"],
         message:
-          "Production requires either SMTP_CONNECTION_URL or SMTP_HOST/SMTP_PORT/SMTP_USER/SMTP_PASS",
+          "Production requires RESEND_API_KEY or SMTP_CONNECTION_URL or SMTP_HOST/SMTP_PORT/SMTP_USER/SMTP_PASS",
       });
     }
 
