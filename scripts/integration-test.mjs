@@ -2,6 +2,7 @@ import {
   PASSWORDS,
   assert,
   createTestContext,
+  extractResetLink,
   extractVerificationLink,
   expectStatus,
   verifyEmailToken,
@@ -304,15 +305,34 @@ async function runAuthAndProfileTests(context, actors) {
     useAccessToken: false,
   });
   expectStatus(forgotPasswordResult, 200, "Forgot password");
+
+  const resetPasswordEmail = await context.emailInbox.waitForMessage(
+    (message) =>
+      message.envelope.to.includes(actors.authEmail) &&
+      Boolean(extractResetLink(message.raw)),
+  );
   assert(
-    forgotPasswordResult.body?.resetToken,
-    "Development forgot-password should return a reset token",
-    forgotPasswordResult.body,
+    resetPasswordEmail,
+    "Forgot-password should deliver a reset email",
+    context.emailInbox?.messages,
+  );
+
+  const resetLink = extractResetLink(resetPasswordEmail.raw);
+  assert(
+    resetLink,
+    "The delivered reset email should contain a reset link",
+    resetPasswordEmail,
+  );
+  const resetToken = new URL(resetLink).searchParams.get("token");
+  assert(
+    resetToken,
+    "The delivered reset link should include a token",
+    resetLink,
   );
 
   const resetPasswordResult = await actors.guest.request("POST", "/auth/reset-password", {
     json: {
-      token: forgotPasswordResult.body.resetToken,
+      token: resetToken,
       password: PASSWORDS.reset,
       confirmPassword: PASSWORDS.reset,
     },

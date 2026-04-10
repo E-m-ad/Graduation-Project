@@ -79,6 +79,15 @@ export function extractVerificationLink(raw) {
   return match?.[0] || null;
 }
 
+export function extractResetLink(raw) {
+  const normalized = normalizeEmailContent(raw);
+  const match = normalized.match(
+    /https?:\/\/[^\s<>"']+\/html\/reset-password\.html\?token=[a-f0-9]+/i,
+  );
+
+  return match?.[0] || null;
+}
+
 async function waitForCondition(check, timeoutMs = 5000, intervalMs = 50) {
   const startedAt = Date.now();
 
@@ -659,24 +668,15 @@ export async function withTestServer(context, run) {
     );
     setEnvValue("SMTP_CONNECTION_URL", undefined);
 
-    if (emailVerificationEnabled) {
-      context.log(`Starting SMTP test server on port ${context.smtpPort}`);
-      smtpServer = await startSmtpTestServer(context);
+    context.log(`Starting SMTP test server on port ${context.smtpPort}`);
+    smtpServer = await startSmtpTestServer(context);
 
-      setEnvValue("SMTP_HOST", "127.0.0.1");
-      setEnvValue("SMTP_PORT", String(context.smtpPort));
-      setEnvValue("SMTP_USER", "qa-mailer");
-      setEnvValue("SMTP_PASS", "qa-mailer-pass");
-      setEnvValue("SMTP_FROM", "AI Rent QA <no-reply@example.com>");
-      setEnvValue("SMTP_SECURE", "false");
-    } else {
-      setEnvValue("SMTP_HOST", undefined);
-      setEnvValue("SMTP_PORT", undefined);
-      setEnvValue("SMTP_USER", undefined);
-      setEnvValue("SMTP_PASS", undefined);
-      setEnvValue("SMTP_FROM", undefined);
-      setEnvValue("SMTP_SECURE", undefined);
-    }
+    setEnvValue("SMTP_HOST", "127.0.0.1");
+    setEnvValue("SMTP_PORT", String(context.smtpPort));
+    setEnvValue("SMTP_USER", "qa-mailer");
+    setEnvValue("SMTP_PASS", "qa-mailer-pass");
+    setEnvValue("SMTP_FROM", "AI Rent QA <no-reply@example.com>");
+    setEnvValue("SMTP_SECURE", "false");
 
     resetEmailTransport();
 

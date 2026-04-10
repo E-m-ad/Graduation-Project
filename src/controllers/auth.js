@@ -13,7 +13,8 @@ const EMAIL_NOT_VERIFIED_CODE = "EMAIL_NOT_VERIFIED";
 const EMAIL_VERIFICATION_PAUSED_MESSAGE =
   "Email verification is currently paused. You can continue without it.";
 const READY_TO_SIGN_IN_MESSAGE = "Your account is ready. You can sign in now.";
-const RESET_TOKEN_TTL_MS = 2 * 60 * 1000;
+const RESET_TOKEN_TTL_MINUTES = 30;
+const RESET_TOKEN_TTL_MS = RESET_TOKEN_TTL_MINUTES * 60 * 1000;
 const EMAIL_VERIFICATION_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
 const REFRESH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -36,6 +37,10 @@ function hashToken(value) {
 
 function buildVerificationLink(req, rawToken) {
   return `${buildRequestBaseUrl(req)}/html/verify-email.html?token=${encodeURIComponent(rawToken)}`;
+}
+
+function buildPasswordResetLink(req, rawToken) {
+  return `${buildRequestBaseUrl(req)}/html/reset-password.html?token=${encodeURIComponent(rawToken)}`;
 }
 
 async function createEmailVerificationToken(userId) {
@@ -105,6 +110,59 @@ async function sendVerificationEmail({ req, user, rawToken }) {
   return {
     emailSent: result.sent,
     verificationLink,
+  };
+}
+
+async function sendPasswordResetEmail({ req, user, rawToken }) {
+  const resetLink = buildPasswordResetLink(req, rawToken);
+  const expiryLabel = `${RESET_TOKEN_TTL_MINUTES} minutes`;
+  const text = [
+    `Hi ${user.name || "there"},`,
+    "",
+    "We received a request to reset your AI Rent password.",
+    `Open the link below within ${expiryLabel} to choose a new password:`,
+    resetLink,
+    "",
+    "If you did not request this, you can ignore this email.",
+  ].join("\n");
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827;">
+      <p>Hi ${user.name || "there"},</p>
+      <p>We received a request to reset your AI Rent password.</p>
+      <p>Please use the link below within ${expiryLabel} to choose a new password:</p>
+      <p>
+        <a href="${resetLink}" style="color: #da291c; font-weight: 700;">
+          Reset your password
+        </a>
+      </p>
+      <p>If you did not request this, you can ignore this email.</p>
+    </div>
+  `;
+
+  const result = await sendEmail({
+    to: user.email,
+    subject: "Reset your AI Rent password",
+    text,
+    html,
+  });
+
+  if (result.skipped) {
+    console.info(
+      `Email delivery is not configured. Password reset link for ${user.email}: ${resetLink}`,
+    );
+  }
+
+  if (!result.sent) {
+    console.error(
+      `Password reset email delivery failed for ${user.email}.`,
+      result.error,
+    );
+  }
+
+  return {
+    emailSent: result.sent,
+    resetLink,
   };
 }
 
@@ -186,6 +244,26 @@ function buildVerificationRequiredResponse({
     },
     rawToken,
     verificationLink,
+  );
+}
+
+function appendDevelopmentResetPreview(responseBody, rawToken, resetLink) {
+  if (process.env.NODE_ENV === "development") {
+    responseBody.resetToken = rawToken;
+    responseBody.resetLink = resetLink;
+  }
+
+  return responseBody;
+}
+
+function buildForgotPasswordResponse({ message, rawToken, resetLink }) {
+  return appendDevelopmentResetPreview(
+    {
+      success: true,
+      message,
+    },
+    rawToken,
+    resetLink,
   );
 }
 
@@ -736,14 +814,19 @@ async function forgotPassword(req, res) {
       },
     });
 
-    if (process.env.NODE_ENV === "development") {
-      return res.status(200).json({
-        ...genericResponse,
-        resetToken: rawToken,
-      });
-    }
+    const { resetLink } = await sendPasswordResetEmail({
+      req,
+      user,
+      rawToken,
+    });
 
-    return res.status(200).json(genericResponse);
+    return res.status(200).json(
+      buildForgotPasswordResponse({
+        message: genericResponse.message,
+        rawToken,
+        resetLink,
+      }),
+    );
   } catch (error) {
     console.error(error);
     return res

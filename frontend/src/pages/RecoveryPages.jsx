@@ -36,7 +36,7 @@ export function ForgotPasswordPage({ page }) {
   const [email, setEmail] = useState("");
   const [emailError, setEmailError] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [token, setToken] = useState("");
+  const [preview, setPreview] = useState(null);
   const [message, showMessage] = useMessageState("");
 
   useEffect(() => {
@@ -46,7 +46,7 @@ export function ForgotPasswordPage({ page }) {
   async function handleSubmit(event) {
     event.preventDefault();
     setEmailError("");
-    setToken("");
+    setPreview(null);
     showMessage("");
 
     if (!validateEmail(email.trim())) {
@@ -72,8 +72,11 @@ export function ForgotPasswordPage({ page }) {
     }
 
     showMessage(result.data.message || "Reset instructions sent.", "success");
-    if (result.data.resetToken) {
-      setToken(result.data.resetToken);
+    if (result.data.resetToken || result.data.resetLink) {
+      setPreview({
+        token: result.data.resetToken || "",
+        link: result.data.resetLink || "",
+      });
     }
   }
 
@@ -86,14 +89,14 @@ export function ForgotPasswordPage({ page }) {
         <AuthIntro
           eyebrow="Password recovery"
           title="Request a reset link."
-          description="Enter your email and the back-end will return a reset token in development mode so you can continue testing the flow quickly."
+          description="Enter your email and we will send password reset instructions. In development, you will also get a local preview link below."
         />
       }
     >
       <section className="auth-card">
         <div className="auth-card__header">
           <h2>Forgot Password</h2>
-          <p>We will guide you to the reset page.</p>
+          <p>We will send reset instructions to your email.</p>
         </div>
 
         <form className="stack-form" onSubmit={handleSubmit} noValidate>
@@ -116,17 +119,16 @@ export function ForgotPasswordPage({ page }) {
           <MessageText message={message} />
         </form>
 
-        {token ? (
+        {preview ? (
           <section className="token-box">
-            <h3>Development token</h3>
-            <p>Use this token on the reset page while testing locally.</p>
-            <code>{token}</code>
-            <a
-              className="btn btn--secondary btn--small"
-              href={`/html/reset-password.html?token=${encodeURIComponent(token)}`}
-            >
-              Open Reset Page
-            </a>
+            <h3>Development preview</h3>
+            <p>Use this preview while testing locally.</p>
+            {preview.token ? <code>{preview.token}</code> : null}
+            {preview.link ? (
+              <a className="btn btn--secondary btn--small" href={preview.link}>
+                Open Reset Page
+              </a>
+            ) : null}
           </section>
         ) : null}
       </section>
@@ -141,6 +143,7 @@ export function ResetPasswordPage({ page }) {
     password: "",
     confirmPassword: "",
   });
+  const [tokenFromLink, setTokenFromLink] = useState(false);
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [message, showMessage] = useMessageState("");
@@ -148,7 +151,8 @@ export function ResetPasswordPage({ page }) {
   useEffect(() => {
     document.title = "Reset Password | AI Rent";
     const params = new URLSearchParams(window.location.search);
-    const token = params.get("token");
+    const token = params.get("token") || "";
+    setTokenFromLink(Boolean(token));
     if (token) {
       setForm((previous) => ({ ...previous, token }));
     }
@@ -225,7 +229,11 @@ export function ResetPasswordPage({ page }) {
         <AuthIntro
           eyebrow="Set a new password"
           title="Finish the recovery flow."
-          description="Paste the reset token and choose a new password that includes at least one uppercase letter and one number."
+          description={
+            tokenFromLink
+              ? "Your reset link is ready. Choose a new password that includes at least one uppercase letter and one number."
+              : "Open the link from your email, or paste the reset token while testing locally, then choose a new password."
+          }
         />
       }
     >
@@ -236,20 +244,27 @@ export function ResetPasswordPage({ page }) {
         </div>
 
         <form className="stack-form" onSubmit={handleSubmit} noValidate>
-          <div className="field">
-            <label htmlFor="resetToken">Reset token</label>
-            <input
-              id="resetToken"
-              type="text"
-              className="input"
-              placeholder="Paste your reset token"
-              value={form.token}
-              onChange={(event) =>
-                setForm((previous) => ({ ...previous, token: event.target.value }))
-              }
-            />
-            <p className="field-error">{errors.token || ""}</p>
-          </div>
+          {tokenFromLink ? (
+            <div className="token-box">
+              <h3>Reset link confirmed</h3>
+              <p>You can set a new password now.</p>
+            </div>
+          ) : (
+            <div className="field">
+              <label htmlFor="resetToken">Reset token</label>
+              <input
+                id="resetToken"
+                type="text"
+                className="input"
+                placeholder="Paste your reset token"
+                value={form.token}
+                onChange={(event) =>
+                  setForm((previous) => ({ ...previous, token: event.target.value }))
+                }
+              />
+              <p className="field-error">{errors.token || ""}</p>
+            </div>
+          )}
 
           <div className="field">
             <label htmlFor="newPassword">New password</label>

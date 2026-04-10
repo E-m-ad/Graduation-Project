@@ -232,6 +232,8 @@ const openApiDocument = {
       post: operation({
         tag: "Auth",
         summary: "Request password reset",
+        description:
+          "Creates a time-limited password reset token and sends a reset email. In development, the response also includes the raw reset token and link for local testing.",
         requestBody: jsonRequestBody(refSchema("ForgotPasswordRequest")),
         successSchema: "ForgotPasswordResponse",
         successDescription: "Reset instructions issued",
@@ -1057,7 +1059,12 @@ const openApiDocument = {
           resetToken: {
             type: "string",
             nullable: true,
-            description: "Returned only in development mode by the current implementation.",
+            description: "Returned only in development mode for local reset-flow testing.",
+          },
+          resetLink: {
+            type: "string",
+            nullable: true,
+            description: "Returned only in development mode for local reset-flow testing.",
           },
         },
       },
