@@ -2,7 +2,6 @@
   position: relative;
   overflow: hidden;
   /* padding: 40px; */
-  padding-top: 74px;
   /* margin-top: 74px; */
   display: flex;
   align-items: center;
@@ -16,6 +15,7 @@
 }
 
 .auth-layout {
+  margin-top: 80px;
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(0, 1.5fr);
   gap: 26px;

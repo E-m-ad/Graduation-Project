@@ -458,9 +458,7 @@ export function RegisterPage({ page }) {
       <section className="auth-card">
         <div className="auth-card__header">
           <h2>Register</h2>
-          <p>Create a new account with a strong password.</p>
         </div>
-
         <form className="stack-form" onSubmit={handleSubmit} noValidate>
           <div className="field">
             <label htmlFor="name">Full name</label>
@@ -477,7 +475,9 @@ export function RegisterPage({ page }) {
                 }))
               }
             />
-            <p className="field-error">{errors.name || ""}</p>
+            <p className={`field-error${errors.name ? " visible" : " hidden"}`}>
+              {errors.name || ""}
+            </p>
           </div>
 
           <div className="field">
@@ -495,7 +495,11 @@ export function RegisterPage({ page }) {
                 }))
               }
             />
-            <p className="field-error">{errors.email || ""}</p>
+            <p
+              className={`field-error${errors.email ? " visible" : " hidden"}`}
+            >
+              {errors.email || ""}
+            </p>
           </div>
 
           <div className="field">
@@ -513,7 +517,11 @@ export function RegisterPage({ page }) {
                 }))
               }
             />
-            <p className="field-error">{errors.password || ""}</p>
+            <p
+              className={`field-error${errors.password ? " visible" : " hidden"}`}
+            >
+              {errors.password || ""}
+            </p>
           </div>
 
           <div className="field">
@@ -531,7 +539,11 @@ export function RegisterPage({ page }) {
                 }))
               }
             />
-            <p className="field-error">{errors.confirmPassword || ""}</p>
+            <p
+              className={`field-error${errors.confirmPassword ? " visible" : " hidden"}`}
+            >
+              {errors.confirmPassword || ""}
+            </p>
           </div>
 
           <button
