@@ -1040,7 +1040,7 @@ ul {
   display: grid;
   gap: 10px;
 }
-.product-card__top-copy {
+.rental-workspace__panel .product-card__top-copy {
   display: flex;
   justify-content: space-between;
   align-items: center;
