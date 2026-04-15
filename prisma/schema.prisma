@@ -1,0 +1,430 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  renter
+  owner
+  both
+  admin
+}
+
+enum ProductStatus {
+  available
+  rented
+  unavailable
+  under_review
+  suspended
+}
+
+enum ProductCondition {
+  new
+  like_new
+  excellent
+  good
+  fair
+}
+
+enum RentalStatus {
+  pending
+  approved
+  rejected
+  active
+  completed
+  cancelled
+  overdue
+}
+
+enum RentalPeriodType {
+  hourly
+  daily
+  weekly
+  monthly
+}
+
+enum BehaviorAction {
+  view
+  search
+  wishlist
+  rent
+  review
+  share
+  click_recommendation
+}
+
+enum NotificationType {
+  rental_request
+  rental_approved
+  rental_rejected
+  rental_started
+  rental_ending_soon
+  rental_completed
+  rental_cancelled
+  new_review
+  review_reply
+  recommendation
+  system
+}
+
+enum UnavailabilityReason {
+  maintenance
+  personal_use
+  booked
+  other
+}
+
+/**
+ * -------------------- MODELS --------------------
+ */
+
+model User {
+  id        String  @id @default(uuid())
+  name      String  @db.VarChar(100)
+  email     String  @unique @db.VarChar(255)
+  password  String  @db.VarChar(255)
+  phone     String? @db.VarChar(20)
+  avatarUrl String? @db.VarChar(500)
+
+  role UserRole @default(renter)
+
+  address   String?  @db.Text
+  city      String?  @db.VarChar(100)
+  latitude  Decimal? @db.Decimal(10, 8)
+  longitude Decimal? @db.Decimal(11, 8)
+
+  bio        String? @db.Text
+  isActive   Boolean @default(true)
+  isVerified Boolean @default(false)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  // Relations
+  productsOwned   Product[] @relation("UserOwnedProducts")
+  rentalsAsRenter Rental[]  @relation("UserRentalsAsRenter")
+  rentalsAsOwner  Rental[]  @relation("UserRentalsAsOwner")
+  reviewsWritten  Review[]  @relation("UserReviewsWritten")
+
+  wishlists           Wishlist[]
+  notifications       Notification[]
+  behaviors           UserBehavior[]
+  refreshTokens       RefreshToken[]
+  passwordResetTokens PasswordResetToken[]
+  emailVerificationTokens EmailVerificationToken[]
+
+  @@index([role])
+  @@index([city])
+  @@index([isActive])
+}
+
+model Category {
+  id          String  @id @default(uuid())
+  name        String  @unique @db.VarChar(100)
+  description String? @db.Text
+  iconUrl     String? @db.VarChar(500)
+
+  parentId String?
+  parent   Category?  @relation("CategoryParent", fields: [parentId], references: [id], onDelete: SetNull)
+  children Category[] @relation("CategoryParent")
+
+  sortOrder Int     @default(0)
+  isActive  Boolean @default(true)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  products      Product[]
+  userBehaviors UserBehavior[]
+
+  @@index([parentId])
+  @@index([isActive])
+}
+
+model Product {
+  id String @id @default(uuid())
+
+  ownerId String
+  owner   User   @relation("UserOwnedProducts", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  title       String @db.VarChar(200)
+  description String @db.Text
+
+  pricePerHour    Decimal? @db.Decimal(10, 2)
+  pricePerDay     Decimal? @db.Decimal(10, 2)
+  pricePerWeek    Decimal? @db.Decimal(10, 2)
+  pricePerMonth   Decimal? @db.Decimal(10, 2)
+  securityDeposit Decimal  @default(0.00) @db.Decimal(10, 2)
+
+  locationAddress String?  @db.Text
+  city            String?  @db.VarChar(100)
+  latitude        Decimal? @db.Decimal(10, 8)
+  longitude       Decimal? @db.Decimal(11, 8)
+
+  status    ProductStatus    @default(under_review)
+  condition ProductCondition @default(good)
+
+  minRentalPeriod Int @default(1)
+  maxRentalPeriod Int @default(365)
+
+  termsConditions String?  @db.Text
+  tags            String[] @default([])
+
+  avgRating    Decimal @default(0.00) @db.Decimal(3, 2)
+  totalReviews Int     @default(0)
+  totalRentals Int     @default(0)
+  viewCount    Int     @default(0)
+
+  isApproved Boolean @default(false)
+  isFeatured Boolean @default(false)
+
+  adminReviewNote  String?   @db.Text
+  ownerReviewReply String?   @db.Text
+  adminReviewedAt  DateTime? @db.Timestamptz(6)
+  ownerRepliedAt   DateTime? @db.Timestamptz(6)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  images       ProductImage[]
+  rentals      Rental[]
+  reviews      Review[]
+  wishlists    Wishlist[]
+  behaviors    UserBehavior[]
+  availability AvailabilityCalendar[]
+
+  @@index([ownerId])
+  @@index([categoryId])
+  @@index([status])
+  @@index([city])
+  @@index([avgRating])
+  @@index([createdAt])
+  @@index([latitude, longitude])
+}
+
+model ProductImage {
+  id        String  @id @default(uuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  imageUrl     String  @db.VarChar(500)
+  thumbnailUrl String? @db.VarChar(500)
+  isPrimary    Boolean @default(false)
+  sortOrder    Int     @default(0)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([productId])
+}
+
+model Rental {
+  id String @id @default(uuid())
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  renterId String
+  renter   User   @relation("UserRentalsAsRenter", fields: [renterId], references: [id], onDelete: Restrict)
+
+  ownerId String
+  owner   User   @relation("UserRentalsAsOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+
+  startDate        DateTime  @db.Timestamptz(6)
+  endDate          DateTime  @db.Timestamptz(6)
+  actualReturnDate DateTime? @db.Timestamptz(6)
+
+  rentalPeriodType RentalPeriodType @default(daily)
+  quantity         Int              @default(1)
+
+  unitPrice       Decimal @db.Decimal(10, 2)
+  totalPrice      Decimal @db.Decimal(10, 2)
+  securityDeposit Decimal @default(0.00) @db.Decimal(10, 2)
+  platformFee     Decimal @default(0.00) @db.Decimal(10, 2)
+
+  status RentalStatus @default(pending)
+
+  cancellationReason String? @db.Text
+  cancelledBy        String? // userId (optional)
+
+  ownerNotes  String? @db.Text
+  renterNotes String? @db.Text
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  review        Review?
+  notifications Notification[]
+
+  @@index([productId])
+  @@index([renterId])
+  @@index([ownerId])
+  @@index([status])
+  @@index([startDate, endDate])
+  @@index([createdAt])
+}
+
+model Review {
+  id String @id @default(uuid())
+
+  rentalId String @unique
+  rental   Rental @relation(fields: [rentalId], references: [id], onDelete: Cascade)
+
+  reviewerId String
+  reviewer   User   @relation("UserReviewsWritten", fields: [reviewerId], references: [id], onDelete: Cascade)
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  rating  Int
+  comment String? @db.Text
+
+  ownerReply   String?   @db.Text
+  ownerReplyAt DateTime? @db.Timestamptz(6)
+
+  isVisible Boolean @default(true)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  @@index([productId])
+  @@index([reviewerId])
+  @@index([rating])
+  @@index([createdAt])
+}
+
+model Wishlist {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  @@unique([userId, productId])
+  @@index([userId])
+  @@index([productId])
+}
+
+model Notification {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  rentalId String?
+  rental   Rental? @relation(fields: [rentalId], references: [id], onDelete: SetNull)
+
+  type    NotificationType
+  title   String           @db.VarChar(200)
+  message String           @db.Text
+
+  data   Json?
+  isRead Boolean   @default(false)
+  readAt DateTime? @db.Timestamptz(6)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([userId])
+  @@index([userId, isRead])
+  @@index([createdAt])
+}
+
+model UserBehavior {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  actionType  BehaviorAction
+  searchQuery String?        @db.VarChar(500)
+
+  sessionId  String? @db.VarChar(100)
+  deviceInfo String? @db.VarChar(200)
+
+  metadata Json?
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([userId])
+  @@index([productId])
+  @@index([actionType])
+  @@index([createdAt])
+  @@index([userId, actionType])
+}
+
+model AvailabilityCalendar {
+  id        String  @id @default(uuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  unavailableFrom DateTime @db.Date
+  unavailableTo   DateTime @db.Date
+
+  reason UnavailabilityReason @default(other)
+  notes  String?              @db.Text
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([productId])
+  @@index([unavailableFrom, unavailableTo])
+}
+
+model RefreshToken {
+  id     String @id @default(uuid())
+  token  String @unique @db.VarChar(512)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  expiresAt DateTime @db.Timestamptz(6)
+  isRevoked Boolean  @default(false)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([userId])
+  @@index([token])
+}
+
+model PasswordResetToken {
+  id     String @id @default(uuid())
+  token  String @unique @db.VarChar(512)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  expiresAt DateTime  @db.Timestamptz(6)
+  isUsed    Boolean   @default(false)
+  usedAt    DateTime? @db.Timestamptz(6)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model EmailVerificationToken {
+  id     String @id @default(uuid())
+  token  String @unique @db.VarChar(512)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  expiresAt DateTime  @db.Timestamptz(6)
+  isUsed    Boolean   @default(false)
+  usedAt    DateTime? @db.Timestamptz(6)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+

@@ -1,0 +1,364 @@
+.admin-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.admin-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.admin-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 12px;
+}
+
+.admin-badge {
+  flex: 1 1 160px;
+  min-width: 150px;
+  padding: 16px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid var(--border);
+}
+
+.admin-badge span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.admin-badge strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 1.15rem;
+}
+
+.admin-layout {
+  display: grid;
+  grid-template-columns: minmax(230px, 280px) minmax(0, 1fr);
+  gap: 22px;
+}
+
+.admin-sidebar {
+  position: sticky;
+  top: 92px;
+  align-self: start;
+}
+
+.admin-sidebar__profile {
+  margin-bottom: 18px;
+}
+
+.admin-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.admin-nav__button {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid transparent;
+  border-radius: 18px;
+  background: transparent;
+  color: var(--text);
+  box-shadow: none;
+}
+
+.admin-nav__button.is-attention {
+  border-color: rgba(218, 41, 28, 0.18);
+  background: rgba(218, 41, 28, 0.04);
+}
+
+.admin-nav__button--with-badge {
+  padding-left: 46px;
+}
+
+.admin-nav__button.is-active {
+  background: rgba(218, 41, 28, 0.08);
+  border-color: rgba(218, 41, 28, 0.16);
+  color: var(--primary);
+}
+
+.admin-nav__label {
+  display: inline-block;
+}
+
+.admin-nav__badge {
+  position: absolute;
+  top: 8px;
+  left: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  min-height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #da291c;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: 0 10px 18px rgba(218, 41, 28, 0.24);
+}
+
+.admin-sidebar__footer {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+
+.admin-content {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.admin-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.admin-toolbar__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.admin-panel {
+  display: none;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.admin-panel.is-active {
+  display: flex;
+}
+
+.admin-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.admin-stat {
+  padding: 18px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.84);
+  border: 1px solid var(--border);
+  box-shadow: 0 18px 30px rgba(15, 23, 42, 0.07);
+}
+
+.admin-stat span {
+  display: block;
+  color: var(--muted);
+}
+
+.admin-stat strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 1.7rem;
+}
+
+.admin-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.admin-grid--categories {
+  grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
+}
+
+.admin-filters {
+  align-items: end;
+}
+
+.admin-pagination {
+  margin: 0;
+  justify-content: flex-end;
+}
+
+.admin-item {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.admin-item__header,
+.admin-item__meta,
+.admin-item__actions,
+.admin-item__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.admin-item__meta,
+.admin-item__footer {
+  color: var(--muted);
+  font-size: 0.94rem;
+}
+
+.admin-item__actions {
+  justify-content: flex-start;
+}
+
+.admin-item__summary {
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.admin-item__thumb {
+  width: 72px;
+  height: 72px;
+  border-radius: 18px;
+  object-fit: cover;
+  background: rgba(226, 232, 240, 0.8);
+}
+
+.admin-item__inline {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.admin-item__inline > div {
+  min-width: 0;
+}
+
+.admin-item strong,
+.admin-item__summary,
+.admin-item__meta,
+.admin-item__footer {
+  overflow-wrap: anywhere;
+}
+
+.admin-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.admin-bar {
+  display: grid;
+  gap: 8px;
+}
+
+.admin-bar__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-bar__track {
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(148, 163, 184, 0.18);
+}
+
+.admin-bar__fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+}
+
+@media (max-width: 1100px) {
+  .admin-layout,
+  .admin-grid,
+  .admin-grid--categories {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-sidebar {
+    position: static;
+  }
+
+  .admin-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 860px) {
+  .admin-hero,
+  .admin-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .admin-hero__actions,
+  .admin-toolbar__actions {
+    width: 100%;
+  }
+
+  .admin-badge {
+    min-width: min(150px, 100%);
+  }
+}
+
+@media (max-width: 720px) {
+  .admin-hero,
+  .admin-toolbar,
+  .admin-item__header,
+  .admin-item__meta,
+  .admin-item__footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .admin-hero__actions,
+  .admin-toolbar__actions,
+  .admin-item__actions {
+    width: 100%;
+  }
+
+  .admin-stats,
+  .admin-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-pagination {
+    justify-content: flex-start;
+  }
+
+  .admin-nav__button {
+    justify-content: center;
+    text-align: center;
+  }
+}
+
+@media (max-width: 560px) {
+  .admin-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-item__actions .btn,
+  .admin-hero__actions .btn,
+  .admin-toolbar__actions .btn,
+  .admin-hero__actions .admin-badge {
+    width: 100%;
+  }
+}

@@ -1,0 +1,8 @@
+node_modules/
+frontend/dist/
+uploads/avatars/*
+uploads/products/*
+!uploads/avatars/.gitkeep
+!uploads/products/.gitkeep
+*.sql
+!prisma/migrations/**/migration.sql

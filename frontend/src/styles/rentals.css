@@ -1,0 +1,105 @@
+/* .rental-workspace-hero {
+  background-image: url(../../img/booking.png);
+  background-size: cover;
+  background-position: center;
+  height: calc(100vh - 100vh / 2);
+  width: 100vw;
+  margin-inline: calc(50% - 50vw);
+  display: grid;
+  align-items: center;
+  justify-items: center;
+  padding: 20px;
+  margin-top: 75px;
+  border-radius: 0px;
+}
+.rental-workspace-hero::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(17, 24, 39, 0.114);
+}
+
+.rental-workspace-hero .hero__content {
+  display: grid;
+  width: min(1280px, calc(100% - 32px));
+  gap: 24px;
+  padding: 20px;
+  border-radius: 12px;
+  backdrop-filter: blur(3px);
+  z-index: 10;
+} */
+.rental-workspace-hero .hero__content h1 {
+  line-height: 1.75;
+  font-size: 3rem;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.rental-workspace-hero__panel {
+  gap: 16px;
+}
+
+.rental-workspace-hero__points {
+  display: grid;
+  gap: 14px;
+}
+
+.rental-workspace-hero__point {
+  padding: 16px 18px;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.rental-workspace-hero__point strong {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 1rem;
+  color: #ffffff;
+}
+
+.rental-workspace-hero__point p {
+  color: rgba(248, 250, 252, 0.76);
+  line-height: 1.6;
+}
+
+.rental-workspace__panel {
+  margin-top: 75px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.rental-workspace__summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.rental-workspace__filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 16px;
+}
+
+.rental-workspace__filters .field {
+  flex: 0 1 280px;
+  min-width: min(280px, 100%);
+}
+
+@media (max-width: 720px) {
+  .rental-workspace__summary {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .rental-workspace__filters .field {
+    flex-basis: 100%;
+  }
+}
