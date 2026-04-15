@@ -8,6 +8,7 @@ import {
 import { useMessageState, useSession } from "../lib/hooks";
 import { MessageText } from "../components/Common";
 import { SiteLayout } from "../components/Layout";
+import { HeroOrbBackground } from "../components/Layout";
 
 // Reuse this on any page by changing the target, active selectors, or disabled sections.
 const CURSOR_CONFIG = {
@@ -52,6 +53,7 @@ function AuthPageShell({ page, user, logout, intro, children, cursorConfig }) {
       cursorConfig={cursorConfig}
     >
       <div className="auth-page">
+        <HeroOrbBackground />
         <section className="auth-layout">
           {intro}
           {children}
