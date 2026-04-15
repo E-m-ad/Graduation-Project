@@ -64,7 +64,10 @@ const UNREAD_NOTIFICATION_SCOPE_SELECT = {
 };
 
 function getScopedNotificationUserId(notification, field) {
-  if (typeof notification?.rental?.[field] === "string" && notification.rental[field]) {
+  if (
+    typeof notification?.rental?.[field] === "string" &&
+    notification.rental[field]
+  ) {
     return notification.rental[field];
   }
 
@@ -408,7 +411,9 @@ async function markNotificationScopeAsRead(req, res) {
   }
 
   try {
-    const unreadNotifications = await fetchUnreadNotificationEntries(req.user.id);
+    const unreadNotifications = await fetchUnreadNotificationEntries(
+      req.user.id,
+    );
     const matchingNotificationIds = unreadNotifications
       .filter((notification) =>
         matchesNotificationScope(notification, req.user.id, data.data.scope),

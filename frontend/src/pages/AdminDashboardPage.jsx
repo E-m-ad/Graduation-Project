@@ -780,8 +780,9 @@ export function AdminDashboardPage({ page }) {
       title: isActive ? "Activate user" : "Suspend user",
       message: `Add an optional note for ${targetUser.name}.`,
       fieldLabel: "Admin note",
-      fieldPlaceholder:
-        isActive ? "Optional activation note" : "Optional suspension reason",
+      fieldPlaceholder: isActive
+        ? "Optional activation note"
+        : "Optional suspension reason",
       confirmLabel: isActive ? "Activate user" : "Suspend user",
       cancelLabel: "Back",
       tone: isActive ? "default" : "danger",

@@ -5,7 +5,11 @@ import notification from "../controllers/notification.js";
 const router = express.Router();
 
 router.get("/", authMiddleWare.auth, notification.getNotifications);
-router.put("/read-all", authMiddleWare.auth, notification.markAllNotificationsAsRead);
+router.put(
+  "/read-all",
+  authMiddleWare.auth,
+  notification.markAllNotificationsAsRead,
+);
 router.put(
   "/scope/:scope/read",
   authMiddleWare.auth,
@@ -21,7 +25,11 @@ router.get(
   authMiddleWare.auth,
   notification.getUnreadNotificationsCount,
 );
-router.put("/:id/read", authMiddleWare.auth, notification.markNotificationAsRead);
+router.put(
+  "/:id/read",
+  authMiddleWare.auth,
+  notification.markNotificationAsRead,
+);
 router.delete("/:id", authMiddleWare.auth, notification.deleteNotification);
 
 export default router;

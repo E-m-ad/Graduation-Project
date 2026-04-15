@@ -478,11 +478,11 @@ export function SiteLayout({
         setLayoutBadgeCounts((previous) =>
           normalizeNotificationBadgeCounts({
             notifications:
-              detail.notifications ?? detail.unreadCount ?? previous.notifications,
+              detail.notifications ??
+              detail.unreadCount ??
+              previous.notifications,
             bookings:
-              detail.bookings ??
-              detail.bookingUnreadCount ??
-              previous.bookings,
+              detail.bookings ?? detail.bookingUnreadCount ?? previous.bookings,
             rentals:
               detail.rentals ?? detail.rentalUnreadCount ?? previous.rentals,
           }),

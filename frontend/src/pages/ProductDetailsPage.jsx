@@ -12,9 +12,14 @@ import {
   toggleWishlist,
   trackBehavior,
 } from "../lib/airent";
+<<<<<<< HEAD
 import { useActionDialog, useMessageState, useSession } from "../lib/hooks";
 import {
   ActionDialog,
+=======
+import { useMessageState, useSession } from "../lib/hooks";
+import {
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
   DetailFactGrid,
   EmptyState,
   MessageText,
@@ -63,6 +68,7 @@ function getOwnerReviewStatusLabel(product) {
   return "Listing is not live yet";
 }
 
+<<<<<<< HEAD
 function getOwnerAvailabilityLockNote(lock) {
   if (!lock) {
     return "";
@@ -77,6 +83,8 @@ function getOwnerAvailabilityLockNote(lock) {
   return `You cannot change this listing availability or delete it while the ${rentalStatus} rental${renterLabel} is still open. Scheduled end: ${endLabel}. The lock is removed only after that rental is cancelled or completed.`;
 }
 
+=======
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
 const RENTAL_PERIOD_OPTIONS = [
   { value: "daily", label: "Daily", priceField: "pricePerDay" },
   { value: "hourly", label: "Hourly", priceField: "pricePerHour" },
@@ -150,13 +158,21 @@ function mapReviewToProductReview(review) {
 
 function sortReviewsByNewest(reviews) {
   return [...reviews].sort(
+<<<<<<< HEAD
     (left, right) =>
       new Date(right.createdAt || 0) - new Date(left.createdAt || 0),
+=======
+    (left, right) => new Date(right.createdAt || 0) - new Date(left.createdAt || 0),
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
   );
 }
 
 function getExistingProductRental(rentals) {
+<<<<<<< HEAD
   const visibleStatuses = new Set(["pending", "approved", "active", "overdue"]);
+=======
+  const visibleStatuses = new Set(["pending", "approved", "active", "overdue", "completed"]);
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
   const relevantRentals = (rentals || []).filter((rental) =>
     visibleStatuses.has(rental.status),
   );
@@ -179,6 +195,7 @@ function getExistingProductRental(rentals) {
     );
   })[0];
 }
+<<<<<<< HEAD
 const CURSOR_CONFIG = {
   "product-details": {
     enabled: false,
@@ -193,6 +210,11 @@ export function ProductDetailsPage({ page }) {
   const { user, loading, logout } = useSession();
   const { dialog, setDialog, closeDialog, confirmDialog, promptDialog } =
     useActionDialog();
+=======
+
+export function ProductDetailsPage({ page }) {
+  const { user, loading, logout } = useSession();
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
   const [pageMessage, showPageMessage] = useMessageState("");
   const [bookingMessage, showBookingMessage] = useMessageState("");
   const [reviewMessage, showReviewMessage] = useMessageState("");
@@ -219,8 +241,11 @@ export function ProductDetailsPage({ page }) {
   const [moderatingAction, setModeratingAction] = useState("");
   const [submittingOwnerReply, setSubmittingOwnerReply] = useState(false);
   const [updatingAdminStatus, setUpdatingAdminStatus] = useState("");
+<<<<<<< HEAD
   const [updatingOwnerStatus, setUpdatingOwnerStatus] = useState("");
   const [deletingOwnerListing, setDeletingOwnerListing] = useState(false);
+=======
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
   const [reviewActionKey, setReviewActionKey] = useState("");
 
   const productId = getProductId();
@@ -276,9 +301,13 @@ export function ProductDetailsPage({ page }) {
       }
 
       const nextProduct = result.data.data;
+<<<<<<< HEAD
       const isOwnerViewingProduct = Boolean(
         user && user.id === nextProduct.owner?.id,
       );
+=======
+      const isOwnerViewingProduct = Boolean(user && user.id === nextProduct.owner?.id);
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
       setProduct(nextProduct);
       setMainImage(getPrimaryImage(nextProduct));
       setOwnerReply(nextProduct.ownerReviewReply || "");
@@ -296,7 +325,11 @@ export function ProductDetailsPage({ page }) {
 
       if (!isAdmin && !isOwnerViewingProduct) {
         const similarResult = await fetchApi(
+<<<<<<< HEAD
           `/api/v1/recommendations/similar/${productId}?limit=4`,
+=======
+          `/api/v1/recommendations/similar/${productId}?limit=3`,
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
         );
         if (!active) return;
 
@@ -413,11 +446,15 @@ export function ProductDetailsPage({ page }) {
   }, [isAdmin, loading, product?.owner?.id, productId, user]);
 
   useEffect(() => {
+<<<<<<< HEAD
     if (
       !product ||
       !supportedRentalPeriods.length ||
       hasSupportedRentalPeriod
     ) {
+=======
+    if (!product || !supportedRentalPeriods.length || hasSupportedRentalPeriod) {
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
       return;
     }
 
@@ -436,10 +473,14 @@ export function ProductDetailsPage({ page }) {
 
     setReviewDrafts(
       Object.fromEntries(
+<<<<<<< HEAD
         reviewRentals.map((rental) => [
           rental.id,
           createReviewDraft(rental.review),
         ]),
+=======
+        reviewRentals.map((rental) => [rental.id, createReviewDraft(rental.review)]),
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
       ),
     );
   }, [reviewRentals]);
@@ -452,9 +493,13 @@ export function ProductDetailsPage({ page }) {
     }
 
     setReplyDrafts(
+<<<<<<< HEAD
       Object.fromEntries(
         reviews.map((review) => [review.id, review.ownerReply || ""]),
       ),
+=======
+      Object.fromEntries(reviews.map((review) => [review.id, review.ownerReply || ""])),
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
     );
   }, [product?.reviews]);
 
@@ -479,6 +524,7 @@ export function ProductDetailsPage({ page }) {
     setProduct((previous) => {
       if (!previous) return previous;
 
+<<<<<<< HEAD
       const currentReviews = Array.isArray(previous.reviews)
         ? previous.reviews
         : [];
@@ -488,6 +534,13 @@ export function ProductDetailsPage({ page }) {
         nextReviews = currentReviews.filter(
           (review) => review.id !== nextReview.id,
         );
+=======
+      const currentReviews = Array.isArray(previous.reviews) ? previous.reviews : [];
+      let nextReviews = currentReviews;
+
+      if (mode === "delete") {
+        nextReviews = currentReviews.filter((review) => review.id !== nextReview.id);
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
       } else {
         const normalizedReview = mapReviewToProductReview(nextReview);
         if (!normalizedReview) {
@@ -510,8 +563,12 @@ export function ProductDetailsPage({ page }) {
       return {
         ...previous,
         avgRating: nextReview?.product?.avgRating ?? previous.avgRating,
+<<<<<<< HEAD
         totalReviews:
           nextReview?.product?.totalReviews ?? previous.totalReviews,
+=======
+        totalReviews: nextReview?.product?.totalReviews ?? previous.totalReviews,
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
         reviews: sortReviewsByNewest(nextReviews),
       };
     });
@@ -536,6 +593,7 @@ export function ProductDetailsPage({ page }) {
 
     setReviewActionKey(`${isUpdating ? "update" : "create"}:${rental.id}`);
 
+<<<<<<< HEAD
     const result = await fetchApi(
       isUpdating ? `/api/v1/reviews/${rental.review.id}` : "/api/v1/reviews",
       {
@@ -554,6 +612,22 @@ export function ProductDetailsPage({ page }) {
     showReviewMessage(
       result.data?.message ||
         (isUpdating ? "Review updated." : "Review submitted."),
+=======
+    const result = await fetchApi(isUpdating ? `/api/v1/reviews/${rental.review.id}` : "/api/v1/reviews", {
+      method: isUpdating ? "PUT" : "POST",
+      auth: true,
+      body: isUpdating
+        ? payload
+        : {
+            rentalId: rental.id,
+            ...payload,
+          },
+    });
+
+    setReviewActionKey("");
+    showReviewMessage(
+      result.data?.message || (isUpdating ? "Review updated." : "Review submitted."),
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
       result.ok ? "success" : "error",
     );
 
@@ -584,6 +658,7 @@ export function ProductDetailsPage({ page }) {
       return;
     }
 
+<<<<<<< HEAD
     const shouldDelete = await confirmDialog({
       title: "Delete this review?",
       message: "This review and its rating will be removed from the product.",
@@ -593,6 +668,9 @@ export function ProductDetailsPage({ page }) {
     });
 
     if (!shouldDelete) {
+=======
+    if (!window.confirm("Delete this review and remove its rating from the product?")) {
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
       return;
     }
 
@@ -642,10 +720,14 @@ export function ProductDetailsPage({ page }) {
 
     const nextReply = (replyDrafts[review.id] || "").trim();
     if (!nextReply) {
+<<<<<<< HEAD
       showReviewMessage(
         "Add a short reply before sending it to the renter.",
         "error",
       );
+=======
+      showReviewMessage("Add a short reply before sending it to the renter.", "error");
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
       return;
     }
 
@@ -707,10 +789,14 @@ export function ProductDetailsPage({ page }) {
 
     if (!supportedRentalPeriods.length) {
       setPricingPreview(null);
+<<<<<<< HEAD
       showBookingMessage(
         "This listing does not have rental pricing set yet.",
         "error",
       );
+=======
+      showBookingMessage("This listing does not have rental pricing set yet.", "error");
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
       return false;
     }
 
@@ -830,6 +916,7 @@ export function ProductDetailsPage({ page }) {
       return;
     }
 
+<<<<<<< HEAD
     const reasonInput = await promptDialog({
       title: action === "approve" ? "Approve listing" : "Reject listing",
       message:
@@ -847,6 +934,11 @@ export function ProductDetailsPage({ page }) {
       fieldRequired: action === "reject",
     });
 
+=======
+    const reasonInput = window.prompt(
+      `Optional reason for ${action === "approve" ? "approval" : "rejection"}:`,
+    );
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
     if (reasonInput === null) {
       return;
     }
@@ -914,15 +1006,20 @@ export function ProductDetailsPage({ page }) {
 
     const nextReply = ownerReply.trim();
     if (!nextReply) {
+<<<<<<< HEAD
       showPageMessage(
         "Add a short reply before sending it to the admin team.",
         "error",
       );
+=======
+      showPageMessage("Add a short reply before sending it to the admin team.", "error");
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
       return;
     }
 
     setSubmittingOwnerReply(true);
 
+<<<<<<< HEAD
     const result = await fetchApi(
       `/api/v1/products/${product.id}/moderation-reply`,
       {
@@ -933,6 +1030,15 @@ export function ProductDetailsPage({ page }) {
         },
       },
     );
+=======
+    const result = await fetchApi(`/api/v1/products/${product.id}/moderation-reply`, {
+      method: "POST",
+      auth: true,
+      body: {
+        reply: nextReply,
+      },
+    });
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
 
     setSubmittingOwnerReply(false);
 
@@ -1014,6 +1120,7 @@ export function ProductDetailsPage({ page }) {
     );
   }
 
+<<<<<<< HEAD
   async function handleOwnerStatusChange(nextStatus) {
     if (!product || !isOwner) {
       return;
@@ -1098,6 +1205,8 @@ export function ProductDetailsPage({ page }) {
     window.location.href = "/html/my-listings.html";
   }
 
+=======
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
   const isOwner = Boolean(user && product && user.id === product.owner?.id);
   const needsModeration = Boolean(
     product && (!product.isApproved || product.status === "under_review"),
@@ -1107,6 +1216,7 @@ export function ProductDetailsPage({ page }) {
   );
   const isPubliclyVisible = Boolean(
     product &&
+<<<<<<< HEAD
     product.isApproved &&
     ["available", "rented", "unavailable"].includes(product.status),
   );
@@ -1114,16 +1224,26 @@ export function ProductDetailsPage({ page }) {
   const pendingReviewCount = reviewRentals.filter(
     (rental) => !rental.review,
   ).length;
+=======
+      product.isApproved &&
+      ["available", "rented", "unavailable"].includes(product.status),
+  );
+  const hasReviewAccess = Boolean(user && !isAdmin && !isOwner);
+  const pendingReviewCount = reviewRentals.filter((rental) => !rental.review).length;
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
   const productReviews = sortReviewsByNewest(product?.reviews || []);
   const hasExistingProductRental = Boolean(currentProductRental?.id);
   const hasPendingBookingRequest = Boolean(pendingBookingRequest?.id);
   const canAdminToggleListingVisibility = Boolean(
     isAdmin && product?.isApproved,
   );
+<<<<<<< HEAD
   const canOwnerManageAvailability = Boolean(
     isOwner && product?.isApproved && product?.status !== "suspended",
   );
   const ownerRentalStatusLock = product?.availabilityLock || null;
+=======
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
   const isUnlistedApprovedListing = Boolean(
     product?.isApproved && product?.status === "suspended",
   );
@@ -1160,12 +1280,16 @@ export function ProductDetailsPage({ page }) {
   const viewerImage = mainImage || (product ? getPrimaryImage(product) : "");
 
   return (
+<<<<<<< HEAD
     <SiteLayout
       page={page}
       user={user}
       onLogout={logout}
       cursorConfig={CURSOR_CONFIG[page]}
     >
+=======
+    <SiteLayout page={page} user={user} onLogout={logout}>
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
       <MessageText message={pageMessage} />
 
       {product ? (
@@ -1177,6 +1301,7 @@ export function ProductDetailsPage({ page }) {
               onClick={() => setIsImageViewerOpen(true)}
               aria-label="Open larger image view"
             >
+<<<<<<< HEAD
               <img
                 className="detail-gallery__main"
                 src={mainImage}
@@ -1186,6 +1311,11 @@ export function ProductDetailsPage({ page }) {
             <p className="detail-gallery__hint">
               Click the image to view it larger.
             </p>
+=======
+              <img className="detail-gallery__main" src={mainImage} alt={product.title} />
+            </button>
+            <p className="detail-gallery__hint">Click the image to view it larger.</p>
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
             <div className="detail-gallery__thumbs">
               {(product.images || []).map((image, index) => {
                 const imageUrl =
@@ -1210,9 +1340,13 @@ export function ProductDetailsPage({ page }) {
           <article className="surface-panel detail-summary">
             <div className="detail-summary__meta">
               <span className="tag">{product.category?.name || "General"}</span>
+<<<<<<< HEAD
               <span className="tag tag--light">
                 {product.status || "available"}
               </span>
+=======
+              <span className="tag tag--light">{product.status || "available"}</span>
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
             </div>
 
             <h1>{product.title || "Untitled listing"}</h1>
@@ -1255,18 +1389,32 @@ export function ProductDetailsPage({ page }) {
 
               <div className="stack-form">
                 <div className="booking-preview admin-moderation-panel__status">
+<<<<<<< HEAD
                   <strong>{getModerationStatusLabel(product)}</strong>
                   <span>Approval status: {getApprovalLabel(product)}</span>
                   <span>
                     Public visibility:{" "}
                     {isPubliclyVisible ? "Visible" : "Hidden from catalog"}
+=======
+                  <strong>
+                    {getModerationStatusLabel(product)}
+                  </strong>
+                  <span>Approval status: {getApprovalLabel(product)}</span>
+                  <span>
+                    Public visibility: {isPubliclyVisible ? "Visible" : "Hidden from catalog"}
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
                   </span>
                   <span>Last updated: {formatDateTime(product.updatedAt)}</span>
                 </div>
 
                 <p className="detail-note">
+<<<<<<< HEAD
                   Admin preview mode hides renter actions and lets you moderate
                   the listing directly from this page.
+=======
+                  Admin preview mode hides renter actions and lets you moderate the
+                  listing directly from this page.
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
                 </p>
 
                 {product.adminReviewNote ? (
@@ -1274,10 +1422,14 @@ export function ProductDetailsPage({ page }) {
                     <strong>Latest admin note</strong>
                     <p className="detail-note">{product.adminReviewNote}</p>
                     <span className="detail-thread__meta">
+<<<<<<< HEAD
                       Sent{" "}
                       {formatDateTime(
                         product.adminReviewedAt || product.updatedAt,
                       )}
+=======
+                      Sent {formatDateTime(product.adminReviewedAt || product.updatedAt)}
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
                     </span>
                   </div>
                 ) : null}
@@ -1349,9 +1501,14 @@ export function ProductDetailsPage({ page }) {
           ) : isOwner ? (
             <aside className="surface-panel booking-panel owner-review-panel">
               <SectionHeading
+<<<<<<< HEAD
                 title={
                   canOwnerReplyToModeration ? "Fix and reply to admin" : null
                 }
+=======
+                eyebrow="Owner workspace"
+                title={canOwnerReplyToModeration ? "Fix and reply to admin" : "Owner preview"}
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
                 compact
               />
 
@@ -1360,6 +1517,7 @@ export function ProductDetailsPage({ page }) {
                   <strong>{getOwnerReviewStatusLabel(product)}</strong>
                   <span>Approval status: {getApprovalLabel(product)}</span>
                   <span>
+<<<<<<< HEAD
                     Last review update:{" "}
                     {formatDateTime(
                       product.adminReviewedAt || product.updatedAt,
@@ -1426,11 +1584,21 @@ export function ProductDetailsPage({ page }) {
                       : "Delete Listing"}
                   </button>
                 </div>
+=======
+                    Last review update: {formatDateTime(product.adminReviewedAt || product.updatedAt)}
+                  </span>
+                  {product.ownerRepliedAt ? (
+                    <span>Your last reply: {formatDateTime(product.ownerRepliedAt)}</span>
+                  ) : null}
+                </div>
+
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
                 {product.adminReviewNote ? (
                   <div className="detail-thread">
                     <strong>Admin note</strong>
                     <p className="detail-note">{product.adminReviewNote}</p>
                     <span className="detail-thread__meta">
+<<<<<<< HEAD
                       Sent{" "}
                       {formatDateTime(
                         product.adminReviewedAt || product.updatedAt,
@@ -1450,6 +1618,19 @@ export function ProductDetailsPage({ page }) {
                   listing and send it back for review.
                 </p>
                 ) */}
+=======
+                      Sent {formatDateTime(product.adminReviewedAt || product.updatedAt)}
+                    </span>
+                  </div>
+                ) : (
+                  <p className="detail-note">
+                    This listing is in owner preview mode. If the admin team asks
+                    for changes, the note will appear here so you can fix the
+                    listing and send it back for review.
+                  </p>
+                )}
+
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
                 {product.ownerReviewReply ? (
                   <div className="detail-thread detail-thread--muted">
                     <strong>Your latest reply</strong>
@@ -1459,6 +1640,7 @@ export function ProductDetailsPage({ page }) {
                     </span>
                   </div>
                 ) : null}
+<<<<<<< HEAD
                 {canOwnerReplyToModeration ? (
                   <>
                     <div className="field">
@@ -1469,6 +1651,17 @@ export function ProductDetailsPage({ page }) {
                         id="ownerModerationReply"
                         className="textarea"
                         rows="1"
+=======
+
+                {canOwnerReplyToModeration ? (
+                  <>
+                    <div className="field">
+                      <label htmlFor="ownerModerationReply">Reply to admin</label>
+                      <textarea
+                        id="ownerModerationReply"
+                        className="textarea"
+                        rows="5"
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
                         placeholder="Explain what you changed so the admin team can review it quickly."
                         value={ownerReply}
                         onChange={(event) => setOwnerReply(event.target.value)}
@@ -1491,12 +1684,20 @@ export function ProductDetailsPage({ page }) {
                 ) : (
                   <MessageText
                     message={{
+<<<<<<< HEAD
                       text:
                         product.isApproved && isPubliclyVisible
                           ? null
                           : product.isApproved
                             ? "This listing is approved but currently hidden from the public catalog."
                             : "This listing is currently waiting for admin review.",
+=======
+                      text: product.isApproved && isPubliclyVisible
+                        ? "This listing is live. If admin feedback is needed later, it will appear here."
+                        : product.isApproved
+                          ? "This listing is approved but currently hidden from the public catalog."
+                        : "This listing is currently waiting for admin review.",
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
                       type: "info",
                     }}
                   />
@@ -1505,7 +1706,15 @@ export function ProductDetailsPage({ page }) {
             </aside>
           ) : hasExistingProductRental ? (
             <aside className="surface-panel booking-panel">
+<<<<<<< HEAD
               <SectionHeading title="Booking status" compact />
+=======
+              <SectionHeading
+                eyebrow="Your rental"
+                title="Booking status"
+                compact
+              />
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
 
               <div className="stack-form">
                 <div className="booking-preview owner-review-panel__status">
@@ -1521,6 +1730,7 @@ export function ProductDetailsPage({ page }) {
                             : "You already rented this listing."}
                   </strong>
                   <span>Status: {currentProductRental.status}</span>
+<<<<<<< HEAD
                   <span>
                     Requested on:{" "}
                     {formatDateTime(currentProductRental.createdAt)}
@@ -1539,6 +1749,18 @@ export function ProductDetailsPage({ page }) {
                     <span>
                       Finished at:{" "}
                       {formatDateTime(currentProductRental.actualReturnDate)}
+=======
+                  <span>Requested on: {formatDateTime(currentProductRental.createdAt)}</span>
+                  {currentProductRental.startDate ? (
+                    <span>Start: {formatDateTime(currentProductRental.startDate)}</span>
+                  ) : null}
+                  {currentProductRental.endDate ? (
+                    <span>End: {formatDateTime(currentProductRental.endDate)}</span>
+                  ) : null}
+                  {currentProductRental.actualReturnDate ? (
+                    <span>
+                      Finished at: {formatDateTime(currentProductRental.actualReturnDate)}
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
                     </span>
                   ) : null}
                 </div>
@@ -1564,7 +1786,15 @@ export function ProductDetailsPage({ page }) {
             </aside>
           ) : (
             <aside className="surface-panel booking-panel">
+<<<<<<< HEAD
               <SectionHeading title="Request this listing" compact />
+=======
+              <SectionHeading
+                eyebrow="Check availability"
+                title="Request this listing"
+                compact
+              />
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
 
               <form className="stack-form" onSubmit={handleBookingSubmit}>
                 <div className="field">
@@ -1605,9 +1835,13 @@ export function ProductDetailsPage({ page }) {
                     id="rentalPeriodType"
                     className="input"
                     value={
+<<<<<<< HEAD
                       supportedRentalPeriods.length
                         ? bookingForm.rentalPeriodType
                         : ""
+=======
+                      supportedRentalPeriods.length ? bookingForm.rentalPeriodType : ""
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
                     }
                     disabled={!supportedRentalPeriods.length}
                     onChange={(event) =>
@@ -1634,7 +1868,11 @@ export function ProductDetailsPage({ page }) {
                   <textarea
                     id="renterNotes"
                     className="textarea"
+<<<<<<< HEAD
                     rows="2"
+=======
+                    rows="4"
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
                     placeholder="Optional message to the owner"
                     value={bookingForm.renterNotes}
                     onChange={(event) =>
@@ -1664,9 +1902,13 @@ export function ProductDetailsPage({ page }) {
                   <button
                     type="submit"
                     className="btn btn--primary"
+<<<<<<< HEAD
                     disabled={
                       isOwner || submittingRequest || hasPendingBookingRequest
                     }
+=======
+                    disabled={isOwner || submittingRequest || hasPendingBookingRequest}
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
                   >
                     {submittingRequest
                       ? "Sending request..."
@@ -1679,6 +1921,7 @@ export function ProductDetailsPage({ page }) {
                 {pricingPreview ? (
                   <div className="booking-preview">
                     <strong>Pricing preview</strong>
+<<<<<<< HEAD
                     <span>
                       Unit price: {formatMoney(pricingPreview.unitPrice)}
                     </span>
@@ -1688,6 +1931,12 @@ export function ProductDetailsPage({ page }) {
                     <span>
                       Security deposit:{" "}
                       {formatMoney(pricingPreview.securityDeposit)}
+=======
+                    <span>Unit price: {formatMoney(pricingPreview.unitPrice)}</span>
+                    <span>Total price: {formatMoney(pricingPreview.totalPrice)}</span>
+                    <span>
+                      Security deposit: {formatMoney(pricingPreview.securityDeposit)}
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
                     </span>
                   </div>
                 ) : null}
@@ -1700,6 +1949,7 @@ export function ProductDetailsPage({ page }) {
                         }
                       : hasPendingBookingRequest && !bookingMessage.text
                         ? {
+<<<<<<< HEAD
                             text: "You already have a pending rental request for this listing. Wait for the owner to approve or reject it before sending another one.",
                             type: "info",
                           }
@@ -1709,6 +1959,18 @@ export function ProductDetailsPage({ page }) {
                               type: "info",
                             }
                           : bookingMessage
+=======
+                            text:
+                              "You already have a pending rental request for this listing. Wait for the owner to approve or reject it before sending another one.",
+                            type: "info",
+                          }
+                      : !user && !bookingMessage.text
+                        ? {
+                            text: "Log in to check availability and send a rental request.",
+                            type: "info",
+                          }
+                        : bookingMessage
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
                   }
                 />
               </form>
@@ -1719,16 +1981,35 @@ export function ProductDetailsPage({ page }) {
 
       {product ? (
         <section className="section detail-reviews">
+<<<<<<< HEAD
           {/* <div className="inner-review"> */}
           <SectionHeading eyebrow="Ratings" title="Reviews and ratings" />
+=======
+          <SectionHeading
+            eyebrow="Ratings"
+            title="Reviews and ratings"
+            note={
+              isOwner
+                ? "Read renter feedback and reply from your product page."
+                : hasReviewAccess
+                  ? "Completed renters can leave one rating per finished rental, and owners are notified when feedback arrives."
+                  : "See how other renters rated this listing."
+            }
+          />
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
           <MessageText message={reviewMessage} id="productReviewMessage" />
 
           <div className="detail-reviews__grid">
             {hasReviewAccess ? (
               <article className="surface-panel detail-reviews__panel">
                 <SectionHeading
+<<<<<<< HEAD
                   // eyebrow="Your feedback"
                   // title="Review this listing"
+=======
+                  eyebrow="Your feedback"
+                  title="Review this listing"
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
                   compact
                   note={
                     pendingReviewCount
@@ -1740,6 +2021,7 @@ export function ProductDetailsPage({ page }) {
                 {reviewRentals.length ? (
                   <div className="list-stack">
                     {reviewRentals.map((rental) => {
+<<<<<<< HEAD
                       const draft =
                         reviewDrafts[rental.id] ||
                         createReviewDraft(rental.review);
@@ -1760,6 +2042,20 @@ export function ProductDetailsPage({ page }) {
                                 {rental.review
                                   ? "Update your review"
                                   : "Leave a review"}
+=======
+                      const draft = reviewDrafts[rental.id] || createReviewDraft(rental.review);
+                      const isSaving =
+                        reviewActionKey === `create:${rental.id}` ||
+                        reviewActionKey === `update:${rental.id}`;
+                      const isDeleting = reviewActionKey === `delete:${rental.id}`;
+
+                      return (
+                        <article className="detail-review-editor" key={rental.id}>
+                          <div className="detail-review-editor__header">
+                            <div>
+                              <strong>
+                                {rental.review ? "Update your review" : "Leave a review"}
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
                               </strong>
                               <p className="detail-note">
                                 Rental finished{" "}
@@ -1770,27 +2066,39 @@ export function ProductDetailsPage({ page }) {
                                 )}
                               </p>
                             </div>
+<<<<<<< HEAD
                             <span
                               className={`tag${rental.review ? " tag--light" : ""}`}
                             >
+=======
+                            <span className={`tag${rental.review ? " tag--light" : ""}`}>
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
                               {rental.review ? "Published" : "Pending"}
                             </span>
                           </div>
 
                           <div className="field">
+<<<<<<< HEAD
                             <label htmlFor={`reviewRating-${rental.id}`}>
                               Rating
                             </label>
+=======
+                            <label htmlFor={`reviewRating-${rental.id}`}>Rating</label>
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
                             <select
                               id={`reviewRating-${rental.id}`}
                               className="input"
                               value={draft.rating}
                               onChange={(event) =>
+<<<<<<< HEAD
                                 updateReviewDraft(
                                   rental.id,
                                   "rating",
                                   event.target.value,
                                 )
+=======
+                                updateReviewDraft(rental.id, "rating", event.target.value)
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
                               }
                             >
                               {REVIEW_RATING_OPTIONS.map((option) => (
@@ -1802,6 +2110,7 @@ export function ProductDetailsPage({ page }) {
                           </div>
 
                           <div className="field">
+<<<<<<< HEAD
                             <label htmlFor={`reviewComment-${rental.id}`}>
                               Comment
                             </label>
@@ -1817,6 +2126,17 @@ export function ProductDetailsPage({ page }) {
                                   "comment",
                                   event.target.value,
                                 )
+=======
+                            <label htmlFor={`reviewComment-${rental.id}`}>Comment</label>
+                            <textarea
+                              id={`reviewComment-${rental.id}`}
+                              className="textarea"
+                              rows="5"
+                              placeholder="Share what went well and anything the next renter should know."
+                              value={draft.comment}
+                              onChange={(event) =>
+                                updateReviewDraft(rental.id, "comment", event.target.value)
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
                               }
                             />
                           </div>
@@ -1824,12 +2144,18 @@ export function ProductDetailsPage({ page }) {
                           {rental.review?.ownerReply ? (
                             <div className="detail-thread detail-thread--muted">
                               <strong>Owner reply</strong>
+<<<<<<< HEAD
                               <p className="detail-note">
                                 {rental.review.ownerReply}
                               </p>
                               <span className="detail-thread__meta">
                                 Sent{" "}
                                 {formatDateTime(rental.review.ownerReplyAt)}
+=======
+                              <p className="detail-note">{rental.review.ownerReply}</p>
+                              <span className="detail-thread__meta">
+                                Sent {formatDateTime(rental.review.ownerReplyAt)}
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
                               </span>
                             </div>
                           ) : null}
@@ -1877,6 +2203,7 @@ export function ProductDetailsPage({ page }) {
                 hasReviewAccess ? " detail-reviews__panel--wide" : ""
               }`}
             >
+<<<<<<< HEAD
               {productReviews.length ? (
                 <div className="list-stack">
                   {productReviews.map((review) => {
@@ -1885,6 +2212,30 @@ export function ProductDetailsPage({ page }) {
                     );
                     const isReplySaving =
                       reviewActionKey === `reply:${review.id}`;
+=======
+              <SectionHeading
+                eyebrow="Community feedback"
+                title="What renters are saying"
+                compact
+              >
+                <div className="detail-review-summary">
+                  <strong>
+                    {product.totalReviews
+                      ? `${Number(product.avgRating || 0).toFixed(1)} / 5`
+                      : "No ratings yet"}
+                  </strong>
+                  <span>
+                    {product.totalReviews} review{product.totalReviews === 1 ? "" : "s"}
+                  </span>
+                </div>
+              </SectionHeading>
+
+              {productReviews.length ? (
+                <div className="list-stack">
+                  {productReviews.map((review) => {
+                    const isOwnReview = Boolean(user && review.reviewer?.id === user.id);
+                    const isReplySaving = reviewActionKey === `reply:${review.id}`;
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
 
                     return (
                       <article
@@ -1897,6 +2248,7 @@ export function ProductDetailsPage({ page }) {
                           <div className="detail-review-card__author">
                             <img
                               className="detail-review-card__avatar"
+<<<<<<< HEAD
                               src={
                                 review.reviewer?.avatarUrl || AVATAR_PLACEHOLDER
                               }
@@ -1920,6 +2272,23 @@ export function ProductDetailsPage({ page }) {
                         <p className="detail-note">
                           {review.comment ||
                             "This renter shared a rating without a written comment."}
+=======
+                              src={review.reviewer?.avatarUrl || AVATAR_PLACEHOLDER}
+                              alt={review.reviewer?.name || "Reviewer"}
+                            />
+                            <div>
+                              <strong>{review.reviewer?.name || "Renter"}</strong>
+                              <p className="list-item__meta">
+                                Rating {review.rating}/5 | {formatDateTime(review.createdAt)}
+                              </p>
+                            </div>
+                          </div>
+                          {isOwnReview ? <span className="tag tag--light">You</span> : null}
+                        </div>
+
+                        <p className="detail-note">
+                          {review.comment || "This renter shared a rating without a written comment."}
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
                         </p>
 
                         {review.ownerReply ? (
@@ -1936,13 +2305,18 @@ export function ProductDetailsPage({ page }) {
                           <div className="detail-review-reply">
                             <div className="field">
                               <label htmlFor={`ownerReplyReview-${review.id}`}>
+<<<<<<< HEAD
                                 {review.ownerReply
                                   ? "Update reply"
                                   : "Reply to this review"}
+=======
+                                {review.ownerReply ? "Update reply" : "Reply to this review"}
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
                               </label>
                               <textarea
                                 id={`ownerReplyReview-${review.id}`}
                                 className="textarea"
+<<<<<<< HEAD
                                 rows="1"
                                 placeholder="Thank the renter or add a short follow-up."
                                 value={replyDrafts[review.id] || ""}
@@ -1951,6 +2325,13 @@ export function ProductDetailsPage({ page }) {
                                     review.id,
                                     event.target.value,
                                   )
+=======
+                                rows="4"
+                                placeholder="Thank the renter or add a short follow-up."
+                                value={replyDrafts[review.id] || ""}
+                                onChange={(event) =>
+                                  updateReplyDraft(review.id, event.target.value)
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
                                 }
                               />
                             </div>
@@ -1979,25 +2360,38 @@ export function ProductDetailsPage({ page }) {
               )}
             </article>
           </div>
+<<<<<<< HEAD
           {/* </div> */}
+=======
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
         </section>
       ) : null}
 
       {!isAdmin && !isOwner ? (
         <section className="section">
+<<<<<<< HEAD
           <SectionHeading title="More listings like this" />
+=======
+          <SectionHeading eyebrow="Similar options" title="More listings like this" />
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
           <div className="card-grid">
             {similarProducts.length ? (
               similarProducts.map((similarProduct) => (
                 <ProductCard
                   key={similarProduct.id}
                   product={similarProduct}
+<<<<<<< HEAD
                   showWishlist={Boolean(
                     user && user.id !== similarProduct.owner?.id,
                   )}
                   isSaved={wishlistIds.has(similarProduct.id)}
                   onToggleWishlist={handleSimilarWishlist}
                   actionLayout="icon-top"
+=======
+                  showWishlist={Boolean(user && user.id !== similarProduct.owner?.id)}
+                  isSaved={wishlistIds.has(similarProduct.id)}
+                  onToggleWishlist={handleSimilarWishlist}
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
                 />
               ))
             ) : (
@@ -2006,11 +2400,14 @@ export function ProductDetailsPage({ page }) {
           </div>
         </section>
       ) : null}
+<<<<<<< HEAD
       <ActionDialog
         dialog={dialog}
         setDialog={setDialog}
         onClose={closeDialog}
       />
+=======
+>>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
 
       {isImageViewerOpen ? (
         <div

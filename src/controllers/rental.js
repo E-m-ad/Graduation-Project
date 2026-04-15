@@ -10,7 +10,11 @@ const DEFAULT_LIMIT = 12;
 const MAX_LIMIT = 50;
 const ACTIVE_BOOKING_PRODUCT_STATUSES = ["available", "rented"];
 const BLOCKING_RENTAL_STATUSES = ["approved", "active", "overdue"];
-const UNAVAILABLE_PRODUCT_STATUSES = ["unavailable", "under_review", "suspended"];
+const UNAVAILABLE_PRODUCT_STATUSES = [
+  "unavailable",
+  "under_review",
+  "suspended",
+];
 
 const USER_SUMMARY_SELECT = {
   id: true,
@@ -120,9 +124,7 @@ function canManageRentalAsOwner(user, rental) {
 
 function canAccessRental(user, rental) {
   return (
-    isAdmin(user) ||
-    rental.ownerId === user.id ||
-    rental.renterId === user.id
+    isAdmin(user) || rental.ownerId === user.id || rental.renterId === user.id
   );
 }
 
@@ -772,7 +774,8 @@ async function approveRental(req, res) {
     if (!conflict.isAvailable) {
       return res.status(409).json({
         success: false,
-        message: "This rental can no longer be approved because the dates are unavailable",
+        message:
+          "This rental can no longer be approved because the dates are unavailable",
         data: {
           overlappingRental: conflict.overlappingRental,
           calendarConflict: conflict.calendarConflict,
@@ -1100,7 +1103,8 @@ async function startRental(req, res) {
     if (new Date() > rental.endDate) {
       return res.status(409).json({
         success: false,
-        message: "This rental can no longer be started because it has already ended",
+        message:
+          "This rental can no longer be started because it has already ended",
       });
     }
 
