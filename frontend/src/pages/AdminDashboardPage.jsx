@@ -69,6 +69,15 @@ const INITIAL_CATEGORY_FORM = {
   parentId: "",
   isActive: "true",
 };
+const CURSOR_CONFIG = {
+  admin: {
+    enabled: false,
+    color: "#ffffff",
+    targetSelector: "body",
+    activeSelectors: [".market-hero", "#home-categories"],
+    deactiveSelectors: [".category-grid"],
+  },
+};
 
 function AdminPagination({ pagination, onPrevious, onNext }) {
   if (!pagination || pagination.totalPages <= 1) {
@@ -1064,7 +1073,12 @@ export function AdminDashboardPage({ page }) {
     : [];
 
   return (
-    <SiteLayout page={page} user={user} onLogout={logout}>
+    <SiteLayout
+      page={page}
+      user={user}
+      onLogout={logout}
+      cursorConfig={CURSOR_CONFIG[page]}
+    >
       <section className="page-hero admin-hero">
         <div>
           <p className="eyebrow">Control center</p>
