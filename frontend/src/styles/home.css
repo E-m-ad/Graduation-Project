@@ -1190,6 +1190,7 @@
 
   .market-hero {
     min-height: 620px;
+    height: 100vh;
   }
 
   .market-hero__inner {
@@ -1226,7 +1227,7 @@
   }
 
   .market-hero__inner {
-    align-items: flex-end;
+    /* align-items: flex-end; */
     padding: calc(var(--site-header-offset) + 16px) 16px 24px 16px;
   }
 
@@ -1313,9 +1314,12 @@
   }
 }
 
-@media (max-width: 720px) {
+@media (max-width: 780px) {
   #home-categories .home-section__inner {
     width: calc(100% - 20px);
+  }
+  .market-hero .intro-head h1 {
+    font-size: clamp(2.35rem, 10vw, 3.2rem);
   }
 }
 
