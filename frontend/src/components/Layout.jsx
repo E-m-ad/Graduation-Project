@@ -1,8 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { fetchApi, getDefaultAuthenticatedPath } from "../lib/airent";
 import { useCanvasCursor } from "../lib/hooks";
-import { Canvas, useFrame } from "@react-three/fiber";
-import { Float, Environment } from "@react-three/drei";
 
 const MOBILE_NAV_BREAKPOINT = 720;
 const HEADER_CLEARANCE_PX = 24;
@@ -23,88 +21,6 @@ const NORMAL_HEADER_SECTION_SELECTORS = {
   "reset-password": [".auth-layout"],
   "verify-email": [".auth-layout"],
 };
-
-const isMobile = window.innerWidth < 768;
-const orbScale = isMobile ? 0.3 : 0.5;
-const radius = isMobile ? 0.3 : 0.5;
-
-function BouncingRedOrb() {
-  const groupRef = useRef();
-  const meshRef = useRef();
-
-  // movement speed
-  const velocity = useRef({ x: 1.1, y: 0.7 });
-
-  // roughly the visible radius of the orb in world units
-  const orbRadius = radius;
-
-  useFrame((state, delta) => {
-    const group = groupRef.current;
-    const mesh = meshRef.current;
-    if (!group || !mesh) return;
-
-    // rotate the orb itself
-    mesh.rotation.y += delta * 0.4;
-    mesh.rotation.x += delta * 0.15;
-
-    // move the whole orb
-    group.position.x += velocity.current.x * delta;
-    group.position.y += velocity.current.y * delta;
-
-    // viewport size in 3D world units
-    const limitX = state.viewport.width / 2 - orbRadius;
-    const limitY = state.viewport.height / 2 - orbRadius;
-
-    // bounce horizontally
-    if (group.position.x >= limitX) {
-      group.position.x = limitX;
-      velocity.current.x *= -1;
-    } else if (group.position.x <= -limitX) {
-      group.position.x = -limitX;
-      velocity.current.x *= -1;
-    }
-
-    // bounce vertically
-    if (group.position.y >= limitY) {
-      group.position.y = limitY;
-      velocity.current.y *= -1;
-    } else if (group.position.y <= -limitY) {
-      group.position.y = -limitY;
-      velocity.current.y *= -1;
-    }
-  });
-
-  return (
-    <group ref={groupRef}>
-      <Float speed={1.2} rotationIntensity={0.2} floatIntensity={0.3}>
-        <mesh ref={meshRef} scale={orbScale}>
-          <icosahedronGeometry args={[1, 1]} />
-          <meshStandardMaterial
-            color="#b30016"
-            emissive="#2b0303"
-            roughness={0.1}
-            metalness={0.15}
-            flatShading
-          />
-        </mesh>
-      </Float>
-    </group>
-  );
-}
-
-export function HeroOrbBackground() {
-  return (
-    <div className="hero-orb-wrap">
-      <Canvas camera={{ position: [0, 0, 7], fov: 45 }}>
-        <ambientLight intensity={1.2} />
-        <directionalLight position={[3, 2, 4]} intensity={2.2} />
-        <directionalLight position={[-3, -2, -4]} intensity={0.7} />
-        <Environment preset="city" />
-        <BouncingRedOrb />
-      </Canvas>
-    </div>
-  );
-}
 
 function toBadgeCount(value) {
   const nextValue = Number(value);
