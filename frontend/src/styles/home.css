@@ -1217,10 +1217,11 @@
 
 @media (max-width: 640px) {
   .page-shell--landing {
-    gap: 34px;
+    gap: 0px;
   }
 
   .market-hero {
+    height: 100vh;
     min-height: 520px;
   }
 
