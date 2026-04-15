@@ -227,7 +227,6 @@ export function LoginPage({ page }) {
       <section className="auth-card">
         <div className="auth-card__header">
           <h2>Login</h2>
-          <p>Enter your email and password.</p>
         </div>
 
         <form className="stack-form" onSubmit={handleSubmit} noValidate>
@@ -246,7 +245,11 @@ export function LoginPage({ page }) {
                 }))
               }
             />
-            <p className="field-error">{errors.email || ""}</p>
+            <p
+              className={`field-error${errors.email ? " visible" : " hidden"}`}
+            >
+              {errors.email || ""}
+            </p>
           </div>
 
           <div className="field">
@@ -264,7 +267,11 @@ export function LoginPage({ page }) {
                 }))
               }
             />
-            <p className="field-error">{errors.password || ""}</p>
+            <p
+              className={`field-error${errors.password ? " visible" : " hidden"}`}
+            >
+              {errors.password || ""}
+            </p>
           </div>
 
           <div className="auth-card__row">

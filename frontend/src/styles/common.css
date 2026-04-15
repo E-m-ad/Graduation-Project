@@ -783,13 +783,18 @@ ul {
 }
 
 .field label {
-  font-weight: 700;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  color: #000000;
 }
 
 .field-error {
   min-height: 18px;
   font-size: 0.85rem;
   color: var(--danger);
+}
+.hidden {
+  display: none;
 }
 
 .field--full {
@@ -799,7 +804,7 @@ ul {
 .stack-form {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 15px;
 }
 
 .form-grid,
