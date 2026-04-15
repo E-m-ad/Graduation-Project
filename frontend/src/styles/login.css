@@ -1,7 +1,7 @@
 .auth-page {
   position: relative;
   overflow: hidden;
-  padding: 40px;
+  /* padding: 40px; */
   padding-top: 74px;
   /* margin-top: 74px; */
   display: flex;
@@ -143,8 +143,11 @@
   .auth-intro {
     display: none;
   }
+  .auth-card {
+    padding: 15px;
+  }
   .auth-page {
-    margin-top: 74px;
+    padding: 10px;
   }
 }
 @media (max-width: 960px) {
