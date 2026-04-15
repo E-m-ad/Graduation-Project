@@ -9,7 +9,6 @@ import { useMessageState, useSession } from "../lib/hooks";
 import { MessageText } from "../components/Common";
 import { SiteLayout } from "../components/Layout";
 
-<<<<<<< HEAD
 // Reuse this on any page by changing the target, active selectors, or disabled sections.
 const CURSOR_CONFIG = {
   login: {
@@ -28,8 +27,6 @@ const CURSOR_CONFIG = {
   },
 };
 
-=======
->>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
 function validateEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
@@ -37,29 +34,15 @@ function validateEmail(email) {
 function AuthIntro({ eyebrow, title, description, points = [] }) {
   return (
     <article className="auth-intro">
-<<<<<<< HEAD
       <div className="inner-intro">
         <p className="eyebrow">{eyebrow}</p>
         <h1>{title}</h1>
         <p>{description}</p>
       </div>
-=======
-      <p className="eyebrow">{eyebrow}</p>
-      <h1>{title}</h1>
-      <p>{description}</p>
-      {points.length ? (
-        <ul className="auth-points">
-          {points.map((point) => (
-            <li key={point}>{point}</li>
-          ))}
-        </ul>
-      ) : null}
->>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
     </article>
   );
 }
 
-<<<<<<< HEAD
 function AuthPageShell({ page, user, logout, intro, children, cursorConfig }) {
   return (
     <SiteLayout
@@ -68,11 +51,6 @@ function AuthPageShell({ page, user, logout, intro, children, cursorConfig }) {
       onLogout={logout}
       cursorConfig={cursorConfig}
     >
-=======
-function AuthPageShell({ page, user, logout, intro, children }) {
-  return (
-    <SiteLayout page={page} user={user} onLogout={logout}>
->>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
       <div className="auth-page">
         <section className="auth-layout">
           {intro}
@@ -85,15 +63,11 @@ function AuthPageShell({ page, user, logout, intro, children }) {
 
 export function LoginPage({ page }) {
   const { user, loading, refreshUser, logout } = useSession();
-<<<<<<< HEAD
   const [form, setForm] = useState({
     email: "",
     password: "",
     rememberMe: false,
   });
-=======
-  const [form, setForm] = useState({ email: "", password: "", rememberMe: false });
->>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [resendingVerification, setResendingVerification] = useState(false);
@@ -236,10 +210,7 @@ export function LoginPage({ page }) {
       page={page}
       user={user}
       logout={logout}
-<<<<<<< HEAD
       cursorConfig={CURSOR_CONFIG[page]}
-=======
->>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
       intro={
         <AuthIntro
           eyebrow="Welcome back"
@@ -269,14 +240,10 @@ export function LoginPage({ page }) {
               placeholder="name@example.com"
               value={form.email}
               onChange={(event) =>
-<<<<<<< HEAD
                 setForm((previous) => ({
                   ...previous,
                   email: event.target.value,
                 }))
-=======
-                setForm((previous) => ({ ...previous, email: event.target.value }))
->>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
               }
             />
             <p className="field-error">{errors.email || ""}</p>
@@ -317,15 +284,11 @@ export function LoginPage({ page }) {
             <a href="/html/forgot-password.html">Forgot password?</a>
           </div>
 
-<<<<<<< HEAD
           <button
             type="submit"
             className="btn btn--primary btn--full"
             disabled={submitting}
           >
-=======
-          <button type="submit" className="btn btn--primary btn--full" disabled={submitting}>
->>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
             {submitting ? "Logging in..." : "Login"}
           </button>
           <MessageText message={message} />
@@ -335,13 +298,8 @@ export function LoginPage({ page }) {
           <section className="token-box">
             <h3>Need a fresh verification email?</h3>
             <p>
-<<<<<<< HEAD
               If this account is waiting for email verification, we can send a
               new verification link to <strong>{verificationEmail}</strong>.
-=======
-              If this account is waiting for email verification, we can send a new
-              verification link to <strong>{verificationEmail}</strong>.
->>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
             </p>
             <button
               type="button"
@@ -453,12 +411,8 @@ export function RegisterPage({ page }) {
     }
 
     showMessage(
-<<<<<<< HEAD
       result.data.message ||
         "Account created successfully. Redirecting to login...",
-=======
-      result.data.message || "Account created successfully. Redirecting to login...",
->>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
       "success",
     );
 
@@ -480,10 +434,7 @@ export function RegisterPage({ page }) {
       page={page}
       user={user}
       logout={logout}
-<<<<<<< HEAD
       cursorConfig={CURSOR_CONFIG[page]}
-=======
->>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
       intro={
         <AuthIntro
           eyebrow="Create your account"
@@ -513,14 +464,10 @@ export function RegisterPage({ page }) {
               placeholder="Your full name"
               value={form.name}
               onChange={(event) =>
-<<<<<<< HEAD
                 setForm((previous) => ({
                   ...previous,
                   name: event.target.value,
                 }))
-=======
-                setForm((previous) => ({ ...previous, name: event.target.value }))
->>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
               }
             />
             <p className="field-error">{errors.name || ""}</p>
@@ -535,14 +482,10 @@ export function RegisterPage({ page }) {
               placeholder="name@example.com"
               value={form.email}
               onChange={(event) =>
-<<<<<<< HEAD
                 setForm((previous) => ({
                   ...previous,
                   email: event.target.value,
                 }))
-=======
-                setForm((previous) => ({ ...previous, email: event.target.value }))
->>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
               }
             />
             <p className="field-error">{errors.email || ""}</p>
@@ -584,15 +527,11 @@ export function RegisterPage({ page }) {
             <p className="field-error">{errors.confirmPassword || ""}</p>
           </div>
 
-<<<<<<< HEAD
           <button
             type="submit"
             className="btn btn--primary btn--full"
             disabled={submitting}
           >
-=======
-          <button type="submit" className="btn btn--primary btn--full" disabled={submitting}>
->>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
             {submitting ? "Creating account..." : "Create Account"}
           </button>
           <MessageText message={message} />
@@ -602,13 +541,8 @@ export function RegisterPage({ page }) {
           <section className="token-box">
             <h3>Verification link</h3>
             <p>
-<<<<<<< HEAD
               Check your inbox first. In development mode, the verification link
               is also shown here so you can finish testing locally.
-=======
-              Check your inbox first. In development mode, the verification link is
-              also shown here so you can finish testing locally.
->>>>>>> 1007cab8ce928c0fd837e17f812674a8f49c8c5f
             </p>
             {verificationPreview.verificationToken ? (
               <code>{verificationPreview.verificationToken}</code>
