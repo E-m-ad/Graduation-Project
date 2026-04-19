@@ -12,6 +12,7 @@ The system supports four practical user modes:
 The project is built with:
 
 - `Node.js + Express` for the API and static hosting
+- `Python + Flask` for optional AI recommendation scoring
 - `React + Vite` for the frontend
 - `PostgreSQL + Prisma` for persistence
 - `JWT + refresh cookies` for authentication
@@ -53,7 +54,7 @@ This repository currently delivers:
 - dedicated `Bookings` and `Rentals` pages
 - owner listing management and moderation feedback handling
 - admin moderation for users, listings, rentals, and reports
-- a behavior-driven recommendation engine
+- a behavior-driven recommendation engine with optional Flask-based AI scoring
 - OpenAPI documentation and automated smoke tests
 
 ## Core Features
@@ -102,6 +103,7 @@ This repository currently delivers:
 
 - track user behavior such as views, searches, wishlist actions, rentals, reviews, and recommendation clicks
 - compute personalized recommendations from behavior and product signals
+- optionally offload recommendation scoring to a Python `Flask` service that applies a TF-IDF-style content model plus marketplace signals
 - compute similar products for each product details page
 
 ## Technology Stack
@@ -110,6 +112,7 @@ This repository currently delivers:
 | --- | --- | --- |
 | Frontend | React 19, Vite 8 | Multi-page UI, routing by HTML entry pages |
 | Backend | Node.js, Express 5 | REST API, auth, static serving, business workflows |
+| AI Service | Python, Flask | Recommendation scoring for personalized and similar-product ranking |
 | Database | PostgreSQL | Relational data store |
 | ORM | Prisma 7 | Schema, migrations, typed database client |
 | Authentication | JWT, httpOnly refresh cookie, bcrypt | Login, session refresh, password protection |
@@ -127,6 +130,7 @@ flowchart LR
   Browser[Browser Client] --> Frontend[React Pages Built By Vite]
   Frontend --> API[Express API]
   API --> Auth[JWT + Refresh Cookie Auth]
+  API --> Recommender[Flask AI Recommender]
   API --> Prisma[Prisma ORM]
   Prisma --> Postgres[(PostgreSQL)]
   API --> Uploads[Local Upload Storage]
@@ -626,14 +630,40 @@ Vite is already configured to proxy:
 - `/api` -> `http://localhost:8080`
 - `/uploads` -> `http://localhost:8080`
 
-### 7. Open The Application
+### 7. Start The Optional AI Recommender Service
+
+In a third terminal on PowerShell:
+
+```bash
+npm run ai:install
+$env:AI_RECOMMENDER_ENABLED = "true"
+npm run ai:start
+```
+
+On `cmd.exe`, use:
+
+```bash
+set AI_RECOMMENDER_ENABLED=true
+npm run ai:start
+```
+
+On macOS or Linux, use:
+
+```bash
+export AI_RECOMMENDER_ENABLED=true
+npm run ai:start
+```
+
+The Flask recommender runs on `http://localhost:5050` by default. When the Node API sees `AI_RECOMMENDER_ENABLED=true`, it sends recommendation candidates to the Flask service and falls back to the built-in JavaScript scorer if the service is unavailable.
+
+### 8. Open The Application
 
 - Home page: `http://localhost:5173/`
 - Login page: `http://localhost:5173/html/login.html`
 - Verify email page: `http://localhost:5173/html/verify-email.html`
 - Admin dashboard page: `http://localhost:5173/html/admin-dashboard.html`
 
-### 8. Build And Run The Production Bundle Locally
+### 9. Build And Run The Production Bundle Locally
 
 ```bash
 npm run build
@@ -642,7 +672,7 @@ npm run start:with-build
 
 Then open `http://localhost:8080`.
 
-### 9. Create An Admin User
+### 10. Create An Admin User
 
 The application does not create an admin account automatically.
 
@@ -673,6 +703,9 @@ The current codebase uses the following variables:
 | `ACCESS_TOKEN_EXPIRATION` | Yes | `15d` | Access token TTL |
 | `REFRESH_TOKEN_EXPIRATION` | Yes | `7d` | Refresh token TTL |
 | `APP_BASE_URL` | Recommended | `http://localhost:8080` | Base URL used inside verification links and production CORS |
+| `AI_RECOMMENDER_ENABLED` | Optional | `true` | Enables the Flask AI recommender and defaults to `http://127.0.0.1:5050` when no URL is supplied |
+| `AI_RECOMMENDER_URL` | Optional | `http://127.0.0.1:5050` | Base URL for the Flask recommendation service |
+| `AI_RECOMMENDER_TIMEOUT_MS` | Optional | `1500` | Timeout for Node -> Flask recommendation scoring requests |
 | `RAILWAY_PUBLIC_DOMAIN` | Railway auto-provided | `example.up.railway.app` | Railway public hostname used as a fallback when `APP_BASE_URL` is not set |
 | `CORS_ALLOWED_ORIGINS` | Optional | `https://www.example.com,https://admin.example.com` | Extra allowed browser origins in production |
 | `UPLOADS_DIR` | Optional | `/app/uploads` | Absolute directory used for avatar and product uploads |
@@ -690,6 +723,8 @@ Important production notes:
 - set `NODE_ENV=production`
 - use strong secrets for both JWT variables
 - set `APP_BASE_URL` to your public app URL so verification links and CORS are correct
+- set `AI_RECOMMENDER_ENABLED=true` only when the Flask service is deployed and reachable
+- set `AI_RECOMMENDER_URL` if the Flask service runs on a different host or port
 - on Railway, `RAILWAY_PUBLIC_DOMAIN` is provided automatically and can be used as the fallback public URL
 - set `CORS_ALLOWED_ORIGINS` only if you need extra browser origins beyond the main app URL
 - set `UPLOADS_DIR` only if you want to override the Railway volume mount path
@@ -703,6 +738,8 @@ Important production notes:
 | Script | Purpose |
 | --- | --- |
 | `npm run dev` | Start the backend with nodemon |
+| `npm run ai:install` | Install Python dependencies for the Flask recommender |
+| `npm run ai:start` | Start the Flask AI recommender service |
 | `npm run build` | Build the frontend bundle |
 | `npm run start` | Start the backend server |
 | `npm run start:with-build` | Build frontend, then start backend |
@@ -764,9 +801,10 @@ Before release, manually verify:
 For the current codebase, the simplest production setup is:
 
 - one Node/Express service
+- one Flask AI recommender service
 - one PostgreSQL database
 - one persistent volume mounted for `uploads/`
-- one public HTTPS domain serving both frontend and backend on the same origin
+- one public HTTPS domain for the Node app and a private internal URL for the recommender
 
 Using the same origin is strongly recommended because:
 

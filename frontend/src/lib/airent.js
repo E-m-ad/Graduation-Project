@@ -81,6 +81,23 @@ async function parseResponse(response) {
   }
 }
 
+function buildNetworkErrorResult(error) {
+  const message =
+    typeof error?.message === "string" && error.message.trim()
+      ? error.message.trim()
+      : "Network request failed";
+
+  return {
+    ok: false,
+    status: 0,
+    data: {
+      success: false,
+      message,
+    },
+    error,
+  };
+}
+
 export async function refreshAccessToken() {
   try {
     const response = await fetch("/api/v1/auth/refresh-token", {
@@ -132,13 +149,21 @@ export async function fetchApi(path, options = {}) {
     headers.set("Authorization", `Bearer ${token}`);
   }
 
-  const response = await fetch(path, {
-    credentials: "include",
-    ...requestOptions,
-    headers,
-    body,
-  });
-  const data = await parseResponse(response);
+  let response;
+  let data;
+
+  try {
+    response = await fetch(path, {
+      credentials: "include",
+      ...requestOptions,
+      headers,
+      body,
+    });
+    data = await parseResponse(response);
+  } catch (error) {
+    console.error(`fetchApi error for ${path}:`, error);
+    return buildNetworkErrorResult(error);
+  }
 
   if (response.status === 401 && auth && retryOnAuth) {
     const refreshed = await refreshAccessToken();

@@ -45,8 +45,39 @@ function parseBooleanEnv(value) {
   return ["1", "true", "yes", "on"].includes(normalizedValue);
 }
 
+function parsePositiveIntegerEnv(value, fallback) {
+  const normalizedValue = trimEnv(value);
+  if (!normalizedValue) {
+    return fallback;
+  }
+
+  const numericValue = Number.parseInt(normalizedValue, 10);
+  if (!Number.isInteger(numericValue) || numericValue <= 0) {
+    return fallback;
+  }
+
+  return numericValue;
+}
+
 export function isEmailVerificationEnabled(env = process.env) {
   return parseBooleanEnv(env.EMAIL_VERIFICATION_ENABLED);
+}
+
+export function getAiRecommenderUrl(env = process.env) {
+  const configuredUrl = normalizeUrl(env.AI_RECOMMENDER_URL);
+  if (configuredUrl) {
+    return configuredUrl;
+  }
+
+  if (parseBooleanEnv(env.AI_RECOMMENDER_ENABLED)) {
+    return "http://127.0.0.1:5050";
+  }
+
+  return "";
+}
+
+export function getAiRecommenderTimeoutMs(env = process.env) {
+  return parsePositiveIntegerEnv(env.AI_RECOMMENDER_TIMEOUT_MS, 1500);
 }
 
 export function normalizeUserVerification(user, env = process.env) {

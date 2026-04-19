@@ -1,4 +1,8 @@
 import db from "../database/db.js";
+import {
+  scorePersonalizedCandidates,
+  scoreSimilarCandidates,
+} from "../services/ai-recommender.js";
 import z from "../utils/recommendation.zod.js";
 
 const DEFAULT_PAGE = 1;
@@ -69,7 +73,12 @@ function buildPagination(page, limit, totalItems) {
 }
 
 function roundScore(value) {
-  return Number(value.toFixed(2));
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) {
+    return 0;
+  }
+
+  return Number(numericValue.toFixed(2));
 }
 
 function normalizeText(value) {
@@ -83,6 +92,15 @@ function tokenizeText(value) {
     .filter((token) => token.length >= 2);
 }
 
+function toNumberOrNull(value) {
+  if (value == null || value === "") {
+    return null;
+  }
+
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) ? numericValue : null;
+}
+
 function getPrimaryPrice(product) {
   const numericPrices = [
     product.pricePerHour,
@@ -90,7 +108,7 @@ function getPrimaryPrice(product) {
     product.pricePerWeek,
     product.pricePerMonth,
   ]
-    .map((price) => (price == null ? null : Number(price)))
+    .map((price) => toNumberOrNull(price))
     .filter((price) => price != null);
 
   if (numericPrices.length === 0) {
@@ -153,7 +171,7 @@ function applySearchSignal(profile, searchQuery, weight) {
 }
 
 function buildPopularityScore(product) {
-  const avgRating = product.avgRating == null ? 0 : Number(product.avgRating);
+  const avgRating = toNumberOrNull(product.avgRating) ?? 0;
   const totalRentals = product.totalRentals ?? 0;
   const totalReviews = product.totalReviews ?? 0;
   const viewCount = product.viewCount ?? 0;
@@ -192,6 +210,131 @@ function formatScoredProduct(product, score, reasons) {
     recommendationScore: roundScore(score),
     recommendationReasons: reasons,
   };
+}
+
+function buildFallbackReason(product, profile, allowRevisited = false) {
+  if (allowRevisited && profile.strongProductIds.has(product.id)) {
+    return "based on items you already saved or explored";
+  }
+
+  if (product.isFeatured) {
+    return "featured listing";
+  }
+
+  return "popular with other users";
+}
+
+function sanitizeReasons(reasons, fallbackReason) {
+  const nextReasons = [...new Set(
+    (Array.isArray(reasons) ? reasons : [])
+      .filter((reason) => typeof reason === "string")
+      .map((reason) => reason.trim())
+      .filter(Boolean),
+  )];
+
+  if (nextReasons.length > 0) {
+    return nextReasons.slice(0, 4);
+  }
+
+  return [fallbackReason];
+}
+
+function sortScoredProducts(scoredProducts) {
+  return scoredProducts
+    .filter(Boolean)
+    .sort((a, b) => b.score - a.score);
+}
+
+function serializeSignalMap(map) {
+  return [...map.entries()]
+    .map(([key, score]) => ({
+      key,
+      score: roundScore(score),
+    }))
+    .filter((item) => item.key && item.score > 0);
+}
+
+function buildAiProfile(profile) {
+  return {
+    categories: serializeSignalMap(profile.categoryScores),
+    cities: serializeSignalMap(profile.cityScores),
+    tags: serializeSignalMap(profile.tagScores),
+    searchTerms: serializeSignalMap(profile.searchTermScores),
+    strongProductIds: [...profile.strongProductIds],
+  };
+}
+
+function serializeProductForAi(product) {
+  return {
+    id: product.id,
+    ownerId: product.ownerId,
+    categoryId: product.categoryId,
+    categoryName: product.category?.name || "",
+    title: product.title || "",
+    description: product.description || "",
+    city: product.city || "",
+    condition: product.condition || "",
+    tags: Array.isArray(product.tags) ? product.tags : [],
+    pricePerHour: toNumberOrNull(product.pricePerHour),
+    pricePerDay: toNumberOrNull(product.pricePerDay),
+    pricePerWeek: toNumberOrNull(product.pricePerWeek),
+    pricePerMonth: toNumberOrNull(product.pricePerMonth),
+    securityDeposit: toNumberOrNull(product.securityDeposit),
+    avgRating: toNumberOrNull(product.avgRating) ?? 0,
+    totalReviews: product.totalReviews ?? 0,
+    totalRentals: product.totalRentals ?? 0,
+    viewCount: product.viewCount ?? 0,
+    isFeatured: Boolean(product.isFeatured),
+    createdAt:
+      product.createdAt instanceof Date
+        ? product.createdAt.toISOString()
+        : product.createdAt,
+  };
+}
+
+function mergeAiScores(
+  candidates,
+  aiItems,
+  fallbackBuilder,
+  fallbackReasonBuilder,
+) {
+  const productById = new Map(candidates.map((product) => [product.id, product]));
+  const rankedProducts = [];
+  const seenIds = new Set();
+
+  for (const item of Array.isArray(aiItems) ? aiItems : []) {
+    if (!item || typeof item.productId !== "string") {
+      continue;
+    }
+
+    const product = productById.get(item.productId);
+    if (!product || seenIds.has(product.id)) {
+      continue;
+    }
+
+    rankedProducts.push({
+      product,
+      score: roundScore(item.score),
+      reasons: sanitizeReasons(
+        item.reasons,
+        fallbackReasonBuilder(product),
+      ),
+    });
+    seenIds.add(product.id);
+  }
+
+  for (const product of candidates) {
+    if (seenIds.has(product.id)) {
+      continue;
+    }
+
+    const fallbackItem = fallbackBuilder(product);
+    if (fallbackItem) {
+      rankedProducts.push(fallbackItem);
+    }
+  }
+
+  return sortScoredProducts(rankedProducts);
 }
 
 async function fetchPublicProducts(
@@ -441,6 +584,70 @@ function scoreSimilarProduct(baseProduct, candidate) {
   };
 }
 
+async function rankRecommendedProducts(candidates, profile, userId) {
+  const eligibleCandidates = candidates.filter(
+    (product) =>
+      product.ownerId !== userId && !profile.strongProductIds.has(product.id),
+  );
+
+  if (eligibleCandidates.length === 0) {
+    return {
+      items: [],
+      engine: "heuristic_js",
+    };
+  }
+
+  const aiItems = await scorePersonalizedCandidates({
+    userId,
+    profile: buildAiProfile(profile),
+    candidates: eligibleCandidates.map(serializeProductForAi),
+  });
+
+  if (aiItems) {
+    return {
+      items: mergeAiScores(
+        eligibleCandidates,
+        aiItems,
+        (product) => scoreRecommendedProduct(product, profile, userId),
+        (product) =>
+          product.isFeatured
+            ? "featured listing"
+            : "matched by the AI recommender",
+      ),
+      engine: "ai_flask",
+    };
+  }
+
+  return {
+    items: sortScoredProducts(
+      eligibleCandidates
+        .map((product) => scoreRecommendedProduct(product, profile, userId))
+        .filter(Boolean),
+    ),
+    engine: "heuristic_js",
+  };
+}
+
+async function rankSimilarProducts(baseProduct, candidates) {
+  const aiItems = await scoreSimilarCandidates({
+    baseProduct: serializeProductForAi(baseProduct),
+    candidates: candidates.map(serializeProductForAi),
+  });
+
+  if (aiItems) {
+    return mergeAiScores(
+      candidates,
+      aiItems,
+      (candidate) => scoreSimilarProduct(baseProduct, candidate),
+      () => "similar overall profile",
+    );
+  }
+
+  return sortScoredProducts(
+    candidates.map((candidate) => scoreSimilarProduct(baseProduct, candidate)),
+  );
+}
+
 async function getRecommendations(req, res) {
   const data = z.recommendationQuerySchema.safeParse(req.query);
   if (!data.success) {
@@ -496,12 +703,15 @@ async function getRecommendations(req, res) {
             PERSONALIZED_CANDIDATE_LIMIT,
           );
 
-    let scoredProducts = candidates
-      .map((product) => scoreRecommendedProduct(product, profile, req.user.id))
-      .filter(Boolean)
-      .sort((a, b) => b.score - a.score);
+    const rankedProducts = await rankRecommendedProducts(
+      candidates,
+      profile,
+      req.user.id,
+    );
 
-    let strategy = "personalized";
+    let scoredProducts = rankedProducts.items;
+    let strategy =
+      rankedProducts.engine === "ai_flask" ? "personalized_ai" : "personalized";
     let fallbackUsed = false;
 
     if (scoredProducts.length === 0) {
@@ -512,20 +722,32 @@ async function getRecommendations(req, res) {
         PERSONALIZED_CANDIDATE_LIMIT,
       );
 
-      scoredProducts = fallbackProducts
-        .filter((product) => !profile.strongProductIds.has(product.id))
+      const unseenFallbackProducts = fallbackProducts.filter(
+        (product) => !profile.strongProductIds.has(product.id),
+      );
+      const fallbackPool =
+        unseenFallbackProducts.length > 0
+          ? unseenFallbackProducts
+          : fallbackProducts;
+      const allowRevisitedProducts = unseenFallbackProducts.length === 0;
+
+      scoredProducts = fallbackPool
         .map((product) => ({
           product,
           score: buildPopularityScore(product),
           reasons: [
-            product.isFeatured
-              ? "featured listing"
-              : "popular with other users",
+            buildFallbackReason(
+              product,
+              profile,
+              allowRevisitedProducts,
+            ),
           ],
         }))
         .sort((a, b) => b.score - a.score);
 
-      strategy = "popularity_fallback";
+      strategy = allowRevisitedProducts
+        ? "revisit_fallback"
+        : "popularity_fallback";
       fallbackUsed = true;
     }
 
@@ -625,9 +847,7 @@ async function getSimilarProducts(req, res) {
       );
     }
 
-    const scoredProducts = candidates
-      .map((candidate) => scoreSimilarProduct(product, candidate))
-      .sort((a, b) => b.score - a.score);
+    const scoredProducts = await rankSimilarProducts(product, candidates);
 
     const totalItems = scoredProducts.length;
     const offset = (page - 1) * limit;
