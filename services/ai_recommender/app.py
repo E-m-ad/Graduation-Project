@@ -425,5 +425,17 @@ def score_similar():
 
 
 if __name__ == "__main__":
-    port = int(os.environ.get("RECOMMENDER_PORT", "5050"))
-    app.run(host="0.0.0.0", port=port)
+    port = int(os.environ.get("PORT") or os.environ.get("RECOMMENDER_PORT", "5050"))
+    host = os.environ.get("HOSTNAME") or os.environ.get("RECOMMENDER_HOST") or "::"
+
+    try:
+        app.run(host=host, port=port)
+    except OSError:
+        if host == "::" and not os.environ.get("HOSTNAME") and not os.environ.get("RECOMMENDER_HOST"):
+            print(
+                "IPv6 bind failed for the AI recommender, falling back to 0.0.0.0",
+                flush=True,
+            )
+            app.run(host="0.0.0.0", port=port)
+        else:
+            raise
