@@ -1244,6 +1244,111 @@ async function runTransactionalFeatureTests(context, actors, fixtures) {
   );
   expectStatus(similarProductsResult, 200, "Get similar products");
 
+  const renterChatMessage = await actors.renterUser.request(
+    "POST",
+    `/rentals/${rental1Id}/messages`,
+    {
+      json: {
+        message: "Hello owner, I would like to confirm the pickup details.",
+      },
+    },
+  );
+  expectStatus(renterChatMessage, 201, "Send renter chat message");
+
+  const ownerRequestsWithUnreadChat = await actors.ownerUser.request(
+    "GET",
+    "/rentals/my-requests",
+  );
+  expectStatus(
+    ownerRequestsWithUnreadChat,
+    200,
+    "Owner requests should include rental chat summary",
+  );
+  const ownerChatSummary = ownerRequestsWithUnreadChat.body?.data?.rentals?.find(
+    (rental) => rental.id === rental1Id,
+  )?.chat;
+  assert(
+    ownerChatSummary?.unreadCount === 1,
+    "Owner rental list should show one unread chat message after the renter writes first",
+    ownerRequestsWithUnreadChat.body,
+  );
+  assert(
+    ownerChatSummary?.lastMessagePreview?.includes("pickup details"),
+    "Owner rental list should include the last chat preview",
+    ownerRequestsWithUnreadChat.body,
+  );
+
+  const ownerChatThread = await actors.ownerUser.request(
+    "GET",
+    `/rentals/${rental1Id}/messages`,
+  );
+  expectStatus(ownerChatThread, 200, "Owner should load rental chat messages");
+  assert(
+    ownerChatThread.body?.data?.chat?.unreadCount === 0,
+    "Opening the owner chat thread should clear the owner's unread count",
+    ownerChatThread.body,
+  );
+  assert(
+    ownerChatThread.body?.data?.messages?.some(
+      (message) =>
+        message.message ===
+        "Hello owner, I would like to confirm the pickup details.",
+    ),
+    "Owner chat thread should include the renter message",
+    ownerChatThread.body,
+  );
+
+  const ownerChatReply = await actors.ownerUser.request(
+    "POST",
+    `/rentals/${rental1Id}/messages`,
+    {
+      json: {
+        message: "Thanks, the item will be ready at the agreed start time.",
+      },
+    },
+  );
+  expectStatus(ownerChatReply, 201, "Send owner chat reply");
+
+  const renterBookingsWithUnreadChat = await actors.renterUser.request(
+    "GET",
+    "/rentals/my-bookings",
+  );
+  expectStatus(
+    renterBookingsWithUnreadChat,
+    200,
+    "Renter bookings should include rental chat summary",
+  );
+  const renterChatSummary =
+    renterBookingsWithUnreadChat.body?.data?.rentals?.find(
+      (rental) => rental.id === rental1Id,
+    )?.chat;
+  assert(
+    renterChatSummary?.unreadCount === 1,
+    "Renter bookings should show one unread chat message after the owner replies",
+    renterBookingsWithUnreadChat.body,
+  );
+  assert(
+    renterChatSummary?.lastMessagePreview?.includes("agreed start time"),
+    "Renter bookings should surface the owner's latest chat preview",
+    renterBookingsWithUnreadChat.body,
+  );
+
+  const renterChatThread = await actors.renterUser.request(
+    "GET",
+    `/rentals/${rental1Id}/messages`,
+  );
+  expectStatus(renterChatThread, 200, "Renter should load rental chat messages");
+  assert(
+    renterChatThread.body?.data?.chat?.unreadCount === 0,
+    "Opening the renter chat thread should clear the renter's unread count",
+    renterChatThread.body,
+  );
+  assert(
+    renterChatThread.body?.data?.messages?.length >= 2,
+    "Rental chat should contain both sent messages",
+    renterChatThread.body,
+  );
+
   const ownerNotifications = await actors.ownerUser.request("GET", "/notifications");
   expectStatus(ownerNotifications, 200, "Get owner notifications");
   const firstOwnerNotification = ownerNotifications.body?.data?.notifications?.[0];

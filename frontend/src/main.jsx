@@ -45,4 +45,32 @@ const pages = {
 const page = document.body.dataset.page || "home";
 const PageComponent = pages[page] || HomePage;
 
-createRoot(document.getElementById("root")).render(<PageComponent page={page} />);
+function AppBootstrap() {
+  React.useEffect(() => {
+    const hideBootLoader = () => {
+      if (typeof window.__AIRentHideBootLoader === "function") {
+        window.__AIRentHideBootLoader();
+        return;
+      }
+
+      document.body.classList.remove("app-shell-loading", "app-shell-delayed");
+      document.body.classList.add("app-shell-ready");
+      document.getElementById("app-boot-loader")?.remove();
+    };
+
+    if (document.readyState === "complete") {
+      hideBootLoader();
+      return undefined;
+    }
+
+    window.addEventListener("load", hideBootLoader, { once: true });
+
+    return () => {
+      window.removeEventListener("load", hideBootLoader);
+    };
+  }, []);
+
+  return <PageComponent page={page} />;
+}
+
+createRoot(document.getElementById("root")).render(<AppBootstrap />);

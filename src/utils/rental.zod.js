@@ -140,11 +140,26 @@ const rentalActionReasonSchema = zod.object({
   ),
 });
 
+const rentalMessageCreateSchema = zod.object({
+  message: zod.preprocess((value) => {
+    if (typeof value !== "string") {
+      return value;
+    }
+
+    return value.trim();
+  },
+  zod
+    .string()
+    .min(1, "Message is required")
+    .max(4000, "Message must be at most 4000 characters long")),
+});
+
 export default {
   availabilityQuerySchema,
   createRentalSchema,
   productAvailabilityParamSchema,
   rentalActionReasonSchema,
+  rentalMessageCreateSchema,
   rentalIdParamSchema,
   rentalListQuerySchema,
   RENTAL_PERIOD_TYPES,

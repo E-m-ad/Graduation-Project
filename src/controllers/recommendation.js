@@ -1,8 +1,4 @@
 import db from "../database/db.js";
-import {
-  scorePersonalizedCandidates,
-  scoreSimilarCandidates,
-} from "../services/ai-recommender.js";
 import z from "../utils/recommendation.zod.js";
 
 const DEFAULT_PAGE = 1;
@@ -224,117 +220,10 @@ function buildFallbackReason(product, profile, allowRevisited = false) {
   return "popular with other users";
 }
 
-function sanitizeReasons(reasons, fallbackReason) {
-  const nextReasons = [...new Set(
-    (Array.isArray(reasons) ? reasons : [])
-      .filter((reason) => typeof reason === "string")
-      .map((reason) => reason.trim())
-      .filter(Boolean),
-  )];
-
-  if (nextReasons.length > 0) {
-    return nextReasons.slice(0, 4);
-  }
-
-  return [fallbackReason];
-}
-
 function sortScoredProducts(scoredProducts) {
   return scoredProducts
     .filter(Boolean)
     .sort((a, b) => b.score - a.score);
-}
-
-function serializeSignalMap(map) {
-  return [...map.entries()]
-    .map(([key, score]) => ({
-      key,
-      score: roundScore(score),
-    }))
-    .filter((item) => item.key && item.score > 0);
-}
-
-function buildAiProfile(profile) {
-  return {
-    categories: serializeSignalMap(profile.categoryScores),
-    cities: serializeSignalMap(profile.cityScores),
-    tags: serializeSignalMap(profile.tagScores),
-    searchTerms: serializeSignalMap(profile.searchTermScores),
-    strongProductIds: [...profile.strongProductIds],
-  };
-}
-
-function serializeProductForAi(product) {
-  return {
-    id: product.id,
-    ownerId: product.ownerId,
-    categoryId: product.categoryId,
-    categoryName: product.category?.name || "",
-    title: product.title || "",
-    description: product.description || "",
-    city: product.city || "",
-    condition: product.condition || "",
-    tags: Array.isArray(product.tags) ? product.tags : [],
-    pricePerHour: toNumberOrNull(product.pricePerHour),
-    pricePerDay: toNumberOrNull(product.pricePerDay),
-    pricePerWeek: toNumberOrNull(product.pricePerWeek),
-    pricePerMonth: toNumberOrNull(product.pricePerMonth),
-    securityDeposit: toNumberOrNull(product.securityDeposit),
-    avgRating: toNumberOrNull(product.avgRating) ?? 0,
-    totalReviews: product.totalReviews ?? 0,
-    totalRentals: product.totalRentals ?? 0,
-    viewCount: product.viewCount ?? 0,
-    isFeatured: Boolean(product.isFeatured),
-    createdAt:
-      product.createdAt instanceof Date
-        ? product.createdAt.toISOString()
-        : product.createdAt,
-  };
-}
-
-function mergeAiScores(
-  candidates,
-  aiItems,
-  fallbackBuilder,
-  fallbackReasonBuilder,
-) {
-  const productById = new Map(candidates.map((product) => [product.id, product]));
-  const rankedProducts = [];
-  const seenIds = new Set();
-
-  for (const item of Array.isArray(aiItems) ? aiItems : []) {
-    if (!item || typeof item.productId !== "string") {
-      continue;
-    }
-
-    const product = productById.get(item.productId);
-    if (!product || seenIds.has(product.id)) {
-      continue;
-    }
-
-    rankedProducts.push({
-      product,
-      score: roundScore(item.score),
-      reasons: sanitizeReasons(
-        item.reasons,
-        fallbackReasonBuilder(product),
-      ),
-    });
-    seenIds.add(product.id);
-  }
-
-  for (const product of candidates) {
-    if (seenIds.has(product.id)) {
-      continue;
-    }
-
-    const fallbackItem = fallbackBuilder(product);
-    if (fallbackItem) {
-      rankedProducts.push(fallbackItem);
-    }
-  }
-
-  return sortScoredProducts(rankedProducts);
 }
 
 async function fetchPublicProducts(
@@ -591,58 +480,17 @@ async function rankRecommendedProducts(candidates, profile, userId) {
   );
 
   if (eligibleCandidates.length === 0) {
-    return {
-      items: [],
-      engine: "heuristic_js",
-    };
+    return [];
   }
 
-  const aiItems = await scorePersonalizedCandidates({
-    userId,
-    profile: buildAiProfile(profile),
-    candidates: eligibleCandidates.map(serializeProductForAi),
-  });
-
-  if (aiItems) {
-    return {
-      items: mergeAiScores(
-        eligibleCandidates,
-        aiItems,
-        (product) => scoreRecommendedProduct(product, profile, userId),
-        (product) =>
-          product.isFeatured
-            ? "featured listing"
-            : "matched by the AI recommender",
-      ),
-      engine: "ai_flask",
-    };
-  }
-
-  return {
-    items: sortScoredProducts(
-      eligibleCandidates
-        .map((product) => scoreRecommendedProduct(product, profile, userId))
-        .filter(Boolean),
-    ),
-    engine: "heuristic_js",
-  };
+  return sortScoredProducts(
+    eligibleCandidates
+      .map((product) => scoreRecommendedProduct(product, profile, userId))
+      .filter(Boolean),
+  );
 }
 
 async function rankSimilarProducts(baseProduct, candidates) {
-  const aiItems = await scoreSimilarCandidates({
-    baseProduct: serializeProductForAi(baseProduct),
-    candidates: candidates.map(serializeProductForAi),
-  });
-
-  if (aiItems) {
-    return mergeAiScores(
-      candidates,
-      aiItems,
-      (candidate) => scoreSimilarProduct(baseProduct, candidate),
-      () => "similar overall profile",
-    );
-  }
-
   return sortScoredProducts(
     candidates.map((candidate) => scoreSimilarProduct(baseProduct, candidate)),
   );
@@ -703,15 +551,12 @@ async function getRecommendations(req, res) {
             PERSONALIZED_CANDIDATE_LIMIT,
           );
 
-    const rankedProducts = await rankRecommendedProducts(
+    let scoredProducts = await rankRecommendedProducts(
       candidates,
       profile,
       req.user.id,
     );
-
-    let scoredProducts = rankedProducts.items;
-    let strategy =
-      rankedProducts.engine === "ai_flask" ? "personalized_ai" : "personalized";
+    let strategy = "personalized";
     let fallbackUsed = false;
 
     if (scoredProducts.length === 0) {

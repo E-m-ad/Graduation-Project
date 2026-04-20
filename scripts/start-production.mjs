@@ -72,6 +72,7 @@ process.on("SIGTERM", () => terminateProcess("SIGTERM"));
 process.on("SIGINT", () => terminateProcess("SIGINT"));
 
 try {
+  await runCommand(npmCommand, ["run", "prisma:generate"]);
   await runCommand(npmCommand, ["run", "prisma:deploy"]);
   await runCommand(npmCommand, ["run", "verify:schema"]);
   const { startServer } = await import("../src/app.js");

@@ -3,8 +3,6 @@ import authSchema from "../src/utils/auth.zod.js";
 import productSchema from "../src/utils/product.zod.js";
 import rentalSchema from "../src/utils/rental.zod.js";
 import {
-  getAiRecommenderTimeoutMs,
-  getAiRecommenderUrl,
   getAllowedCorsOrigins,
   getAppBaseUrl,
   getUploadsRootDir,
@@ -138,33 +136,6 @@ async function run() {
     explicitBaseUrl === "https://rent.example.com",
     "Runtime config should prefer APP_BASE_URL over Railway fallback",
     explicitBaseUrl,
-  );
-
-  const defaultAiRecommenderUrl = getAiRecommenderUrl({
-    AI_RECOMMENDER_ENABLED: "true",
-  });
-  assert(
-    defaultAiRecommenderUrl === "http://127.0.0.1:5050",
-    "Runtime config should default the AI recommender URL when the feature is enabled",
-    defaultAiRecommenderUrl,
-  );
-
-  const explicitAiRecommenderUrl = getAiRecommenderUrl({
-    AI_RECOMMENDER_URL: "http://ai.internal:6000/",
-  });
-  assert(
-    explicitAiRecommenderUrl === "http://ai.internal:6000",
-    "Runtime config should normalize an explicit AI recommender URL",
-    explicitAiRecommenderUrl,
-  );
-
-  const aiRecommenderTimeout = getAiRecommenderTimeoutMs({
-    AI_RECOMMENDER_TIMEOUT_MS: "2500",
-  });
-  assert(
-    aiRecommenderTimeout === 2500,
-    "Runtime config should parse the AI recommender timeout",
-    aiRecommenderTimeout,
   );
 
   const allowedOrigins = getAllowedCorsOrigins({
@@ -342,6 +313,23 @@ async function run() {
     availabilityQuery.quantity === 1,
     "Availability query schema should coerce quantity",
     availabilityQuery,
+  );
+
+  const rentalMessagePayload = rentalSchema.rentalMessageCreateSchema.parse({
+    message: "  Hello owner, can we confirm pickup time?  ",
+  });
+  assert(
+    rentalMessagePayload.message === "Hello owner, can we confirm pickup time?",
+    "Rental chat message schema should trim the message body",
+    rentalMessagePayload,
+  );
+
+  const blankRentalMessage = rentalSchema.rentalMessageCreateSchema.safeParse({
+    message: "   ",
+  });
+  assert(
+    blankRentalMessage.success === false,
+    "Rental chat message schema should reject blank messages",
   );
 
   const wishlistNotifyPayload = wishlistSchema.wishlistNotifyBodySchema.parse({

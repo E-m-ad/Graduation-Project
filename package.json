@@ -5,10 +5,8 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon src/app.js",
-    "ai:install": "python -m pip install -r services/ai_recommender/requirements.txt",
-    "ai:start": "python services/ai_recommender/app.py",
     "build": "npm run prisma:generate && npm run client:build",
-    "start": "node src/app.js",
+    "start": "npm run prisma:generate && node src/app.js",
     "start:with-build": "npm run build && node src/app.js",
     "check": "npm run build && npm run test:smoke",
     "client:dev": "vite",
@@ -23,7 +21,7 @@
     "prisma:deploy": "prisma migrate deploy",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
-    "verify:schema": "npm run prisma:generate && node scripts/verify-schema.mjs",
+    "verify:schema": "node scripts/verify-schema.mjs",
     "start:production": "node scripts/start-production.mjs"
   },
   "keywords": [],
@@ -50,7 +48,6 @@
     "nodemailer": "8.0.5",
     "pg": "8.20.0",
     "prisma": "7.7.0",
-    "python-dotenv": "^0.0.1-security",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "swagger-ui-express": "5.0.1",

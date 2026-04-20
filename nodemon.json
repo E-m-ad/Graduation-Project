@@ -1,0 +1,16 @@
+{
+  "watch": [
+    "src",
+    "prisma",
+    "prisma.config.js"
+  ],
+  "ext": "js,mjs,cjs,json,prisma",
+  "ignore": [
+    "frontend/**",
+    "public/**",
+    "uploads/**",
+    "node_modules/**",
+    "coverage/**",
+    ".git/**"
+  ]
+}

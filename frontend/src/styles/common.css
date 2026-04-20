@@ -563,6 +563,19 @@ ul {
   gap: 12px;
 }
 
+.btn--with-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn__icon {
+  width: 1.05rem;
+  height: 1.05rem;
+  flex-shrink: 0;
+}
+
 .hero__panel {
   justify-content: space-between;
   padding: 24px;
@@ -980,7 +993,10 @@ ul {
   justify-content: space-between;
   gap: 12px;
 }
-
+.product-card__top {
+  flex-direction: column;
+  align-items: start;
+}
 .product-card__title {
   font-size: 1.1rem;
   overflow-wrap: anywhere;
@@ -1042,8 +1058,9 @@ ul {
 }
 .rental-workspace__panel .product-card__top-copy {
   display: flex;
+  flex-direction: column;
   justify-content: space-between;
-  align-items: center;
+  align-items: start;
 }
 .rental-card__media {
   min-height: 0;
@@ -1162,6 +1179,34 @@ ul {
 .rental-card__message-text {
   margin: 0;
   white-space: pre-wrap;
+}
+
+.rental-card__chat {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.84);
+}
+
+.rental-card__chat-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.rental-card__chat-preview {
+  margin: 0;
+  color: var(--text);
+  line-height: 1.55;
+}
+
+.rental-card__chat-meta {
+  margin: 0;
+  color: var(--muted);
 }
 
 .rental-card__bottom {
@@ -1448,12 +1493,24 @@ ul {
   min-width: 0;
 }
 
+.list-item--interactive {
+  cursor: pointer;
+}
+
 .list-item:hover,
 .list-item:focus-within {
   transform: translateY(-2px);
   border-color: rgba(218, 41, 28, 0.12);
   background: rgba(255, 255, 255, 0.92);
   box-shadow: 0 16px 30px rgba(17, 24, 39, 0.06);
+}
+
+.list-item--interactive:focus-visible {
+  outline: none;
+  border-color: rgba(218, 41, 28, 0.22);
+  box-shadow:
+    0 0 0 4px rgba(218, 41, 28, 0.1),
+    0 16px 30px rgba(17, 24, 39, 0.06);
 }
 
 .list-item__title-row {
@@ -1806,6 +1863,9 @@ ul {
   .list-item__title-row {
     align-items: flex-start;
     flex-direction: column;
+  }
+  .product-card__bottom {
+    flex-direction: row;
   }
 
   .rental-card__headline,

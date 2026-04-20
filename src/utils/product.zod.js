@@ -295,6 +295,27 @@ const updateProductStatusSchema = zod.object({
   status: zod.enum(PRODUCT_STATUS_UPDATE_VALUES),
 });
 
+const productChatQuerySchema = zod.object({
+  conversationId: zod
+    .string()
+    .trim()
+    .uuid("Valid conversation id is required")
+    .optional(),
+});
+
+const productChatMessageCreateSchema = zod.object({
+  conversationId: zod
+    .string()
+    .trim()
+    .uuid("Valid conversation id is required")
+    .optional(),
+  message: zod
+    .string()
+    .trim()
+    .min(1, "Message cannot be empty")
+    .max(4000, "Message must be at most 4000 characters long"),
+});
+
 const moderationReplySchema = zod.object({
   reply: zod
     .string()
@@ -306,6 +327,8 @@ const moderationReplySchema = zod.object({
 export default {
   createProductSchema,
   moderationReplySchema,
+  productChatMessageCreateSchema,
+  productChatQuerySchema,
   productIdParamSchema,
   productImageParamSchema,
   updateProductSchema,

@@ -339,8 +339,11 @@ export function ProductCard({
   actionLayout = "default",
   secondaryText,
   footerActions,
+  detailsHref,
 }) {
-  const detailsUrl = `/html/product-details.html?id=${encodeURIComponent(product.id)}`;
+  const detailsUrl =
+    detailsHref ||
+    `/html/product-details.html?id=${encodeURIComponent(product.id)}`;
   const imageUrl = getPrimaryImage(product);
   const useCompactWishlist = actionLayout === "icon-top";
   const wishlistLabel = isSaved
@@ -586,6 +589,51 @@ function formatRentalStatusLabel(status) {
     .join(" ");
 }
 
+function formatChatSummaryTimestamp(value) {
+  if (!value) {
+    return "";
+  }
+
+  const parsedValue = new Date(value);
+  if (Number.isNaN(parsedValue.getTime())) {
+    return "";
+  }
+
+  return parsedValue.toLocaleString([], {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function getRentalChatPreview(rental) {
+  if (rental?.chat?.hasMessages && rental.chat.lastMessagePreview) {
+    return truncateText(rental.chat.lastMessagePreview, 120);
+  }
+
+  return "No messages yet. Start the conversation to coordinate the rental.";
+}
+
+function getRentalChatMeta(rental) {
+  if (!rental?.chat?.hasMessages) {
+    return "Conversation not started";
+  }
+
+  const timestampLabel = formatChatSummaryTimestamp(rental.chat.lastMessageAt);
+  return timestampLabel ? `Last update ${timestampLabel}` : "Recent message";
+}
+
+function getRentalChatUnreadLabel(rental) {
+  const unreadCount = Number(rental?.chat?.unreadCount || 0);
+
+  if (!unreadCount) {
+    return "";
+  }
+
+  return unreadCount === 1 ? "1 new" : `${unreadCount} new`;
+}
+
 function getRentalActions(listType, status) {
   const actions = [];
 
@@ -621,10 +669,14 @@ export function BookingProductCard({ rental, onAction }) {
     ...rental.product,
     id: rental.product?.id || rental.productId,
   };
+  const detailsUrl = `/html/product-details.html?id=${encodeURIComponent(
+    product.id,
+  )}&rentalId=${encodeURIComponent(rental.id)}`;
 
   return (
     <ProductCard
       product={product}
+      detailsHref={detailsUrl}
       footerActions={
         <div className="hero__actions">
           <button
@@ -692,6 +744,7 @@ export function RentalListItem({
       : rental.ownerNotes?.trim();
   const requestNoteLabel =
     listType === "requests" ? "Renter note" : "Owner note";
+  const unreadLabel = getRentalChatUnreadLabel(rental);
 
   return (
     <article className="rental-card">
@@ -783,6 +836,21 @@ export function RentalListItem({
           </div>
         ) : null}
 
+        <div className="rental-card__chat">
+          <div className="rental-card__chat-header">
+            <span className="rental-card__message-label">Conversation</span>
+            {unreadLabel ? (
+              <span className="tag tag--light">{unreadLabel}</span>
+            ) : null}
+          </div>
+          <p className="compact-text rental-card__chat-preview">
+            {getRentalChatPreview(rental)}
+          </p>
+          <p className="compact-text rental-card__chat-meta">
+            {getRentalChatMeta(rental)}
+          </p>
+        </div>
+
         <div className="product-card__bottom rental-card__bottom">
           <p className="compact-text rental-card__listing-note">
             {showOwner
@@ -793,6 +861,13 @@ export function RentalListItem({
             <a className="btn btn--ghost btn--small" href={detailsUrl}>
               View Product
             </a>
+            <button
+              type="button"
+              className="btn btn--ghost btn--small"
+              onClick={() => onAction?.("chat", rental.id)}
+            >
+              Open chat
+            </button>
             {actions.map(([action, label, variant]) => (
               <button
                 key={action}

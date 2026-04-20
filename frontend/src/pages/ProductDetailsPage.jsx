@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   AVATAR_PLACEHOLDER,
   buildQuery,
@@ -25,6 +25,30 @@ import { SiteLayout } from "../components/Layout";
 
 function getProductId() {
   return new URLSearchParams(window.location.search).get("id");
+}
+
+function getRequestedRentalId() {
+  return new URLSearchParams(window.location.search).get("rentalId");
+}
+
+function shouldAutoOpenRequestedChat() {
+  return new URLSearchParams(window.location.search).get("openChat") === "1";
+}
+
+function getRequestedNotificationId() {
+  return new URLSearchParams(window.location.search).get("notificationId");
+}
+
+function getRequestedConversationId() {
+  return new URLSearchParams(window.location.search).get("conversationId");
+}
+
+function publishNotificationsChanged() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.dispatchEvent(new CustomEvent("notifications:changed"));
 }
 
 function getOwnerProfileHref(ownerId) {
@@ -179,6 +203,331 @@ function getExistingProductRental(rentals) {
     );
   })[0];
 }
+
+function formatRentalStatusLabel(status) {
+  return String(status || "rental")
+    .split("_")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function formatChatTimestamp(value) {
+  if (!value) {
+    return "";
+  }
+
+  const parsedValue = new Date(value);
+  if (Number.isNaN(parsedValue.getTime())) {
+    return "";
+  }
+
+  return parsedValue.toLocaleString();
+}
+
+function getChatCounterpart(chatState, currentUserId) {
+  if (chatState.threadType === "product") {
+    const conversation = chatState.conversation;
+    if (!conversation) {
+      return null;
+    }
+
+    return conversation.ownerId === currentUserId
+      ? conversation.participant
+      : conversation.owner;
+  }
+
+  if (!chatState.rental) {
+    return null;
+  }
+
+  return chatState.rental.ownerId === currentUserId
+    ? chatState.rental.renter
+    : chatState.rental.owner;
+}
+
+function getChatThreadSummary(chatState, messageCount) {
+  const summary =
+    chatState.threadType === "product"
+      ? chatState.conversation?.chat
+      : chatState.rental?.chat;
+
+  if (!summary?.hasMessages) {
+    return chatState.threadType === "product"
+      ? "Ask about availability, pickup, condition, and rental terms here."
+      : "Conversation ready for scheduling, pickup details, and follow-up.";
+  }
+
+  const lastUpdatedLabel = formatChatTimestamp(summary.lastMessageAt);
+  const messageLabel = `${messageCount} message${messageCount === 1 ? "" : "s"}`;
+
+  return lastUpdatedLabel
+    ? `${messageLabel} | Last update ${lastUpdatedLabel}`
+    : messageLabel;
+}
+
+function getChatThreadBadgeLabel(chatState) {
+  return chatState.threadType === "product"
+    ? "Listing inquiry"
+    : formatRentalStatusLabel(chatState.rental?.status || "rental");
+}
+
+function getChatThreadEyebrow(chatState) {
+  return chatState.threadType === "product" ? "Product chat" : "Rental chat";
+}
+
+function getChatThreadTitle(chatState) {
+  return chatState.threadType === "product"
+    ? chatState.conversation?.product?.title || "Product chat"
+    : chatState.rental?.product?.title || "Rental chat";
+}
+
+function getChatComposerPlaceholder(chatState, counterpart) {
+  if (counterpart?.name) {
+    return `Write a message to ${counterpart.name}...`;
+  }
+
+  return chatState.threadType === "product"
+    ? "Write a message about this listing..."
+    : "Write a message to the other participant...";
+}
+
+function ChatButtonContent() {
+  return (
+    <>
+      <svg
+        className="btn__icon"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <path
+          d="M6 7.5A3.5 3.5 0 0 1 9.5 4h5A3.5 3.5 0 0 1 18 7.5v5A3.5 3.5 0 0 1 14.5 16H11l-4 4v-4.2A3.5 3.5 0 0 1 6 13V7.5Z"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M9.5 9.5h5M9.5 12.5h3.5"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+        />
+      </svg>
+      <span>Chat</span>
+    </>
+  );
+}
+
+function getBookingStatusHeadline(rental) {
+  switch (rental?.status) {
+    case "pending":
+      return "Your rental request is waiting for the owner response.";
+    case "approved":
+      return "Your rental request has already been approved.";
+    case "active":
+      return "You are currently renting this listing.";
+    case "overdue":
+      return "This rental is overdue and still open.";
+    case "completed":
+      return "This rental is completed.";
+    case "cancelled":
+      return "This rental was cancelled.";
+    case "rejected":
+      return "This rental request was rejected.";
+    default:
+      return "This booking is linked to the current listing.";
+  }
+}
+
+function ConversationDialog({
+  chatState,
+  currentUserId,
+  onClose,
+  onDraftChange,
+  onSend,
+}) {
+  const messagesEndRef = useRef(null);
+  const composerRef = useRef(null);
+
+  useEffect(() => {
+    if (!chatState.open) {
+      return undefined;
+    }
+
+    const previousBodyOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    function handleKeyDown(event) {
+      if (event.key === "Escape") {
+        onClose();
+        return;
+      }
+
+      if (
+        event.key === "Enter" &&
+        (event.metaKey || event.ctrlKey) &&
+        !chatState.sending
+      ) {
+        event.preventDefault();
+        onSend();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [chatState.open, chatState.sending, onClose, onSend]);
+
+  useEffect(() => {
+    if (!chatState.open) {
+      return;
+    }
+
+    messagesEndRef.current?.scrollIntoView({
+      block: "end",
+    });
+  }, [chatState.messages, chatState.open]);
+
+  useEffect(() => {
+    if (!chatState.open || chatState.loading) {
+      return;
+    }
+
+    composerRef.current?.focus();
+  }, [
+    chatState.conversationId,
+    chatState.loading,
+    chatState.open,
+    chatState.rentalId,
+  ]);
+
+  if (!chatState.open) {
+    return null;
+  }
+
+  const counterpart = getChatCounterpart(chatState, currentUserId);
+  const productTitle = getChatThreadTitle(chatState);
+  const messageCount = chatState.messages.length;
+
+  function handleOverlayPointerDown(event) {
+    if (event.target === event.currentTarget) {
+      onClose();
+    }
+  }
+
+  return (
+    <div
+      className="rental-chat-dialog"
+      role="presentation"
+      onMouseDown={handleOverlayPointerDown}
+    >
+      <div
+        className="rental-chat-dialog__panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="productDetailConversationTitle"
+      >
+        <div className="rental-chat-dialog__header">
+          <div className="rental-chat-dialog__header-copy">
+            <p className="rental-chat-dialog__eyebrow">
+              {getChatThreadEyebrow(chatState)}
+            </p>
+            <h3 id="productDetailConversationTitle">{productTitle}</h3>
+            <p className="compact-text">
+              {counterpart?.name
+                ? `Chat with ${counterpart.name}`
+                : "Chat with the other participant"}
+            </p>
+            <div className="rental-chat-dialog__thread-meta">
+              <span className="tag tag--light">
+                {getChatThreadBadgeLabel(chatState)}
+              </span>
+              <span className="compact-text">
+                {getChatThreadSummary(chatState, messageCount)}
+              </span>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="btn btn--ghost btn--small"
+            onClick={onClose}
+          >
+            Close
+          </button>
+        </div>
+
+        {chatState.error ? (
+          <MessageText message={{ text: chatState.error, type: "error" }} />
+        ) : null}
+
+        <div className="rental-chat-dialog__messages">
+          {chatState.loading && !chatState.messages.length ? (
+            <EmptyState message="Loading chat..." />
+          ) : chatState.messages.length ? (
+            chatState.messages.map((message) => {
+              const isOwnMessage = message.senderId === currentUserId;
+
+              return (
+                <article
+                  key={message.id}
+                  className={`rental-chat-message${isOwnMessage ? " is-own" : ""}`}
+                >
+                  <div className="rental-chat-message__meta">
+                    <strong>
+                      {isOwnMessage
+                        ? "You"
+                        : message.sender?.name || "Participant"}
+                    </strong>
+                    <span>{formatChatTimestamp(message.createdAt)}</span>
+                  </div>
+                  <p className="rental-chat-message__body">{message.message}</p>
+                </article>
+              );
+            })
+          ) : (
+            <EmptyState message="No messages yet. Start the conversation here." />
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+
+        <div className="rental-chat-dialog__composer">
+          <label htmlFor="productDetailConversationMessage">Message</label>
+          <textarea
+            id="productDetailConversationMessage"
+            ref={composerRef}
+            className="textarea rental-chat-dialog__textarea"
+            rows="4"
+            maxLength="4000"
+            placeholder={getChatComposerPlaceholder(chatState, counterpart)}
+            value={chatState.draft}
+            onChange={(event) => onDraftChange(event.target.value)}
+          />
+          <div className="rental-chat-dialog__composer-actions">
+            <p className="compact-text">
+              {chatState.draft.length}/4000 characters | Press{" "}
+              <strong>Ctrl + Enter</strong> to send quickly.
+            </p>
+            <button
+              type="button"
+              className="btn btn--primary btn--small"
+              onClick={onSend}
+              disabled={chatState.sending || !chatState.draft.trim()}
+            >
+              {chatState.sending ? "Sending..." : "Send message"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 const CURSOR_CONFIG = {
   "product-details": {
     enabled: false,
@@ -207,6 +556,7 @@ export function ProductDetailsPage({ page }) {
   const [replyDrafts, setReplyDrafts] = useState({});
   const [currentProductRental, setCurrentProductRental] = useState(null);
   const [pendingBookingRequest, setPendingBookingRequest] = useState(null);
+  const [selectedBookingRental, setSelectedBookingRental] = useState(null);
   const [pricingPreview, setPricingPreview] = useState(null);
   const [ownerReply, setOwnerReply] = useState("");
   const [bookingForm, setBookingForm] = useState({
@@ -222,8 +572,28 @@ export function ProductDetailsPage({ page }) {
   const [updatingOwnerStatus, setUpdatingOwnerStatus] = useState("");
   const [deletingOwnerListing, setDeletingOwnerListing] = useState(false);
   const [reviewActionKey, setReviewActionKey] = useState("");
+  const [chatState, setChatState] = useState({
+    open: false,
+    threadType: "",
+    rentalId: "",
+    rental: null,
+    conversationId: "",
+    conversation: null,
+    messages: [],
+    draft: "",
+    loading: false,
+    sending: false,
+    error: "",
+  });
 
   const productId = getProductId();
+  const requestedRentalId = getRequestedRentalId();
+  const requestedConversationId = getRequestedConversationId();
+  const shouldAutoOpenChat = shouldAutoOpenRequestedChat();
+  const requestedNotificationId = getRequestedNotificationId();
+  const chatRequestRef = useRef(0);
+  const autoOpenChatRef = useRef(false);
+  const autoReadNotificationRef = useRef(false);
   const isAdmin = user?.role === "admin";
   const supportedRentalPeriods = getSupportedRentalPeriods(product);
   const hasSupportedRentalPeriod = supportedRentalPeriods.some(
@@ -369,12 +739,14 @@ export function ProductDetailsPage({ page }) {
       if (loading || !user || !productId || isAdmin) {
         setCurrentProductRental(null);
         setPendingBookingRequest(null);
+        setSelectedBookingRental(null);
         return;
       }
 
       if (product?.owner?.id === user.id) {
         setCurrentProductRental(null);
         setPendingBookingRequest(null);
+        setSelectedBookingRental(null);
         return;
       }
 
@@ -391,6 +763,7 @@ export function ProductDetailsPage({ page }) {
       if (!result.ok || !result.data?.success) {
         setCurrentProductRental(null);
         setPendingBookingRequest(null);
+        setSelectedBookingRental(null);
         return;
       }
 
@@ -400,9 +773,18 @@ export function ProductDetailsPage({ page }) {
           rental.status === "pending" &&
           new Date(rental.endDate || rental.createdAt || 0) > new Date(),
       );
+      const nextSelectedRental = requestedRentalId
+        ? nextRentals.find((rental) => rental.id === requestedRentalId) || null
+        : null;
 
       setCurrentProductRental(getExistingProductRental(nextRentals));
       setPendingBookingRequest(nextPendingRental || null);
+      setSelectedBookingRental(
+        nextSelectedRental ||
+          getExistingProductRental(nextRentals) ||
+          nextPendingRental ||
+          null,
+      );
     }
 
     loadProductBookings();
@@ -410,7 +792,7 @@ export function ProductDetailsPage({ page }) {
     return () => {
       active = false;
     };
-  }, [isAdmin, loading, product?.owner?.id, productId, user]);
+  }, [isAdmin, loading, product?.owner?.id, productId, requestedRentalId, user]);
 
   useEffect(() => {
     if (
@@ -457,6 +839,403 @@ export function ProductDetailsPage({ page }) {
       ),
     );
   }, [product?.reviews]);
+
+  useEffect(() => {
+    if (
+      !requestedNotificationId ||
+      !user ||
+      loading ||
+      autoReadNotificationRef.current
+    ) {
+      return;
+    }
+
+    autoReadNotificationRef.current = true;
+    fetchApi(`/api/v1/notifications/${requestedNotificationId}/read`, {
+      method: "PUT",
+      auth: true,
+    })
+      .then(() => {
+        publishNotificationsChanged();
+      })
+      .catch((error) => {
+        console.error(
+          "markNotificationAsRead from product details error:",
+          error,
+        );
+      });
+  }, [loading, requestedNotificationId, user]);
+
+  function syncBookingRentalState(nextRental) {
+    if (!nextRental?.id) {
+      return;
+    }
+
+    setSelectedBookingRental((previous) =>
+      !previous || previous.id === nextRental.id ? nextRental : previous,
+    );
+    setCurrentProductRental((previous) =>
+      previous?.id === nextRental.id ? nextRental : previous,
+    );
+    setPendingBookingRequest((previous) =>
+      previous?.id === nextRental.id ? nextRental : previous,
+    );
+  }
+
+  async function loadRentalChat(rentalId, options = {}) {
+    if (!rentalId) {
+      return;
+    }
+
+    const { silent = false } = options;
+    const nextRequestId = chatRequestRef.current + 1;
+    chatRequestRef.current = nextRequestId;
+    const fallbackRental =
+      (selectedBookingRental?.id === rentalId
+        ? selectedBookingRental
+        : currentProductRental?.id === rentalId
+          ? currentProductRental
+          : pendingBookingRequest?.id === rentalId
+            ? pendingBookingRequest
+            : null) || chatState.rental;
+
+    setChatState((previous) => ({
+      ...previous,
+      open: true,
+      threadType: "rental",
+      rentalId,
+      rental:
+        previous.threadType === "rental" &&
+        previous.rentalId === rentalId &&
+        previous.rental
+          ? previous.rental
+          : fallbackRental,
+      conversationId: "",
+      conversation: null,
+      loading: silent ? previous.loading : true,
+      error: "",
+    }));
+
+    const result = await fetchApi(`/api/v1/rentals/${rentalId}/messages`, {
+      auth: true,
+    });
+
+    if (chatRequestRef.current !== nextRequestId) {
+      return;
+    }
+
+    if (!result.ok || !result.data?.success) {
+      setChatState((previous) =>
+        previous.threadType === "rental" && previous.rentalId === rentalId
+          ? {
+              ...previous,
+              loading: false,
+              error:
+                result.data?.message || "Unable to load the rental chat right now.",
+            }
+          : previous,
+      );
+      return;
+    }
+
+    const nextRental = result.data?.data?.rental || fallbackRental;
+    if (nextRental) {
+      syncBookingRentalState(nextRental);
+    }
+
+    setChatState((previous) =>
+      previous.threadType === "rental" && previous.rentalId === rentalId
+        ? {
+            ...previous,
+            open: true,
+            threadType: "rental",
+            rentalId,
+            rental: nextRental || previous.rental,
+            messages: result.data?.data?.messages || [],
+            loading: false,
+            error: "",
+          }
+        : previous,
+    );
+    publishNotificationsChanged();
+  }
+
+  async function loadProductChat(options = {}) {
+    if (!productId || !user) {
+      return;
+    }
+
+    const { conversationId = "", silent = false } = options;
+    const nextRequestId = chatRequestRef.current + 1;
+    chatRequestRef.current = nextRequestId;
+    const nextConversationId = conversationId || chatState.conversationId || "";
+    const query = buildQuery({
+      conversationId: nextConversationId || undefined,
+    });
+    const fallbackConversation =
+      chatState.threadType === "product" &&
+      (!nextConversationId || chatState.conversationId === nextConversationId)
+        ? chatState.conversation
+        : null;
+
+    setChatState((previous) => ({
+      ...previous,
+      open: true,
+      threadType: "product",
+      rentalId: "",
+      rental: null,
+      conversationId: nextConversationId,
+      conversation:
+        previous.threadType === "product" &&
+        previous.conversation &&
+        previous.conversationId === nextConversationId
+          ? previous.conversation
+          : fallbackConversation,
+      loading: silent ? previous.loading : true,
+      error: "",
+    }));
+
+    const result = await fetchApi(
+      query
+        ? `/api/v1/products/${productId}/chat?${query}`
+        : `/api/v1/products/${productId}/chat`,
+      {
+        auth: true,
+      },
+    );
+
+    if (chatRequestRef.current !== nextRequestId) {
+      return;
+    }
+
+    if (!result.ok || !result.data?.success) {
+      setChatState((previous) =>
+        previous.threadType === "product" &&
+        previous.conversationId === nextConversationId
+          ? {
+              ...previous,
+              loading: false,
+              error:
+                result.data?.message ||
+                "Unable to load the product chat right now.",
+            }
+          : previous,
+      );
+      return;
+    }
+
+    const nextConversation =
+      result.data?.data?.conversation || fallbackConversation;
+
+    setChatState((previous) =>
+      previous.threadType === "product"
+        ? {
+            ...previous,
+            open: true,
+            threadType: "product",
+            conversationId: nextConversation?.id || nextConversationId,
+            conversation: nextConversation || previous.conversation,
+            messages: result.data?.data?.messages || [],
+            loading: false,
+            error: "",
+          }
+        : previous,
+    );
+    publishNotificationsChanged();
+  }
+
+  function closeChat() {
+    chatRequestRef.current += 1;
+    setChatState({
+      open: false,
+      threadType: "",
+      rentalId: "",
+      rental: null,
+      conversationId: "",
+      conversation: null,
+      messages: [],
+      draft: "",
+      loading: false,
+      sending: false,
+      error: "",
+    });
+  }
+
+  async function sendChatMessage() {
+    if (!chatState.draft.trim() || !chatState.threadType || chatState.sending) {
+      return;
+    }
+
+    const nextMessage = chatState.draft.trim();
+
+    setChatState((previous) => ({
+      ...previous,
+      sending: true,
+      error: "",
+    }));
+
+    if (chatState.threadType === "product") {
+      const result = await fetchApi(`/api/v1/products/${productId}/chat/messages`, {
+        method: "POST",
+        auth: true,
+        body: {
+          message: nextMessage,
+          ...(chatState.conversationId
+            ? {
+                conversationId: chatState.conversationId,
+              }
+            : {}),
+        },
+      });
+
+      if (!result.ok || !result.data?.success) {
+        setChatState((previous) =>
+          previous.threadType === "product"
+            ? {
+                ...previous,
+                sending: false,
+                error:
+                  result.data?.message ||
+                  "Unable to send your message right now.",
+              }
+            : previous,
+        );
+        return;
+      }
+
+      const nextConversation =
+        result.data?.data?.conversation || chatState.conversation;
+
+      setChatState((previous) =>
+        previous.threadType === "product"
+          ? {
+              ...previous,
+              conversationId:
+                nextConversation?.id || previous.conversationId,
+              conversation: nextConversation || previous.conversation,
+              messages: result.data?.data?.message
+                ? [...previous.messages, result.data.data.message]
+                : previous.messages,
+              draft: "",
+              sending: false,
+              error: "",
+            }
+          : previous,
+      );
+      publishNotificationsChanged();
+      return;
+    }
+
+    if (!chatState.rentalId) {
+      return;
+    }
+
+    const rentalId = chatState.rentalId;
+    const result = await fetchApi(`/api/v1/rentals/${rentalId}/messages`, {
+      method: "POST",
+      auth: true,
+      body: {
+        message: nextMessage,
+      },
+    });
+
+    if (!result.ok || !result.data?.success) {
+      setChatState((previous) =>
+        previous.threadType === "rental" && previous.rentalId === rentalId
+          ? {
+              ...previous,
+              sending: false,
+              error:
+                result.data?.message || "Unable to send your message right now.",
+            }
+          : previous,
+      );
+      return;
+    }
+
+    const nextRental = result.data?.data?.rental || chatState.rental;
+    if (nextRental) {
+      syncBookingRentalState(nextRental);
+    }
+
+    setChatState((previous) =>
+      previous.threadType === "rental" && previous.rentalId === rentalId
+        ? {
+            ...previous,
+            rental: nextRental || previous.rental,
+            messages: result.data?.data?.message
+              ? [...previous.messages, result.data.data.message]
+              : previous.messages,
+            draft: "",
+            sending: false,
+            error: "",
+          }
+        : previous,
+    );
+    publishNotificationsChanged();
+  }
+
+  useEffect(() => {
+    if (!chatState.open || !chatState.threadType) {
+      return undefined;
+    }
+
+    if (chatState.threadType === "rental" && !chatState.rentalId) {
+      return undefined;
+    }
+
+    if (chatState.threadType === "product" && !chatState.conversationId) {
+      return undefined;
+    }
+
+    const intervalId = window.setInterval(() => {
+      if (chatState.threadType === "product") {
+        loadProductChat({
+          conversationId: chatState.conversationId,
+          silent: true,
+        });
+        return;
+      }
+
+      loadRentalChat(chatState.rentalId, {
+        silent: true,
+      });
+    }, 10000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [
+    chatState.conversationId,
+    chatState.open,
+    chatState.rentalId,
+    chatState.threadType,
+  ]);
+
+  useEffect(() => {
+    if (!shouldAutoOpenChat || !user || loading || autoOpenChatRef.current) {
+      return;
+    }
+
+    if (requestedRentalId) {
+      autoOpenChatRef.current = true;
+      loadRentalChat(requestedRentalId);
+      return;
+    }
+
+    if (requestedConversationId) {
+      autoOpenChatRef.current = true;
+      loadProductChat({
+        conversationId: requestedConversationId,
+      });
+    }
+  }, [
+    loading,
+    requestedConversationId,
+    requestedRentalId,
+    shouldAutoOpenChat,
+    user,
+  ]);
 
   function updateReviewDraft(rentalId, field, value) {
     setReviewDrafts((previous) => ({
@@ -1115,8 +1894,22 @@ export function ProductDetailsPage({ page }) {
     (rental) => !rental.review,
   ).length;
   const productReviews = sortReviewsByNewest(product?.reviews || []);
-  const hasExistingProductRental = Boolean(currentProductRental?.id);
   const hasPendingBookingRequest = Boolean(pendingBookingRequest?.id);
+  const detailChatRental =
+    selectedBookingRental || currentProductRental || pendingBookingRequest;
+  const hasBookingContext = Boolean(detailChatRental?.id);
+  const shouldPreferRequestedProductConversation = Boolean(
+    requestedConversationId,
+  );
+  const canOpenDetailRentalChat = Boolean(
+    user && !isAdmin && detailChatRental?.id,
+  );
+  const canOpenDetailProductChat = Boolean(
+    product && !isAdmin && (!isOwner || requestedConversationId),
+  );
+  const canOpenDetailChat = shouldPreferRequestedProductConversation
+    ? canOpenDetailProductChat
+    : canOpenDetailRentalChat || canOpenDetailProductChat;
   const canAdminToggleListingVisibility = Boolean(
     isAdmin && product?.isApproved,
   );
@@ -1157,6 +1950,36 @@ export function ProductDetailsPage({ page }) {
         ],
       ]
     : [];
+
+  function handleOpenDetailChat() {
+    if (!canOpenDetailChat) {
+      return;
+    }
+
+    if (!user) {
+      redirectToLogin();
+      return;
+    }
+
+    if (shouldPreferRequestedProductConversation && canOpenDetailProductChat) {
+      loadProductChat({
+        conversationId: requestedConversationId,
+      });
+      return;
+    }
+
+    if (canOpenDetailRentalChat && detailChatRental?.id) {
+      loadRentalChat(detailChatRental.id);
+      return;
+    }
+
+    if (canOpenDetailProductChat) {
+      loadProductChat({
+        conversationId: requestedConversationId || "",
+      });
+    }
+  }
+
   const viewerImage = mainImage || (product ? getPrimaryImage(product) : "");
 
   return (
@@ -1224,6 +2047,15 @@ export function ProductDetailsPage({ page }) {
             <DetailFactGrid facts={facts} />
 
             <div className="detail-actions">
+              {canOpenDetailChat ? (
+                <button
+                  type="button"
+                  className="btn btn--primary btn--with-icon"
+                  onClick={handleOpenDetailChat}
+                >
+                  <ChatButtonContent />
+                </button>
+              ) : null}
               {!isAdmin && !isOwner ? (
                 <button
                   type="button"
@@ -1503,42 +2335,34 @@ export function ProductDetailsPage({ page }) {
                 )}
               </div>
             </aside>
-          ) : hasExistingProductRental ? (
+          ) : hasBookingContext ? (
             <aside className="surface-panel booking-panel">
               <SectionHeading title="Booking status" compact />
 
               <div className="stack-form">
                 <div className="booking-preview owner-review-panel__status">
-                  <strong>
-                    {currentProductRental.status === "pending"
-                      ? "Your rental request is waiting for the owner response."
-                      : currentProductRental.status === "approved"
-                        ? "Your rental request has already been approved."
-                        : currentProductRental.status === "active"
-                          ? "You are currently renting this listing."
-                          : currentProductRental.status === "overdue"
-                            ? "This rental is overdue and still open."
-                            : "You already rented this listing."}
-                  </strong>
-                  <span>Status: {currentProductRental.status}</span>
+                  <strong>{getBookingStatusHeadline(detailChatRental)}</strong>
+                  <span>
+                    Status: {formatRentalStatusLabel(detailChatRental.status)}
+                  </span>
                   <span>
                     Requested on:{" "}
-                    {formatDateTime(currentProductRental.createdAt)}
+                    {formatDateTime(detailChatRental.createdAt)}
                   </span>
-                  {currentProductRental.startDate ? (
+                  {detailChatRental.startDate ? (
                     <span>
-                      Start: {formatDateTime(currentProductRental.startDate)}
+                      Start: {formatDateTime(detailChatRental.startDate)}
                     </span>
                   ) : null}
-                  {currentProductRental.endDate ? (
+                  {detailChatRental.endDate ? (
                     <span>
-                      End: {formatDateTime(currentProductRental.endDate)}
+                      End: {formatDateTime(detailChatRental.endDate)}
                     </span>
                   ) : null}
-                  {currentProductRental.actualReturnDate ? (
+                  {detailChatRental.actualReturnDate ? (
                     <span>
                       Finished at:{" "}
-                      {formatDateTime(currentProductRental.actualReturnDate)}
+                      {formatDateTime(detailChatRental.actualReturnDate)}
                     </span>
                   ) : null}
                 </div>
@@ -1546,11 +2370,15 @@ export function ProductDetailsPage({ page }) {
                 <MessageText
                   message={{
                     text:
-                      currentProductRental.status === "completed"
-                        ? currentProductRental.review?.id
+                      detailChatRental.status === "completed"
+                        ? detailChatRental.review?.id
                           ? "Your review for this rental is already saved below."
                           : "You can leave your review for this rental in the ratings section below."
-                        : "Request controls are hidden here because you already have a booking for this listing.",
+                        : ["cancelled", "rejected"].includes(
+                              detailChatRental.status,
+                            )
+                          ? "Use the Chat button above if you still need to follow up with the owner."
+                          : "Request controls are hidden here because you already have a booking for this listing. Use the Chat button above to keep the conversation going.",
                     type: "info",
                   }}
                 />
@@ -2010,6 +2838,18 @@ export function ProductDetailsPage({ page }) {
         dialog={dialog}
         setDialog={setDialog}
         onClose={closeDialog}
+      />
+      <ConversationDialog
+        chatState={chatState}
+        currentUserId={user?.id}
+        onClose={closeChat}
+        onDraftChange={(draft) =>
+          setChatState((previous) => ({
+            ...previous,
+            draft,
+          }))
+        }
+        onSend={sendChatMessage}
       />
 
       {isImageViewerOpen ? (

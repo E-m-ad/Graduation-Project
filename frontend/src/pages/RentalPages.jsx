@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   buildQuery,
   fetchApi,
@@ -116,6 +116,7 @@ const STATUS_OPTIONS = [
   { value: "rejected", label: "Rejected" },
   { value: "overdue", label: "Overdue" },
 ];
+const CHAT_POLL_INTERVAL_MS = 10000;
 
 function getHiddenRentalStorageKey(mode, userId) {
   if (mode === "rentals") {
@@ -277,6 +278,219 @@ function getRentalActionSuccessMessage(action, rental, fallbackMessage) {
   return fallbackMessage;
 }
 
+function formatChatTimestamp(value) {
+  if (!value) {
+    return "";
+  }
+
+  const parsedValue = new Date(value);
+  if (Number.isNaN(parsedValue.getTime())) {
+    return "";
+  }
+
+  return parsedValue.toLocaleString();
+}
+
+function getChatThreadSummary(rental, messageCount) {
+  if (!rental?.chat?.hasMessages) {
+    return "Conversation ready for pickup details, timing, and questions.";
+  }
+
+  const lastUpdatedLabel = formatChatTimestamp(rental.chat.lastMessageAt);
+  const messageLabel = `${messageCount} message${messageCount === 1 ? "" : "s"}`;
+
+  return lastUpdatedLabel
+    ? `${messageLabel} • Last update ${lastUpdatedLabel}`
+    : messageLabel;
+}
+
+function getChatCounterpart(rental, currentUserId) {
+  if (!rental) {
+    return null;
+  }
+
+  return rental.ownerId === currentUserId ? rental.renter : rental.owner;
+}
+
+function RentalChatDialog({
+  chatState,
+  currentUserId,
+  onClose,
+  onDraftChange,
+  onSend,
+}) {
+  const messagesEndRef = useRef(null);
+  const composerRef = useRef(null);
+
+  useEffect(() => {
+    if (!chatState.open) {
+      return undefined;
+    }
+
+    const previousBodyOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    function handleKeyDown(event) {
+      if (event.key === "Escape") {
+        onClose();
+        return;
+      }
+
+      if (
+        event.key === "Enter" &&
+        (event.metaKey || event.ctrlKey) &&
+        !chatState.sending
+      ) {
+        event.preventDefault();
+        onSend();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [chatState.open, chatState.sending, onClose, onSend]);
+
+  useEffect(() => {
+    if (!chatState.open) {
+      return;
+    }
+
+    messagesEndRef.current?.scrollIntoView({
+      block: "end",
+    });
+  }, [chatState.messages, chatState.open]);
+
+  useEffect(() => {
+    if (!chatState.open || chatState.loading) {
+      return;
+    }
+
+    composerRef.current?.focus();
+  }, [chatState.loading, chatState.open, chatState.rentalId]);
+
+  if (!chatState.open) {
+    return null;
+  }
+
+  const counterpart = getChatCounterpart(chatState.rental, currentUserId);
+  const productTitle = chatState.rental?.product?.title || "Rental chat";
+  const messageCount = chatState.messages.length;
+
+  function handleOverlayPointerDown(event) {
+    if (event.target === event.currentTarget) {
+      onClose();
+    }
+  }
+
+  return (
+    <div
+      className="rental-chat-dialog"
+      role="presentation"
+      onMouseDown={handleOverlayPointerDown}
+    >
+      <div
+        className="rental-chat-dialog__panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="rentalChatTitle"
+      >
+        <div className="rental-chat-dialog__header">
+          <div className="rental-chat-dialog__header-copy">
+            <p className="rental-chat-dialog__eyebrow">Rental chat</p>
+            <h3 id="rentalChatTitle">{productTitle}</h3>
+            <p className="compact-text">
+              {counterpart?.name
+                ? `Chat with ${counterpart.name}`
+                : "Chat with the other participant"}
+            </p>
+            <div className="rental-chat-dialog__thread-meta">
+              <span className="tag tag--light">
+                {formatStatusLabel(chatState.rental?.status || "rental")}
+              </span>
+              <span className="compact-text">
+                {getChatThreadSummary(chatState.rental, messageCount)}
+              </span>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="btn btn--ghost btn--small"
+            onClick={onClose}
+          >
+            Close
+          </button>
+        </div>
+
+        {chatState.error ? (
+          <MessageText message={{ text: chatState.error, type: "error" }} />
+        ) : null}
+
+        <div className="rental-chat-dialog__messages">
+          {chatState.loading && !chatState.messages.length ? (
+            <EmptyState message="Loading chat..." />
+          ) : chatState.messages.length ? (
+            chatState.messages.map((message) => {
+              const isOwnMessage = message.senderId === currentUserId;
+
+              return (
+                <article
+                  key={message.id}
+                  className={`rental-chat-message${isOwnMessage ? " is-own" : ""}`}
+                >
+                  <div className="rental-chat-message__meta">
+                    <strong>
+                      {isOwnMessage
+                        ? "You"
+                        : message.sender?.name || "Participant"}
+                    </strong>
+                    <span>{formatChatTimestamp(message.createdAt)}</span>
+                  </div>
+                  <p className="rental-chat-message__body">{message.message}</p>
+                </article>
+              );
+            })
+          ) : (
+            <EmptyState message="No messages yet. Start the conversation here." />
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+
+        <div className="rental-chat-dialog__composer">
+          <label htmlFor="rentalChatMessage">Message</label>
+          <textarea
+            id="rentalChatMessage"
+            ref={composerRef}
+            className="textarea rental-chat-dialog__textarea"
+            rows="4"
+            maxLength="4000"
+            placeholder="Write a message to the other participant..."
+            value={chatState.draft}
+            onChange={(event) => onDraftChange(event.target.value)}
+          />
+          <div className="rental-chat-dialog__composer-actions">
+            <p className="compact-text">
+              {chatState.draft.length}/4000 characters • Press{" "}
+              <strong>Ctrl + Enter</strong> to send quickly.
+            </p>
+            <button
+              type="button"
+              className="btn btn--primary btn--small"
+              onClick={onSend}
+              disabled={chatState.sending || !chatState.draft.trim()}
+            >
+              {chatState.sending ? "Sending..." : "Send message"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function RentalWorkspacePage({ mode, page }) {
   const config = PAGE_CONFIG[mode];
   const initialFilters = readFiltersFromUrl();
@@ -289,6 +503,17 @@ function RentalWorkspacePage({ mode, page }) {
   const [pagination, setPagination] = useState(null);
   const [loadingRentals, setLoadingRentals] = useState(true);
   const [hiddenRentalIds, setHiddenRentalIds] = useState([]);
+  const [chatState, setChatState] = useState({
+    open: false,
+    rentalId: "",
+    rental: null,
+    messages: [],
+    draft: "",
+    loading: false,
+    sending: false,
+    error: "",
+  });
+  const chatRequestRef = useRef(0);
 
   useEffect(() => {
     document.title = config.pageTitle;
@@ -421,7 +646,166 @@ function RentalWorkspacePage({ mode, page }) {
     setPagination(visiblePagination);
   }
 
+  async function loadChat(rentalId, options = {}) {
+    if (!rentalId) {
+      return;
+    }
+
+    const { silent = false } = options;
+    const nextRequestId = chatRequestRef.current + 1;
+    chatRequestRef.current = nextRequestId;
+    const fallbackRental =
+      rentals.find((rental) => rental.id === rentalId) || chatState.rental;
+
+    setChatState((previous) => ({
+      ...previous,
+      open: true,
+      rentalId,
+      rental:
+        previous.rentalId === rentalId && previous.rental
+          ? previous.rental
+          : fallbackRental,
+      loading: silent ? previous.loading : true,
+      error: "",
+    }));
+
+    const result = await fetchApi(`/api/v1/rentals/${rentalId}/messages`, {
+      auth: true,
+    });
+
+    if (chatRequestRef.current !== nextRequestId) {
+      return;
+    }
+
+    if (!result.ok || !result.data?.success) {
+      setChatState((previous) =>
+        previous.rentalId === rentalId
+          ? {
+              ...previous,
+              loading: false,
+              error:
+                result.data?.message || "Unable to load the rental chat right now.",
+            }
+          : previous,
+      );
+      return;
+    }
+
+    const nextRental = result.data?.data?.rental || fallbackRental;
+
+    setChatState((previous) =>
+      previous.rentalId === rentalId
+        ? {
+            ...previous,
+            open: true,
+            rentalId,
+            rental: nextRental || previous.rental,
+            messages: result.data?.data?.messages || [],
+            loading: false,
+            error: "",
+          }
+        : previous,
+    );
+    if (nextRental) {
+      setRentals((previous) => replaceRentalInList(previous, nextRental));
+    }
+    publishNotificationsChanged();
+  }
+
+  function closeChat() {
+    chatRequestRef.current += 1;
+    setChatState({
+      open: false,
+      rentalId: "",
+      rental: null,
+      messages: [],
+      draft: "",
+      loading: false,
+      sending: false,
+      error: "",
+    });
+  }
+
+  async function sendChatMessage() {
+    if (!chatState.rentalId || !chatState.draft.trim() || chatState.sending) {
+      return;
+    }
+
+    const rentalId = chatState.rentalId;
+    const nextMessage = chatState.draft.trim();
+
+    setChatState((previous) => ({
+      ...previous,
+      sending: true,
+      error: "",
+    }));
+
+    const result = await fetchApi(`/api/v1/rentals/${rentalId}/messages`, {
+      method: "POST",
+      auth: true,
+      body: {
+        message: nextMessage,
+      },
+    });
+
+    if (!result.ok || !result.data?.success) {
+      setChatState((previous) =>
+        previous.rentalId === rentalId
+          ? {
+              ...previous,
+              sending: false,
+              error:
+                result.data?.message || "Unable to send your message right now.",
+            }
+          : previous,
+      );
+      return;
+    }
+
+    const nextRental = result.data?.data?.rental || chatState.rental;
+
+    setChatState((previous) =>
+      previous.rentalId === rentalId
+        ? {
+            ...previous,
+            rental: nextRental || previous.rental,
+            messages: result.data?.data?.message
+              ? [...previous.messages, result.data.data.message]
+              : previous.messages,
+            draft: "",
+            sending: false,
+            error: "",
+          }
+        : previous,
+    );
+    if (nextRental) {
+      setRentals((previous) => replaceRentalInList(previous, nextRental));
+    }
+    publishNotificationsChanged();
+  }
+
+  useEffect(() => {
+    if (!chatState.open || !chatState.rentalId) {
+      return undefined;
+    }
+
+    const intervalId = window.setInterval(() => {
+      loadChat(chatState.rentalId, {
+        silent: true,
+      });
+    }, CHAT_POLL_INTERVAL_MS);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [chatState.open, chatState.rentalId]);
+
   async function handleRentalAction(action, rentalId) {
+    if (action === "chat") {
+      await loadChat(rentalId);
+      return;
+    }
+
     const targetRental = rentals.find((rental) => rental.id === rentalId);
     const isBookingsDelete = mode === "bookings" && action === "delete";
     const isOwnerRentalsDelete = mode === "rentals" && action === "delete";
@@ -669,6 +1053,18 @@ function RentalWorkspacePage({ mode, page }) {
         dialog={dialog}
         setDialog={setDialog}
         onClose={closeDialog}
+      />
+      <RentalChatDialog
+        chatState={chatState}
+        currentUserId={user?.id}
+        onClose={closeChat}
+        onDraftChange={(draft) =>
+          setChatState((previous) => ({
+            ...previous,
+            draft,
+          }))
+        }
+        onSend={sendChatMessage}
       />
     </SiteLayout>
   );

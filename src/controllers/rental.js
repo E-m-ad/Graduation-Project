@@ -8,6 +8,7 @@ import z from "../utils/rental.zod.js";
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 12;
 const MAX_LIMIT = 50;
+const RENTAL_CHAT_PREVIEW_MAX_LENGTH = 160;
 const ACTIVE_BOOKING_PRODUCT_STATUSES = ["available", "rented"];
 const BLOCKING_RENTAL_STATUSES = ["approved", "active", "overdue"];
 const UNAVAILABLE_PRODUCT_STATUSES = [
@@ -75,6 +76,17 @@ const RENTAL_PRODUCT_SELECT = {
   },
 };
 
+const RENTAL_CHAT_STATE_SELECT = {
+  rentalId: true,
+  lastMessageSenderId: true,
+  lastMessagePreview: true,
+  lastMessageAt: true,
+  ownerUnreadCount: true,
+  renterUnreadCount: true,
+  ownerLastReadAt: true,
+  renterLastReadAt: true,
+};
+
 const RENTAL_LIST_SELECT = {
   id: true,
   productId: true,
@@ -96,6 +108,9 @@ const RENTAL_LIST_SELECT = {
   renterNotes: true,
   createdAt: true,
   updatedAt: true,
+  chatState: {
+    select: RENTAL_CHAT_STATE_SELECT,
+  },
   review: {
     select: REVIEW_SUMMARY_SELECT,
   },
@@ -114,6 +129,54 @@ const RENTAL_DETAIL_SELECT = {
   ...RENTAL_LIST_SELECT,
 };
 
+const RENTAL_CHAT_MESSAGE_SELECT = {
+  id: true,
+  rentalId: true,
+  senderId: true,
+  message: true,
+  createdAt: true,
+  updatedAt: true,
+  sender: {
+    select: USER_SUMMARY_SELECT,
+  },
+};
+
+const RENTAL_CHAT_SELECT = {
+  id: true,
+  productId: true,
+  ownerId: true,
+  renterId: true,
+  status: true,
+  startDate: true,
+  endDate: true,
+  createdAt: true,
+  product: {
+    select: {
+      id: true,
+      title: true,
+      images: {
+        take: 1,
+        orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }],
+        select: {
+          id: true,
+          imageUrl: true,
+          thumbnailUrl: true,
+          isPrimary: true,
+        },
+      },
+    },
+  },
+  owner: {
+    select: USER_SUMMARY_SELECT,
+  },
+  renter: {
+    select: USER_SUMMARY_SELECT,
+  },
+  chatState: {
+    select: RENTAL_CHAT_STATE_SELECT,
+  },
+};
+
 function isAdmin(user) {
   return user?.role === "admin";
 }
@@ -126,6 +189,10 @@ function canAccessRental(user, rental) {
   return (
     isAdmin(user) || rental.ownerId === user.id || rental.renterId === user.id
   );
+}
+
+function canParticipateInRentalChat(user, rental) {
+  return rental.ownerId === user.id || rental.renterId === user.id;
 }
 
 function canCancelRental(user, rental) {
@@ -331,6 +398,394 @@ async function createNotification(tx, input) {
   });
 }
 
+function truncateMessagePreview(
+  message,
+  maxLength = RENTAL_CHAT_PREVIEW_MAX_LENGTH,
+) {
+  const normalizedMessage =
+    typeof message === "string" ? message.trim() : "";
+
+  if (normalizedMessage.length <= maxLength) {
+    return normalizedMessage;
+  }
+
+  return `${normalizedMessage.slice(0, maxLength - 3)}...`;
+}
+
+function getRentalChatParticipantRole(userId, rental) {
+  if (!userId || !rental) {
+    return null;
+  }
+
+  if (rental.ownerId === userId) {
+    return "owner";
+  }
+
+  if (rental.renterId === userId) {
+    return "renter";
+  }
+
+  return null;
+}
+
+function getRentalChatCounterpart(rental, userId) {
+  const participantRole = getRentalChatParticipantRole(userId, rental);
+
+  if (participantRole === "owner") {
+    return rental.renter ?? null;
+  }
+
+  if (participantRole === "renter") {
+    return rental.owner ?? null;
+  }
+
+  return null;
+}
+
+function buildRentalChatSummary(rental, userId) {
+  const participantRole = getRentalChatParticipantRole(userId, rental);
+  const unreadCount =
+    participantRole === "owner"
+      ? Number(rental?.chatState?.ownerUnreadCount || 0)
+      : participantRole === "renter"
+        ? Number(rental?.chatState?.renterUnreadCount || 0)
+        : 0;
+  const lastReadAt =
+    participantRole === "owner"
+      ? rental?.chatState?.ownerLastReadAt ?? null
+      : participantRole === "renter"
+        ? rental?.chatState?.renterLastReadAt ?? null
+        : null;
+  const counterpart = getRentalChatCounterpart(rental, userId);
+
+  return {
+    isAvailable: Boolean(participantRole),
+    participantRole,
+    counterpartId: counterpart?.id ?? null,
+    counterpartName: counterpart?.name ?? null,
+    counterpartAvatarUrl: counterpart?.avatarUrl ?? null,
+    lastMessageSenderId: rental?.chatState?.lastMessageSenderId ?? null,
+    lastMessagePreview: rental?.chatState?.lastMessagePreview ?? "",
+    lastMessageAt: rental?.chatState?.lastMessageAt ?? null,
+    lastReadAt,
+    unreadCount,
+    hasUnread: unreadCount > 0,
+    hasMessages: Boolean(rental?.chatState?.lastMessageAt),
+  };
+}
+
+function decorateRentalWithChat(rental, userId) {
+  if (!rental) {
+    return rental;
+  }
+
+  const chat = buildRentalChatSummary(rental, userId);
+  const { chatState, ...rentalWithoutChatState } = rental;
+
+  return {
+    ...rentalWithoutChatState,
+    chat,
+  };
+}
+
+function decorateRentalsWithChat(rentals, userId) {
+  return rentals.map((rental) => decorateRentalWithChat(rental, userId));
+}
+
+async function markRentalChatNotificationsAsRead(
+  client,
+  rentalId,
+  userId,
+  readAt,
+) {
+  return client.notification.updateMany({
+    where: {
+      rentalId,
+      userId,
+      type: "system",
+      isRead: false,
+    },
+    data: {
+      isRead: true,
+      readAt,
+    },
+  });
+}
+
+async function markRentalChatAsRead(client, rental, userId, readAt = new Date()) {
+  const participantRole = getRentalChatParticipantRole(userId, rental);
+
+  if (!participantRole) {
+    return rental?.chatState ?? null;
+  }
+
+  return client.rentalChatState.upsert({
+    where: {
+      rentalId: rental.id,
+    },
+    create: {
+      rentalId: rental.id,
+      ownerUnreadCount: 0,
+      renterUnreadCount: 0,
+      ownerLastReadAt: participantRole === "owner" ? readAt : null,
+      renterLastReadAt: participantRole === "renter" ? readAt : null,
+    },
+    update:
+      participantRole === "owner"
+        ? {
+            ownerUnreadCount: 0,
+            ownerLastReadAt: readAt,
+          }
+        : {
+            renterUnreadCount: 0,
+            renterLastReadAt: readAt,
+          },
+    select: RENTAL_CHAT_STATE_SELECT,
+  });
+}
+
+async function updateRentalChatAfterMessage(
+  client,
+  rental,
+  senderId,
+  message,
+  createdAt,
+) {
+  const senderRole = getRentalChatParticipantRole(senderId, rental);
+
+  if (!senderRole) {
+    return rental?.chatState ?? null;
+  }
+
+  const isOwnerMessage = senderRole === "owner";
+  const preview = truncateMessagePreview(message);
+
+  return client.rentalChatState.upsert({
+    where: {
+      rentalId: rental.id,
+    },
+    create: {
+      rentalId: rental.id,
+      lastMessageSenderId: senderId,
+      lastMessagePreview: preview,
+      lastMessageAt: createdAt,
+      ownerUnreadCount: isOwnerMessage ? 0 : 1,
+      renterUnreadCount: isOwnerMessage ? 1 : 0,
+      ownerLastReadAt: isOwnerMessage ? createdAt : null,
+      renterLastReadAt: isOwnerMessage ? null : createdAt,
+    },
+    update: {
+      lastMessageSenderId: senderId,
+      lastMessagePreview: preview,
+      lastMessageAt: createdAt,
+      ...(isOwnerMessage
+        ? {
+            ownerUnreadCount: 0,
+            ownerLastReadAt: createdAt,
+            renterUnreadCount: {
+              increment: 1,
+            },
+          }
+        : {
+            renterUnreadCount: 0,
+            renterLastReadAt: createdAt,
+            ownerUnreadCount: {
+              increment: 1,
+            },
+          }),
+    },
+    select: RENTAL_CHAT_STATE_SELECT,
+  });
+}
+
+async function getRentalMessages(req, res) {
+  const data = z.rentalIdParamSchema.safeParse(req.params);
+  if (!data.success) {
+    return res.status(400).json({
+      success: false,
+      message: data.error.issues[0].message,
+    });
+  }
+
+  try {
+    const rental = await db.rental.findUnique({
+      where: { id: data.data.id },
+      select: RENTAL_CHAT_SELECT,
+    });
+
+    if (!rental) {
+      return res.status(404).json({
+        success: false,
+        message: "Rental not found",
+      });
+    }
+
+    if (!canParticipateInRentalChat(req.user, rental)) {
+      return res.status(403).json({
+        success: false,
+        message: "You are not allowed to view this chat",
+      });
+    }
+
+    const readAt = new Date();
+    const { messages, chatState } = await db.$transaction(async (tx) => {
+      const nextMessages = await tx.rentalMessage.findMany({
+        where: {
+          rentalId: rental.id,
+        },
+        orderBy: [{ createdAt: "asc" }],
+        select: RENTAL_CHAT_MESSAGE_SELECT,
+      });
+      const nextChatState = await markRentalChatAsRead(
+        tx,
+        rental,
+        req.user.id,
+        readAt,
+      );
+      await markRentalChatNotificationsAsRead(tx, rental.id, req.user.id, readAt);
+
+      return {
+        messages: nextMessages,
+        chatState: nextChatState,
+      };
+    });
+    const decoratedRental = decorateRentalWithChat(
+      {
+        ...rental,
+        chatState,
+      },
+      req.user.id,
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        rental: decoratedRental,
+        messages,
+        chat: decoratedRental.chat,
+      },
+    });
+  } catch (error) {
+    console.error("getRentalMessages error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch rental chat messages",
+    });
+  }
+}
+
+async function sendRentalMessage(req, res) {
+  const paramsData = z.rentalIdParamSchema.safeParse(req.params);
+  if (!paramsData.success) {
+    return res.status(400).json({
+      success: false,
+      message: paramsData.error.issues[0].message,
+    });
+  }
+
+  const bodyData = z.rentalMessageCreateSchema.safeParse(req.body);
+  if (!bodyData.success) {
+    return res.status(400).json({
+      success: false,
+      message: bodyData.error.issues[0].message,
+    });
+  }
+
+  try {
+    const rental = await db.rental.findUnique({
+      where: { id: paramsData.data.id },
+      select: RENTAL_CHAT_SELECT,
+    });
+
+    if (!rental) {
+      return res.status(404).json({
+        success: false,
+        message: "Rental not found",
+      });
+    }
+
+    if (!canParticipateInRentalChat(req.user, rental)) {
+      return res.status(403).json({
+        success: false,
+        message: "You are not allowed to send messages in this chat",
+      });
+    }
+
+    const senderIsOwner = rental.ownerId === req.user.id;
+    const recipientId = senderIsOwner ? rental.renterId : rental.ownerId;
+    const senderName = senderIsOwner
+      ? rental.owner?.name || "Owner"
+      : rental.renter?.name || "Renter";
+    const productTitle = rental.product?.title || "your rental";
+
+    const { message, chatState } = await db.$transaction(async (tx) => {
+      const createdMessage = await tx.rentalMessage.create({
+        data: {
+          rentalId: rental.id,
+          senderId: req.user.id,
+          message: bodyData.data.message,
+        },
+        select: RENTAL_CHAT_MESSAGE_SELECT,
+      });
+      const nextChatState = await updateRentalChatAfterMessage(
+        tx,
+        rental,
+        req.user.id,
+        bodyData.data.message,
+        createdMessage.createdAt,
+      );
+
+      if (recipientId && recipientId !== req.user.id) {
+        await createNotification(tx, {
+          userId: recipientId,
+          rentalId: rental.id,
+          type: "system",
+          title: `New message from ${senderName}`,
+          message: `${productTitle}: ${truncateMessagePreview(
+            bodyData.data.message,
+          )}`,
+          data: {
+            action: "rental_chat_message",
+            senderId: req.user.id,
+            senderName,
+            rentalId: rental.id,
+            productId: rental.productId,
+            productTitle,
+          },
+        });
+      }
+
+      return {
+        message: createdMessage,
+        chatState: nextChatState,
+      };
+    });
+    const decoratedRental = decorateRentalWithChat(
+      {
+        ...rental,
+        chatState,
+      },
+      req.user.id,
+    );
+
+    return res.status(201).json({
+      success: true,
+      message: "Message sent successfully",
+      data: {
+        rental: decoratedRental,
+        message,
+        chat: decoratedRental.chat,
+      },
+    });
+  } catch (error) {
+    console.error("sendRentalMessage error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to send chat message",
+    });
+  }
+}
+
 async function getRentalDetails(req, res) {
   const data = z.rentalIdParamSchema.safeParse(req.params);
   if (!data.success) {
@@ -408,11 +863,12 @@ async function getMyBookings(req, res) {
       }),
       db.rental.count({ where }),
     ]);
+    const decoratedRentals = decorateRentalsWithChat(rentals, req.user.id);
 
     return res.status(200).json({
       success: true,
       data: {
-        rentals,
+        rentals: decoratedRentals,
         pagination: buildPagination(page, limit, totalItems),
         filters: {
           status: data.data.status ?? null,
@@ -464,11 +920,12 @@ async function getMyRequests(req, res) {
       }),
       db.rental.count({ where }),
     ]);
+    const decoratedRentals = decorateRentalsWithChat(rentals, req.user.id);
 
     return res.status(200).json({
       success: true,
       data: {
-        rentals,
+        rentals: decoratedRentals,
         pagination: buildPagination(page, limit, totalItems),
         filters: {
           status: data.data.status ?? null,
@@ -1407,8 +1864,10 @@ export default {
   completeRental,
   createRental,
   getMyBookings,
+  getRentalMessages,
   getMyRequests,
   getRentalDetails,
   rejectRental,
+  sendRentalMessage,
   startRental,
 };

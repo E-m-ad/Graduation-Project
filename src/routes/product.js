@@ -16,6 +16,8 @@ router.post(
   uploadProductImages,
   product.uploadProductImages,
 );
+router.get("/:id/chat", authMiddleWare.auth, product.getProductChat);
+router.post("/:id/chat/messages", authMiddleWare.auth, product.sendProductChatMessage);
 router.delete(
   "/:id/images/:imgId",
   authMiddleWare.auth,

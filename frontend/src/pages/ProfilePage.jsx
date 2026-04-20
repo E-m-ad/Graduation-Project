@@ -147,16 +147,117 @@ function getNotificationProductId(notification) {
     : null;
 }
 
-function NotificationListItem({ notification, onMarkRead, onDelete }) {
-  const contextLines = getNotificationContextText(notification);
+function getNotificationRentalId(notification) {
+  const rawRentalId = notification?.rentalId || notification?.rental?.id || null;
+
+  return typeof rawRentalId === "string" && rawRentalId.trim()
+    ? rawRentalId
+    : null;
+}
+
+function getNotificationConversationId(notification) {
+  const rawConversationId = notification?.data?.conversationId || null;
+
+  return typeof rawConversationId === "string" && rawConversationId.trim()
+    ? rawConversationId
+    : null;
+}
+
+function isRentalChatNotification(notification) {
+  return notification?.data?.action === "rental_chat_message";
+}
+
+function isProductChatNotification(notification) {
+  return notification?.data?.action === "product_chat_message";
+}
+
+function isChatNotification(notification) {
+  return (
+    isRentalChatNotification(notification) ||
+    isProductChatNotification(notification)
+  );
+}
+
+function getNotificationDestination(notification) {
   const productId = getNotificationProductId(notification);
-  const productHref = productId
-    ? `/html/product-details.html?id=${encodeURIComponent(productId)}`
-    : "";
-  const hasActions = Boolean(productId || !notification.isRead || onDelete);
+  if (!productId) {
+    return "";
+  }
+
+  if (isChatNotification(notification)) {
+    const rentalId = getNotificationRentalId(notification);
+    const conversationId = getNotificationConversationId(notification);
+    const params = new URLSearchParams({
+      id: productId,
+    });
+
+    if (rentalId) {
+      params.set("rentalId", rentalId);
+      params.set("openChat", "1");
+    }
+
+    if (conversationId) {
+      params.set("conversationId", conversationId);
+      params.set("openChat", "1");
+    }
+
+    if (notification?.id) {
+      params.set("notificationId", notification.id);
+    }
+
+    return `/html/product-details.html?${params.toString()}`;
+  }
+
+  return `/html/product-details.html?id=${encodeURIComponent(productId)}`;
+}
+
+function NotificationListItem({
+  notification,
+  onMarkRead,
+  onDelete,
+  onOpen,
+}) {
+  const contextLines = getNotificationContextText(notification);
+  const productHref = getNotificationDestination(notification);
+  const hasChatLink = isChatNotification(notification);
+  const canOpen = Boolean(productHref && onOpen && hasChatLink);
+  const hasActions = Boolean(productHref || !notification.isRead || onDelete);
+
+  function handleOpen() {
+    if (!canOpen) {
+      return;
+    }
+
+    onOpen(notification);
+  }
+
+  function handleItemClick(event) {
+    if (!canOpen || event.target.closest("button, a")) {
+      return;
+    }
+
+    handleOpen();
+  }
+
+  function handleItemKeyDown(event) {
+    if (!canOpen || event.target !== event.currentTarget) {
+      return;
+    }
+
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      handleOpen();
+    }
+  }
 
   return (
-    <article className="list-item">
+    <article
+      className={`list-item${canOpen ? " list-item--interactive" : ""}`}
+      role={canOpen ? "link" : undefined}
+      tabIndex={canOpen ? 0 : undefined}
+      onClick={handleItemClick}
+      onKeyDown={handleItemKeyDown}
+    >
       <div className="list-item__title-row">
         <div>
           <strong>{notification.title || "Notification"}</strong>
@@ -182,10 +283,20 @@ function NotificationListItem({ notification, onMarkRead, onDelete }) {
         : null}
       {hasActions ? (
         <div className="listing-actions">
-          {productId ? (
-            <a className="btn btn--secondary btn--small" href={productHref}>
-              View Product
-            </a>
+          {productHref ? (
+            canOpen ? (
+              <button
+                type="button"
+                className="btn btn--secondary btn--small"
+                onClick={handleOpen}
+              >
+                {hasChatLink ? "Chat" : "View product"}
+              </button>
+            ) : (
+              <a className="btn btn--secondary btn--small" href={productHref}>
+                View product
+              </a>
+            )
           ) : null}
           {!notification.isRead ? (
             <button
@@ -512,6 +623,15 @@ export function ProfilePage({ page }) {
     if (result.ok) {
       await reloadNotifications();
     }
+  }
+
+  function handleOpenNotification(notification) {
+    const destination = getNotificationDestination(notification);
+    if (!destination) {
+      return;
+    }
+
+    window.location.href = destination;
   }
 
   function handleTabChange(nextTab) {
@@ -1237,6 +1357,7 @@ export function ProfilePage({ page }) {
                       notification={notification}
                       onMarkRead={handleMarkRead}
                       onDelete={handleDeleteNotification}
+                      onOpen={handleOpenNotification}
                     />
                   ))
                 ) : (

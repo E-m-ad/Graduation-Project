@@ -115,6 +115,10 @@ model User {
   refreshTokens       RefreshToken[]
   passwordResetTokens PasswordResetToken[]
   emailVerificationTokens EmailVerificationToken[]
+  productConversationsAsOwner ProductConversation[] @relation("UserOwnedProductConversations")
+  productConversationsAsParticipant ProductConversation[] @relation("UserParticipatingProductConversations")
+  productConversationMessagesSent ProductConversationMessage[] @relation("UserProductConversationMessagesSent")
+  rentalMessagesSent  RentalMessage[] @relation("UserRentalMessagesSent")
 
   @@index([role])
   @@index([city])
@@ -194,6 +198,7 @@ model Product {
 
   images       ProductImage[]
   rentals      Rental[]
+  conversations ProductConversation[]
   reviews      Review[]
   wishlists    Wishlist[]
   behaviors    UserBehavior[]
@@ -259,7 +264,9 @@ model Rental {
   updatedAt DateTime @updatedAt @db.Timestamptz(6)
 
   review        Review?
+  chatState     RentalChatState?
   notifications Notification[]
+  messages      RentalMessage[]
 
   @@index([productId])
   @@index([renterId])
@@ -267,6 +274,97 @@ model Rental {
   @@index([status])
   @@index([startDate, endDate])
   @@index([createdAt])
+}
+
+model RentalMessage {
+  id String @id @default(uuid())
+
+  rentalId String
+  rental   Rental @relation(fields: [rentalId], references: [id], onDelete: Cascade)
+
+  senderId String
+  sender   User   @relation("UserRentalMessagesSent", fields: [senderId], references: [id], onDelete: Cascade)
+
+  message String @db.Text
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  @@index([rentalId, createdAt])
+  @@index([senderId])
+}
+
+model RentalChatState {
+  rentalId String @id
+  rental   Rental @relation(fields: [rentalId], references: [id], onDelete: Cascade)
+
+  lastMessageSenderId String?
+  lastMessagePreview  String?   @db.VarChar(160)
+  lastMessageAt       DateTime? @db.Timestamptz(6)
+
+  ownerUnreadCount Int @default(0)
+  renterUnreadCount Int @default(0)
+
+  ownerLastReadAt  DateTime? @db.Timestamptz(6)
+  renterLastReadAt DateTime? @db.Timestamptz(6)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  @@index([lastMessageAt])
+  @@index([lastMessageSenderId])
+}
+
+model ProductConversation {
+  id String @id @default(uuid())
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  ownerId String
+  owner   User @relation("UserOwnedProductConversations", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  participantId String
+  participant   User @relation("UserParticipatingProductConversations", fields: [participantId], references: [id], onDelete: Cascade)
+
+  lastMessageSenderId String?
+  lastMessagePreview  String?   @db.VarChar(160)
+  lastMessageAt       DateTime? @db.Timestamptz(6)
+
+  ownerUnreadCount       Int @default(0)
+  participantUnreadCount Int @default(0)
+
+  ownerLastReadAt       DateTime? @db.Timestamptz(6)
+  participantLastReadAt DateTime? @db.Timestamptz(6)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  messages ProductConversationMessage[]
+
+  @@unique([productId, participantId])
+  @@index([productId, lastMessageAt])
+  @@index([ownerId, lastMessageAt])
+  @@index([participantId, lastMessageAt])
+  @@index([lastMessageSenderId])
+}
+
+model ProductConversationMessage {
+  id String @id @default(uuid())
+
+  conversationId String
+  conversation   ProductConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  senderId String
+  sender   User @relation("UserProductConversationMessagesSent", fields: [senderId], references: [id], onDelete: Cascade)
+
+  message String @db.Text
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  @@index([conversationId, createdAt])
+  @@index([senderId])
 }
 
 model Review {
@@ -427,4 +525,3 @@ model EmailVerificationToken {
   @@index([userId])
   @@index([expiresAt])
 }
-

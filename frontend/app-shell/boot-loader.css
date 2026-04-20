@@ -1,0 +1,156 @@
+<style>
+  :root {
+    color-scheme: light;
+  }
+
+  body.app-shell-loading {
+    margin: 0;
+    min-height: 100vh;
+    background:
+      radial-gradient(circle at top, rgba(243, 185, 0, 0.18), transparent 34%),
+      linear-gradient(180deg, #130f0e 0%, #251915 48%, #f5f1ed 100%);
+  }
+
+  body.app-shell-loading.has-canvas-cursor-active,
+  body.app-shell-loading.has-canvas-cursor-active * {
+    cursor: none;
+  }
+
+  #app-boot-loader {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background-image: url(../img/ChatGPT\ Image\ Apr\ 13\,\ 2026\,\ 09_57_14\ AM.png);
+    background-size: cover;
+    background-position : center;
+    background-repeat : no-repeat;
+    opacity: 1;
+    visibility: visible;
+    transition:
+      opacity 0.35s ease,
+      visibility 0.35s ease;
+  }
+
+  .canvas-cursor {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 10001;
+  }
+
+  body.app-shell-ready #app-boot-loader {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  .app-boot-loader__panel {
+    width: min(100%, 280px);
+    text-align: center;
+    padding: 32px 28px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 28px;
+    background: rgba(14, 18, 24, 0.62);
+    color: #fff7ef;
+    box-shadow:
+      0 24px 60px rgba(0, 0, 0, 0.28),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(18px);
+  }
+
+  .app-boot-loader__eyebrow {
+    margin-bottom: 10px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(255, 247, 239, 0.7);
+  }
+
+  .app-boot-loader__brand {
+    margin: 0 0 10px;
+  font-size: 1.9rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+    color: #ff0000;
+  }
+
+  .app-boot-loader__brand-accent {
+    color: #ffffff;
+  }
+
+  .app-boot-loader__copy {
+    margin: 0 0 22px;
+    font-size: 0.98rem;
+    line-height: 1.65;
+    color: rgba(255, 247, 239, 0.78);
+  }
+
+  .app-boot-loader__status {
+    min-height: 3.2em;
+    margin: 0 0 18px;
+    font-size: 0.92rem;
+    line-height: 1.6;
+    color: rgba(255, 247, 239, 0.7);
+  }
+
+  .app-boot-loader__status-delayed {
+    display: none;
+  }
+
+  body.app-shell-delayed .app-boot-loader__status-default {
+    display: none;
+  }
+
+  body.app-shell-delayed .app-boot-loader__status-delayed {
+    display: block;
+  }
+
+  .app-boot-loader__progress {
+    position: relative;
+    height: 5px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.12);
+  }
+
+  .app-boot-loader__progress::after {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 34%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #da291c 0%, #f3b900 100%);
+    box-shadow: 0 0 18px rgba(243, 185, 0, 0.45);
+    animation: app-boot-loader-slide 1.1s ease-in-out infinite;
+  }
+
+  @keyframes app-boot-loader-slide {
+    from {
+      transform: translateX(-130%);
+    }
+
+    to {
+      transform: translateX(340%);
+    }
+  }
+
+  @media (max-width: 640px) {
+    .app-boot-loader__panel {
+      padding: 28px 22px;
+      border-radius: 24px;
+    }
+
+    .app-boot-loader__copy,
+    .app-boot-loader__status {
+      font-size: 0.9rem;
+    }
+  }
+</style>

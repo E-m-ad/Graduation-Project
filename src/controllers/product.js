@@ -26,6 +26,7 @@ const ADMIN_ALLOWED_STATUS_UPDATES = [
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 12;
 const MAX_LIMIT = 50;
+const CHAT_PREVIEW_MAX_LENGTH = 160;
 const uploadsRootDir = getUploadsRootDir();
 const MANAGE_PRODUCT_SELECT = {
   id: true,
@@ -81,6 +82,371 @@ const MANAGE_PRODUCT_SELECT = {
     },
   },
 };
+const PRODUCT_CHAT_USER_SELECT = {
+  id: true,
+  name: true,
+  avatarUrl: true,
+  role: true,
+  city: true,
+};
+
+const PRODUCT_CHAT_PRODUCT_SELECT = {
+  id: true,
+  ownerId: true,
+  title: true,
+  status: true,
+  isApproved: true,
+  owner: {
+    select: PRODUCT_CHAT_USER_SELECT,
+  },
+  images: {
+    take: 1,
+    orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }],
+    select: {
+      id: true,
+      imageUrl: true,
+      thumbnailUrl: true,
+      isPrimary: true,
+    },
+  },
+};
+
+const PRODUCT_CONVERSATION_SELECT = {
+  id: true,
+  productId: true,
+  ownerId: true,
+  participantId: true,
+  lastMessageSenderId: true,
+  lastMessagePreview: true,
+  lastMessageAt: true,
+  ownerUnreadCount: true,
+  participantUnreadCount: true,
+  ownerLastReadAt: true,
+  participantLastReadAt: true,
+  createdAt: true,
+  updatedAt: true,
+  product: {
+    select: {
+      id: true,
+      title: true,
+      images: {
+        take: 1,
+        orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }],
+        select: {
+          id: true,
+          imageUrl: true,
+          thumbnailUrl: true,
+          isPrimary: true,
+        },
+      },
+    },
+  },
+  owner: {
+    select: PRODUCT_CHAT_USER_SELECT,
+  },
+  participant: {
+    select: PRODUCT_CHAT_USER_SELECT,
+  },
+};
+
+const PRODUCT_CONVERSATION_MESSAGE_SELECT = {
+  id: true,
+  conversationId: true,
+  senderId: true,
+  message: true,
+  createdAt: true,
+  updatedAt: true,
+  sender: {
+    select: PRODUCT_CHAT_USER_SELECT,
+  },
+};
+
+function buildProductVisibilityFilter(user) {
+  const isAdmin = user?.role === "admin";
+  const canViewOwnUnpublishedListings = Boolean(user?.id);
+
+  return isAdmin
+    ? {}
+    : {
+        OR: [
+          {
+            isApproved: true,
+            status: {
+              in: PUBLIC_DISCOVERY_PRODUCT_STATUSES,
+            },
+            owner: {
+              is: {
+                isActive: true,
+              },
+            },
+          },
+          ...(canViewOwnUnpublishedListings
+            ? [
+                {
+                  ownerId: user.id,
+                },
+              ]
+            : []),
+        ],
+      };
+}
+
+function canUseProductChat(user) {
+  return Boolean(user && user.role !== "admin");
+}
+
+function canAccessProductConversation(user, conversation) {
+  return (
+    conversation?.ownerId === user?.id || conversation?.participantId === user?.id
+  );
+}
+
+function truncateChatPreview(message, maxLength = CHAT_PREVIEW_MAX_LENGTH) {
+  const normalizedMessage =
+    typeof message === "string" ? message.trim() : "";
+
+  if (normalizedMessage.length <= maxLength) {
+    return normalizedMessage;
+  }
+
+  return `${normalizedMessage.slice(0, maxLength - 3)}...`;
+}
+
+function getProductConversationParticipantRole(userId, conversation) {
+  if (!userId || !conversation) {
+    return null;
+  }
+
+  if (conversation.ownerId === userId) {
+    return "owner";
+  }
+
+  if (conversation.participantId === userId) {
+    return "participant";
+  }
+
+  return null;
+}
+
+function getProductConversationCounterpart(conversation, userId) {
+  const participantRole = getProductConversationParticipantRole(
+    userId,
+    conversation,
+  );
+
+  if (participantRole === "owner") {
+    return conversation.participant ?? null;
+  }
+
+  if (participantRole === "participant") {
+    return conversation.owner ?? null;
+  }
+
+  return null;
+}
+
+function buildProductConversationSummary(conversation, userId) {
+  const participantRole = getProductConversationParticipantRole(
+    userId,
+    conversation,
+  );
+  const unreadCount =
+    participantRole === "owner"
+      ? Number(conversation?.ownerUnreadCount || 0)
+      : participantRole === "participant"
+        ? Number(conversation?.participantUnreadCount || 0)
+        : 0;
+  const lastReadAt =
+    participantRole === "owner"
+      ? conversation?.ownerLastReadAt ?? null
+      : participantRole === "participant"
+        ? conversation?.participantLastReadAt ?? null
+        : null;
+  const counterpart = getProductConversationCounterpart(conversation, userId);
+
+  return {
+    isAvailable: Boolean(participantRole),
+    participantRole,
+    counterpartId: counterpart?.id ?? null,
+    counterpartName: counterpart?.name ?? null,
+    counterpartAvatarUrl: counterpart?.avatarUrl ?? null,
+    lastMessageSenderId: conversation?.lastMessageSenderId ?? null,
+    lastMessagePreview: conversation?.lastMessagePreview ?? "",
+    lastMessageAt: conversation?.lastMessageAt ?? null,
+    lastReadAt,
+    unreadCount,
+    hasUnread: unreadCount > 0,
+    hasMessages: Boolean(conversation?.lastMessageAt),
+  };
+}
+
+function decorateProductConversation(conversation, userId) {
+  if (!conversation) {
+    return conversation;
+  }
+
+  return {
+    ...conversation,
+    chat: buildProductConversationSummary(conversation, userId),
+  };
+}
+
+function buildEmptyProductConversation(product, user) {
+  return {
+    id: null,
+    productId: product.id,
+    ownerId: product.ownerId,
+    participantId: user.id,
+    lastMessageSenderId: null,
+    lastMessagePreview: "",
+    lastMessageAt: null,
+    ownerUnreadCount: 0,
+    participantUnreadCount: 0,
+    ownerLastReadAt: null,
+    participantLastReadAt: null,
+    createdAt: null,
+    updatedAt: null,
+    product: {
+      id: product.id,
+      title: product.title,
+      images: product.images || [],
+    },
+    owner: product.owner,
+    participant: {
+      id: user.id,
+      name: user.name || "You",
+      avatarUrl: user.avatarUrl || null,
+      role: user.role || "renter",
+      city: user.city || null,
+    },
+  };
+}
+
+async function findChatProductForUser(productId, user, prismaClient = db) {
+  return prismaClient.product.findFirst({
+    where: {
+      id: productId,
+      ...buildProductVisibilityFilter(user),
+    },
+    select: PRODUCT_CHAT_PRODUCT_SELECT,
+  });
+}
+
+async function ensureProductConversation(client, product, participantId) {
+  return client.productConversation.upsert({
+    where: {
+      productId_participantId: {
+        productId: product.id,
+        participantId,
+      },
+    },
+    create: {
+      productId: product.id,
+      ownerId: product.ownerId,
+      participantId,
+    },
+    update: {},
+    select: PRODUCT_CONVERSATION_SELECT,
+  });
+}
+
+async function markProductConversationNotificationsAsRead(
+  client,
+  conversationId,
+  userId,
+  readAt,
+) {
+  return client.$executeRaw`
+    UPDATE "Notification"
+    SET "isRead" = TRUE,
+        "readAt" = ${readAt}
+    WHERE "userId" = ${userId}
+      AND "isRead" = FALSE
+      AND "type"::text = 'system'
+      AND COALESCE("data"->>'action', '') = 'product_chat_message'
+      AND COALESCE("data"->>'conversationId', '') = ${conversationId}
+  `;
+}
+
+async function markProductConversationAsRead(
+  client,
+  conversation,
+  userId,
+  readAt = new Date(),
+) {
+  const participantRole = getProductConversationParticipantRole(
+    userId,
+    conversation,
+  );
+
+  if (!participantRole || !conversation?.id) {
+    return conversation;
+  }
+
+  return client.productConversation.update({
+    where: {
+      id: conversation.id,
+    },
+    data:
+      participantRole === "owner"
+        ? {
+            ownerUnreadCount: 0,
+            ownerLastReadAt: readAt,
+          }
+        : {
+            participantUnreadCount: 0,
+            participantLastReadAt: readAt,
+          },
+    select: PRODUCT_CONVERSATION_SELECT,
+  });
+}
+
+async function updateProductConversationAfterMessage(
+  client,
+  conversation,
+  senderId,
+  message,
+  createdAt,
+) {
+  const senderRole = getProductConversationParticipantRole(
+    senderId,
+    conversation,
+  );
+
+  if (!senderRole) {
+    return conversation;
+  }
+
+  const isOwnerMessage = senderRole === "owner";
+  const preview = truncateChatPreview(message);
+
+  return client.productConversation.update({
+    where: {
+      id: conversation.id,
+    },
+    data: {
+      lastMessageSenderId: senderId,
+      lastMessagePreview: preview,
+      lastMessageAt: createdAt,
+      ...(isOwnerMessage
+        ? {
+            ownerUnreadCount: 0,
+            ownerLastReadAt: createdAt,
+            participantUnreadCount: {
+              increment: 1,
+            },
+          }
+        : {
+            participantUnreadCount: 0,
+            participantLastReadAt: createdAt,
+            ownerUnreadCount: {
+              increment: 1,
+            },
+          }),
+    },
+    select: PRODUCT_CONVERSATION_SELECT,
+  });
+}
 
 async function findOwnerUnavailableStatusLock(productId, prismaClient = db) {
   const activeRental = await prismaClient.rental.findFirst({
@@ -402,37 +768,10 @@ async function getProductDetails(req, res) {
   }
 
   try {
-    const isAdmin = req.user?.role === "admin";
-    const canViewOwnUnpublishedListings = Boolean(req.user?.id);
-    const visibilityFilter = isAdmin
-      ? {}
-      : {
-          OR: [
-            {
-              isApproved: true,
-              status: {
-                in: PUBLIC_DISCOVERY_PRODUCT_STATUSES,
-              },
-              owner: {
-                is: {
-                  isActive: true,
-                },
-              },
-            },
-            ...(canViewOwnUnpublishedListings
-              ? [
-                  {
-                    ownerId: req.user.id,
-                  },
-                ]
-              : []),
-          ],
-        };
-
     const product = await db.product.findFirst({
       where: {
         id: id.trim(),
-        ...visibilityFilter,
+        ...buildProductVisibilityFilter(req.user),
       },
       select: {
         id: true,
@@ -552,6 +891,302 @@ async function getProductDetails(req, res) {
     return res.status(500).json({
       success: false,
       message: "Failed to fetch product details",
+    });
+  }
+}
+
+async function getProductChat(req, res) {
+  const paramsData = z.productIdParamSchema.safeParse(req.params);
+  if (!paramsData.success) {
+    return res.status(400).json({
+      success: false,
+      message: paramsData.error.issues[0].message,
+    });
+  }
+
+  const queryData = z.productChatQuerySchema.safeParse(req.query);
+  if (!queryData.success) {
+    return res.status(400).json({
+      success: false,
+      message: queryData.error.issues[0].message,
+    });
+  }
+
+  if (!canUseProductChat(req.user)) {
+    return res.status(403).json({
+      success: false,
+      message: "Product chat is available only for signed-in owners and renters",
+    });
+  }
+
+  try {
+    const product = await findChatProductForUser(paramsData.data.id, req.user);
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
+    }
+
+    const requestedConversationId = queryData.data.conversationId || null;
+    const isOwner = product.ownerId === req.user.id;
+    let conversation = null;
+
+    if (requestedConversationId) {
+      conversation = await db.productConversation.findFirst({
+        where: {
+          id: requestedConversationId,
+          productId: product.id,
+        },
+        select: PRODUCT_CONVERSATION_SELECT,
+      });
+
+      if (!conversation) {
+        return res.status(404).json({
+          success: false,
+          message: "Conversation not found",
+        });
+      }
+
+      if (!canAccessProductConversation(req.user, conversation)) {
+        return res.status(403).json({
+          success: false,
+          message: "You are not allowed to view this conversation",
+        });
+      }
+    } else if (!isOwner) {
+      conversation = await db.productConversation.findUnique({
+        where: {
+          productId_participantId: {
+            productId: product.id,
+            participantId: req.user.id,
+          },
+        },
+        select: PRODUCT_CONVERSATION_SELECT,
+      });
+    } else {
+      return res.status(400).json({
+        success: false,
+        message:
+          "A conversation id is required to open a listing chat from the owner side",
+      });
+    }
+
+    if (!conversation) {
+      const emptyConversation = decorateProductConversation(
+        buildEmptyProductConversation(product, req.user),
+        req.user.id,
+      );
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          conversation: emptyConversation,
+          messages: [],
+          chat: emptyConversation.chat,
+        },
+      });
+    }
+
+    const readAt = new Date();
+    const { messages, conversation: nextConversation } = await db.$transaction(
+      async (tx) => {
+        const nextMessages = await tx.productConversationMessage.findMany({
+          where: {
+            conversationId: conversation.id,
+          },
+          orderBy: [{ createdAt: "asc" }],
+          select: PRODUCT_CONVERSATION_MESSAGE_SELECT,
+        });
+        const updatedConversation = await markProductConversationAsRead(
+          tx,
+          conversation,
+          req.user.id,
+          readAt,
+        );
+
+        await markProductConversationNotificationsAsRead(
+          tx,
+          conversation.id,
+          req.user.id,
+          readAt,
+        );
+
+        return {
+          messages: nextMessages,
+          conversation: updatedConversation,
+        };
+      },
+    );
+
+    const decoratedConversation = decorateProductConversation(
+      nextConversation,
+      req.user.id,
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        conversation: decoratedConversation,
+        messages,
+        chat: decoratedConversation.chat,
+      },
+    });
+  } catch (error) {
+    console.error("getProductChat error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch product chat",
+    });
+  }
+}
+
+async function sendProductChatMessage(req, res) {
+  const paramsData = z.productIdParamSchema.safeParse(req.params);
+  if (!paramsData.success) {
+    return res.status(400).json({
+      success: false,
+      message: paramsData.error.issues[0].message,
+    });
+  }
+
+  const bodyData = z.productChatMessageCreateSchema.safeParse(req.body);
+  if (!bodyData.success) {
+    return res.status(400).json({
+      success: false,
+      message: bodyData.error.issues[0].message,
+    });
+  }
+
+  if (!canUseProductChat(req.user)) {
+    return res.status(403).json({
+      success: false,
+      message: "Product chat is available only for signed-in owners and renters",
+    });
+  }
+
+  try {
+    const product = await findChatProductForUser(paramsData.data.id, req.user);
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
+    }
+
+    const isOwner = product.ownerId === req.user.id;
+    const requestedConversationId = bodyData.data.conversationId || null;
+    let conversation = null;
+
+    if (requestedConversationId) {
+      conversation = await db.productConversation.findFirst({
+        where: {
+          id: requestedConversationId,
+          productId: product.id,
+        },
+        select: PRODUCT_CONVERSATION_SELECT,
+      });
+
+      if (!conversation) {
+        return res.status(404).json({
+          success: false,
+          message: "Conversation not found",
+        });
+      }
+
+      if (!canAccessProductConversation(req.user, conversation)) {
+        return res.status(403).json({
+          success: false,
+          message: "You are not allowed to send messages in this conversation",
+        });
+      }
+    }
+
+    if (isOwner && !conversation) {
+      return res.status(400).json({
+        success: false,
+        message: "Choose a conversation before sending a message from this listing",
+      });
+    }
+
+    const { message, conversation: nextConversation } = await db.$transaction(
+      async (tx) => {
+        const ensuredConversation =
+          conversation ||
+          (await ensureProductConversation(tx, product, req.user.id));
+        const createdMessage = await tx.productConversationMessage.create({
+          data: {
+            conversationId: ensuredConversation.id,
+            senderId: req.user.id,
+            message: bodyData.data.message,
+          },
+          select: PRODUCT_CONVERSATION_MESSAGE_SELECT,
+        });
+        const updatedConversation = await updateProductConversationAfterMessage(
+          tx,
+          ensuredConversation,
+          req.user.id,
+          bodyData.data.message,
+          createdMessage.createdAt,
+        );
+        const senderIsOwner = ensuredConversation.ownerId === req.user.id;
+        const recipientId = senderIsOwner
+          ? ensuredConversation.participantId
+          : ensuredConversation.ownerId;
+        const senderName =
+          createdMessage.sender?.name ||
+          (senderIsOwner ? product.owner?.name : req.user.name) ||
+          "User";
+
+        if (recipientId && recipientId !== req.user.id) {
+          await tx.notification.create({
+            data: {
+              userId: recipientId,
+              type: "system",
+              title: `New message from ${senderName}`,
+              message: `${product.title}: ${truncateChatPreview(
+                bodyData.data.message,
+              )}`,
+              data: {
+                action: "product_chat_message",
+                productId: product.id,
+                productTitle: product.title,
+                conversationId: ensuredConversation.id,
+                senderId: req.user.id,
+                senderName,
+              },
+            },
+          });
+        }
+
+        return {
+          message: createdMessage,
+          conversation: updatedConversation,
+        };
+      },
+    );
+
+    const decoratedConversation = decorateProductConversation(
+      nextConversation,
+      req.user.id,
+    );
+
+    return res.status(201).json({
+      success: true,
+      message: "Message sent successfully",
+      data: {
+        conversation: decoratedConversation,
+        message,
+        chat: decoratedConversation.chat,
+      },
+    });
+  } catch (error) {
+    console.error("sendProductChatMessage error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to send product chat message",
     });
   }
 }
@@ -1368,10 +2003,12 @@ export default {
   createProduct,
   deleteProduct,
   deleteProductImage,
+  getProductChat,
   getMyListings,
   getProductDetails,
   getProducts,
   replyToModeration,
+  sendProductChatMessage,
   updateProduct,
   updateProductStatus,
   uploadProductImages,
