@@ -152,7 +152,7 @@
 
 .rental-chat-dialog__messages {
   flex: 1 1 auto;
-  min-height: 320px;
+  /* min-height: 320px; */
   max-height: 46vh;
   overflow-y: auto;
   display: flex;
@@ -267,7 +267,7 @@
   }
 
   .rental-chat-dialog__messages {
-    min-height: 260px;
+    /* min-height: 260px; */
     max-height: 50vh;
     padding: 14px;
   }
