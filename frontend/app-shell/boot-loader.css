@@ -11,11 +11,6 @@
       linear-gradient(180deg, #130f0e 0%, #251915 48%, #f5f1ed 100%);
   }
 
-  body.app-shell-loading.has-canvas-cursor-active,
-  body.app-shell-loading.has-canvas-cursor-active * {
-    cursor: none;
-  }
-
   #app-boot-loader {
     position: fixed;
     inset: 0;
@@ -24,24 +19,14 @@
     align-items: center;
     justify-content: center;
     padding: 24px;
-    background-image: url(../img/ChatGPT\ Image\ Apr\ 13\,\ 2026\,\ 09_57_14\ AM.png);
-    background-size: cover;
-    background-position : center;
-    background-repeat : no-repeat;
+    background:
+      radial-gradient(circle at top, rgba(243, 185, 0, 0.12), transparent 32%),
+      linear-gradient(180deg, rgba(19, 15, 14, 0.96) 0%, rgba(37, 25, 21, 0.94) 56%, rgba(245, 241, 237, 0.94) 100%);
     opacity: 1;
     visibility: visible;
     transition:
       opacity 0.35s ease,
       visibility 0.35s ease;
-  }
-
-  .canvas-cursor {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    z-index: 10001;
   }
 
   body.app-shell-ready #app-boot-loader {
@@ -52,8 +37,8 @@
 
   .app-boot-loader__panel {
     width: min(100%, 280px);
-    text-align: center;
     padding: 32px 28px;
+    text-align: center;
     border: 1px solid rgba(255, 255, 255, 0.14);
     border-radius: 28px;
     background: rgba(14, 18, 24, 0.62);
@@ -75,7 +60,7 @@
 
   .app-boot-loader__brand {
     margin: 0 0 10px;
-  font-size: 1.9rem;
+  font-size: 1.7rem;
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
