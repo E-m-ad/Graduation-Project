@@ -297,12 +297,12 @@
 
       window.setTimeout(function () {
         loader.remove();
-      }, 380);
+      }, 500);
     }
 
     var delayedTimer = window.setTimeout(function () {
       document.body.classList.add("app-shell-delayed");
-    }, 3200);
+    }, 5000);
     loaderCursorCleanup = enableLoaderCursor(LOADER_CURSOR_CONFIG);
 
     window.__AIRentHideBootLoader = function () {
