@@ -446,12 +446,12 @@ function ConversationDialog({
                 : "Chat with the other participant"}
             </p>
             <div className="rental-chat-dialog__thread-meta">
-              <span className="tag tag--light">
+              {/* <span className="tag tag--light">
                 {getChatThreadBadgeLabel(chatState)}
-              </span>
-              <span className="compact-text">
+              </span> */}
+              {/* <span className="compact-text">
                 {getChatThreadSummary(chatState, messageCount)}
-              </span>
+              </span> */}
             </div>
           </div>
           <button
@@ -480,11 +480,11 @@ function ConversationDialog({
                   className={`rental-chat-message${isOwnMessage ? " is-own" : ""}`}
                 >
                   <div className="rental-chat-message__meta">
-                    <strong>
+                    {/* <strong>
                       {isOwnMessage
                         ? "You"
                         : message.sender?.name || "Participant"}
-                    </strong>
+                    </strong> */}
                     <span>{formatChatTimestamp(message.createdAt)}</span>
                   </div>
                   <p className="rental-chat-message__body">{message.message}</p>
@@ -503,17 +503,17 @@ function ConversationDialog({
             id="productDetailConversationMessage"
             ref={composerRef}
             className="textarea rental-chat-dialog__textarea"
-            rows="4"
+            rows="1"
             maxLength="4000"
             placeholder={getChatComposerPlaceholder(chatState, counterpart)}
             value={chatState.draft}
             onChange={(event) => onDraftChange(event.target.value)}
           />
           <div className="rental-chat-dialog__composer-actions">
-            <p className="compact-text">
+            {/* <p className="compact-text">
               {chatState.draft.length}/4000 characters | Press{" "}
               <strong>Ctrl + Enter</strong> to send quickly.
-            </p>
+            </p> */}
             <button
               type="button"
               className="btn btn--primary btn--small"
@@ -792,7 +792,14 @@ export function ProductDetailsPage({ page }) {
     return () => {
       active = false;
     };
-  }, [isAdmin, loading, product?.owner?.id, productId, requestedRentalId, user]);
+  }, [
+    isAdmin,
+    loading,
+    product?.owner?.id,
+    productId,
+    requestedRentalId,
+    user,
+  ]);
 
   useEffect(() => {
     if (
@@ -931,7 +938,8 @@ export function ProductDetailsPage({ page }) {
               ...previous,
               loading: false,
               error:
-                result.data?.message || "Unable to load the rental chat right now.",
+                result.data?.message ||
+                "Unable to load the rental chat right now.",
             }
           : previous,
       );
@@ -1075,18 +1083,21 @@ export function ProductDetailsPage({ page }) {
     }));
 
     if (chatState.threadType === "product") {
-      const result = await fetchApi(`/api/v1/products/${productId}/chat/messages`, {
-        method: "POST",
-        auth: true,
-        body: {
-          message: nextMessage,
-          ...(chatState.conversationId
-            ? {
-                conversationId: chatState.conversationId,
-              }
-            : {}),
+      const result = await fetchApi(
+        `/api/v1/products/${productId}/chat/messages`,
+        {
+          method: "POST",
+          auth: true,
+          body: {
+            message: nextMessage,
+            ...(chatState.conversationId
+              ? {
+                  conversationId: chatState.conversationId,
+                }
+              : {}),
+          },
         },
-      });
+      );
 
       if (!result.ok || !result.data?.success) {
         setChatState((previous) =>
@@ -1110,8 +1121,7 @@ export function ProductDetailsPage({ page }) {
         previous.threadType === "product"
           ? {
               ...previous,
-              conversationId:
-                nextConversation?.id || previous.conversationId,
+              conversationId: nextConversation?.id || previous.conversationId,
               conversation: nextConversation || previous.conversation,
               messages: result.data?.data?.message
                 ? [...previous.messages, result.data.data.message]
@@ -1146,7 +1156,8 @@ export function ProductDetailsPage({ page }) {
               ...previous,
               sending: false,
               error:
-                result.data?.message || "Unable to send your message right now.",
+                result.data?.message ||
+                "Unable to send your message right now.",
             }
           : previous,
       );
@@ -2346,8 +2357,7 @@ export function ProductDetailsPage({ page }) {
                     Status: {formatRentalStatusLabel(detailChatRental.status)}
                   </span>
                   <span>
-                    Requested on:{" "}
-                    {formatDateTime(detailChatRental.createdAt)}
+                    Requested on: {formatDateTime(detailChatRental.createdAt)}
                   </span>
                   {detailChatRental.startDate ? (
                     <span>
@@ -2355,9 +2365,7 @@ export function ProductDetailsPage({ page }) {
                     </span>
                   ) : null}
                   {detailChatRental.endDate ? (
-                    <span>
-                      End: {formatDateTime(detailChatRental.endDate)}
-                    </span>
+                    <span>End: {formatDateTime(detailChatRental.endDate)}</span>
                   ) : null}
                   {detailChatRental.actualReturnDate ? (
                     <span>

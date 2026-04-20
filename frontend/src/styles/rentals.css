@@ -157,11 +157,14 @@
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 8px;
   padding: 18px;
   border-radius: 24px;
-  background:
-    linear-gradient(180deg, rgba(248, 250, 252, 0.98) 0%, rgba(241, 245, 249, 0.92) 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(248, 250, 252, 0.98) 0%,
+    rgba(241, 245, 249, 0.92) 100%
+  );
   border: 1px solid rgba(148, 163, 184, 0.18);
 }
 
@@ -170,7 +173,7 @@
   max-width: min(86%, 460px);
   display: grid;
   gap: 8px;
-  padding: 14px 16px;
+  padding: 10px;
   border-radius: 20px 20px 20px 8px;
   background: rgba(255, 255, 255, 0.96);
   border: 1px solid rgba(148, 163, 184, 0.18);
@@ -180,7 +183,11 @@
 .rental-chat-message.is-own {
   align-self: flex-end;
   border-radius: 20px 20px 8px 20px;
-  background: linear-gradient(180deg, rgba(218, 41, 28, 0.96) 0%, rgba(179, 33, 22, 0.94) 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(218, 41, 28, 0.96) 0%,
+    rgba(179, 33, 22, 0.94) 100%
+  );
   border-color: rgba(179, 33, 22, 0.2);
   color: #ffffff;
 }
@@ -215,7 +222,7 @@
 }
 
 .rental-chat-dialog__textarea {
-  min-height: 110px;
+  /* min-height: 110px; */
   resize: vertical;
 }
 
