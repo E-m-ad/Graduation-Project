@@ -108,7 +108,7 @@ export function ProductsPage({ page }) {
 
       const query = new URLSearchParams({
         page: String(filters.page),
-        limit: "9",
+        limit: "20",
       });
 
       if (filters.search) query.set("search", filters.search);

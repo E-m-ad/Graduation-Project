@@ -301,7 +301,7 @@ export function HomePage({ page }) {
     (first, second) =>
       (second?._count?.products || 0) - (first?._count?.products || 0),
   );
-  const featuredProducts = products.slice(0, 8);
+  const featuredProducts = products.slice(0, 12);
   const topCategories = sortedCategories.slice(0, 4);
   const quickDiscoveryLinks = getQuickDiscoveryLinks(sortedCategories);
   const cityHighlights = getCityHighlights(products);
