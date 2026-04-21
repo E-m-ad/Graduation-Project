@@ -2392,7 +2392,7 @@ export function ProductDetailsPage({ page }) {
                 />
 
                 <div className="detail-actions detail-actions--stacked">
-                  <a className="btn btn--secondary" href="/html/profile.html">
+                  <a className="btn btn--secondary" href="/html/bookings.html">
                     Open My Bookings
                   </a>
                 </div>
@@ -2433,36 +2433,6 @@ export function ProductDetailsPage({ page }) {
                       }))
                     }
                   />
-                </div>
-
-                <div className="field">
-                  <label htmlFor="rentalPeriodType">Rental period</label>
-                  <select
-                    id="rentalPeriodType"
-                    className="input"
-                    value={
-                      supportedRentalPeriods.length
-                        ? bookingForm.rentalPeriodType
-                        : ""
-                    }
-                    disabled={!supportedRentalPeriods.length}
-                    onChange={(event) =>
-                      setBookingForm((previous) => ({
-                        ...previous,
-                        rentalPeriodType: event.target.value,
-                      }))
-                    }
-                  >
-                    {supportedRentalPeriods.length ? (
-                      supportedRentalPeriods.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))
-                    ) : (
-                      <option value="">Pricing unavailable</option>
-                    )}
-                  </select>
                 </div>
 
                 <div className="field">
