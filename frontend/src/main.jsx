@@ -38,6 +38,8 @@ const pageLoaders = {
     ),
 };
 
+
+
 const page = document.body.dataset.page || "home";
 
 function PageLoadErrorState({ message }) {
