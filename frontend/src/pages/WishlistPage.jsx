@@ -1,14 +1,10 @@
 import React, { useEffect, useState } from "react";
+import "../styles/wishlist.css";
 import {
-  AVATAR_PLACEHOLDER,
-  fetchOwnerWishlistPage,
   fetchWishlistPage,
-  formatDateTime,
   getDefaultAuthenticatedPath,
   redirectToLogin,
-  removeOwnerWishlistItem,
   removeWishlistItem,
-  sendWishlistNotification,
 } from "../lib/airent";
 import { useActionDialog, useMessageState, useSession } from "../lib/hooks";
 import {
@@ -38,6 +34,7 @@ function SavedWishlistCard({ item, onRemove }) {
     />
   );
 }
+
 const CURSOR_CONFIG = {
   wishlist: {
     enabled: false,
@@ -47,104 +44,16 @@ const CURSOR_CONFIG = {
     deactiveSelectors: [],
   },
 };
-function WishlistWatcher({ wishlist, product, busyKey, onNotify, onRemove }) {
-  const user = wishlist.user || {};
-  const notifyBusy = busyKey === `notify:${wishlist.id}`;
-  const removeBusy = busyKey === `remove-owner:${wishlist.id}`;
-
-  return (
-    <article className="wishlist-watcher">
-      <div className="wishlist-watcher__profile">
-        <img
-          className="wishlist-watcher__avatar"
-          src={user.avatarUrl || AVATAR_PLACEHOLDER}
-          alt={user.name || "Wishlist user"}
-        />
-        <div className="wishlist-watcher__copy">
-          <div className="wishlist-watcher__headline">
-            <strong>{user.name || "Unknown user"}</strong>
-          </div>
-          <p className="compact-text">
-            {user.city || "City not added"} | Role: {user.role || "user"}
-          </p>
-          <p className="compact-text">
-            Saved on {formatDateTime(wishlist.createdAt)}
-          </p>
-        </div>
-      </div>
-
-      <div className="wishlist-watcher__actions">
-        <button
-          type="button"
-          className="btn btn--secondary btn--small"
-          onClick={() => onNotify(wishlist, product)}
-          disabled={notifyBusy || removeBusy}
-        >
-          {notifyBusy
-            ? "Sending..."
-            : product.status === "available"
-              ? "Notify Available"
-              : "Send Update"}
-        </button>
-        <button
-          type="button"
-          className="btn btn--ghost btn--small"
-          onClick={() => onRemove(wishlist, product)}
-          disabled={notifyBusy || removeBusy}
-        >
-          {removeBusy ? "Removing..." : "Remove"}
-        </button>
-      </div>
-    </article>
-  );
-}
-
-function OwnerWishlistCard({ product, busyKey, onNotify, onRemove }) {
-  const watcherCount = Number(
-    product?._count?.wishlists || product?.wishlists?.length || 0,
-  );
-
-  return (
-    <article className="wishlist-owner-card">
-      <ProductCard product={product} actionLayout="icon-top" />
-
-      <div className="wishlist-owner-card__watchers">
-        <div className="wishlist-owner-card__watchers-header">
-          <h4>People waiting for this item</h4>
-          <span className="tag">{watcherCount} saved</span>
-        </div>
-
-        <div className="list-stack">
-          {product.wishlists?.map((wishlist) => (
-            <WishlistWatcher
-              key={wishlist.id}
-              wishlist={wishlist}
-              product={product}
-              busyKey={busyKey}
-              onNotify={onNotify}
-              onRemove={onRemove}
-            />
-          ))}
-        </div>
-      </div>
-    </article>
-  );
-}
 
 export function WishlistPage({ page }) {
   const { user, loading, logout } = useSession();
-  const { dialog, setDialog, closeDialog, confirmDialog, promptDialog } =
-    useActionDialog();
+  const { dialog, setDialog, closeDialog, confirmDialog } = useActionDialog();
   const [message, showMessage] = useMessageState("");
   const [savedPage, setSavedPage] = useState(1);
-  const [ownerPage, setOwnerPage] = useState(1);
   const [savedItems, setSavedItems] = useState([]);
-  const [ownerProducts, setOwnerProducts] = useState([]);
   const [savedPagination, setSavedPagination] = useState(null);
-  const [ownerPagination, setOwnerPagination] = useState(null);
   const [loadingSaved, setLoadingSaved] = useState(true);
-  const [loadingOwner, setLoadingOwner] = useState(true);
-  const [busyKey, setBusyKey] = useState("");
+  const [busyProductId, setBusyProductId] = useState("");
 
   useEffect(() => {
     document.title = "Wishlist | AI Rent";
@@ -181,10 +90,7 @@ export function WishlistPage({ page }) {
       if (!result.ok || !result.data?.success) {
         setSavedItems([]);
         setSavedPagination(null);
-        showMessage(
-          result.data?.message || "Unable to load your wishlist.",
-          "error",
-        );
+        showMessage(result.data?.message || "Unable to load your wishlist.", "error");
         return;
       }
 
@@ -199,66 +105,16 @@ export function WishlistPage({ page }) {
     };
   }, [loading, savedPage, showMessage, user]);
 
-  useEffect(() => {
-    let active = true;
-
-    async function loadOwnerInterest() {
-      if (loading || !user || user.role === "admin") {
-        return;
-      }
-
-      setLoadingOwner(true);
-      const result = await fetchOwnerWishlistPage({
-        page: ownerPage,
-        limit: 4,
-      });
-
-      if (!active) {
-        return;
-      }
-
-      setLoadingOwner(false);
-
-      if (!result.ok || !result.data?.success) {
-        setOwnerProducts([]);
-        setOwnerPagination(null);
-        showMessage(
-          result.data?.message ||
-            "Unable to load wishlist interest for your listings.",
-          "error",
-        );
-        return;
-      }
-
-      setOwnerProducts(result.data.data?.products || []);
-      setOwnerPagination(result.data.data?.pagination || null);
-    }
-
-    loadOwnerInterest();
-
-    return () => {
-      active = false;
-    };
-  }, [loading, ownerPage, showMessage, user]);
-
   async function reloadSavedItems() {
     const result = await fetchWishlistPage({ page: savedPage, limit: 6 });
     if (!result.ok || !result.data?.success) {
+      setSavedItems([]);
+      setSavedPagination(null);
       return;
     }
 
     setSavedItems(result.data.data?.wishlists || []);
     setSavedPagination(result.data.data?.pagination || null);
-  }
-
-  async function reloadOwnerInterest() {
-    const result = await fetchOwnerWishlistPage({ page: ownerPage, limit: 4 });
-    if (!result.ok || !result.data?.success) {
-      return;
-    }
-
-    setOwnerProducts(result.data.data?.products || []);
-    setOwnerPagination(result.data.data?.pagination || null);
   }
 
   async function handleRemoveSaved(productId) {
@@ -273,9 +129,9 @@ export function WishlistPage({ page }) {
       return;
     }
 
-    setBusyKey(`saved:${productId}`);
+    setBusyProductId(productId);
     const result = await removeWishlistItem(productId);
-    setBusyKey("");
+    setBusyProductId("");
 
     showMessage(
       result.data?.message || "Wishlist updated.",
@@ -293,80 +149,6 @@ export function WishlistPage({ page }) {
 
     await reloadSavedItems();
   }
-
-  async function handleNotifyWishlist(wishlist, product) {
-    const defaultMessage =
-      product.status === "available"
-        ? `${product.title} is available again and ready for rent.`
-        : `${product.title} has a new update from the owner.`;
-    const enteredMessage = await promptDialog({
-      title: "Send wishlist update",
-      message:
-        "Add an optional message for this user. Leave it blank to send the default update.",
-      fieldLabel: "Message",
-      fieldPlaceholder: "Write an optional update",
-      defaultValue: defaultMessage,
-      confirmLabel: "Send update",
-      cancelLabel: "Cancel",
-    });
-
-    if (enteredMessage === null) {
-      return;
-    }
-
-    setBusyKey(`notify:${wishlist.id}`);
-    const result = await sendWishlistNotification(wishlist.id, {
-      message: enteredMessage.trim() || undefined,
-    });
-    setBusyKey("");
-
-    showMessage(
-      result.data?.message || "Wishlist notification updated.",
-      result.ok ? "success" : "error",
-    );
-  }
-
-  async function handleRemoveOwnerWishlist(wishlist, product) {
-    const shouldRemove = await confirmDialog({
-      title: "Remove wishlist alert?",
-      message: `Remove ${wishlist.user?.name || "this user"} from alerts for ${product.title}?`,
-      confirmLabel: "Remove alert",
-      cancelLabel: "Keep alert",
-      tone: "danger",
-    });
-    if (!shouldRemove) {
-      return;
-    }
-
-    setBusyKey(`remove-owner:${wishlist.id}`);
-    const result = await removeOwnerWishlistItem(wishlist.id);
-    setBusyKey("");
-
-    showMessage(
-      result.data?.message || "Wishlist interest updated.",
-      result.ok ? "success" : "error",
-    );
-
-    if (!result.ok) {
-      return;
-    }
-
-    if (ownerProducts.length === 1 && (ownerPagination?.page || 1) > 1) {
-      setOwnerPage((previous) => previous - 1);
-      return;
-    }
-
-    await reloadOwnerInterest();
-  }
-
-  const savedCount = savedPagination?.totalItems || savedItems.length;
-  const ownerListingCount = ownerPagination?.totalItems || ownerProducts.length;
-  const visibleWatcherCount = ownerProducts.reduce(
-    (total, product) =>
-      total +
-      Number(product?._count?.wishlists || product?.wishlists?.length || 0),
-    0,
-  );
 
   return (
     <SiteLayout
@@ -388,11 +170,12 @@ export function WishlistPage({ page }) {
           >
             {savedItems.length ? (
               savedItems.map((item) => (
-                <SavedWishlistCard
-                  key={item.id}
-                  item={item}
-                  onRemove={handleRemoveSaved}
-                />
+                <div key={item.id}>
+                  <SavedWishlistCard item={item} onRemove={handleRemoveSaved} />
+                  {busyProductId === (item.product?.id || item.productId) ? (
+                    <p className="compact-text">Updating wishlist...</p>
+                  ) : null}
+                </div>
               ))
             ) : (
               <EmptyState
@@ -411,44 +194,6 @@ export function WishlistPage({ page }) {
             onNext={() => setSavedPage((previous) => previous + 1)}
           />
         </article>
-
-        {/* <article className="surface-panel">
-          <SectionHeading
-            eyebrow="Owner side"
-            title="People waiting for my listings"
-            compact
-            linkHref="/html/profile.html?tab=notifications"
-            linkLabel="Open notifications"
-          /> */}
-
-        {/* <div className="card-grid wishlist-owner-grid">
-            {ownerProducts.length ? (
-              ownerProducts.map((product) => (
-                <OwnerWishlistCard
-                  key={product.id}
-                  product={product}
-                  busyKey={busyKey}
-                  onNotify={handleNotifyWishlist}
-                  onRemove={handleRemoveOwnerWishlist}
-                />
-              ))
-            ) : (
-              <EmptyState
-                message={
-                  loadingOwner
-                    ? "Loading owner wishlist interest..."
-                    : "No one has saved your listings yet."
-                }
-              />
-            )}
-          </div> */}
-
-        {/* <PaginationBar
-            pagination={ownerPagination}
-            onPrevious={() => setOwnerPage((previous) => previous - 1)}
-            onNext={() => setOwnerPage((previous) => previous + 1)}
-          /> */}
-        {/* </article> */}
       </section>
       <ActionDialog
         dialog={dialog}

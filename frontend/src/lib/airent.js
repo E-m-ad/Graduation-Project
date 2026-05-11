@@ -27,6 +27,79 @@ function isPersistentSession() {
   return getCurrentStorage() === localStorage;
 }
 
+function readMessageValue(value) {
+  return typeof value === "string" && value.trim() ? value.trim() : "";
+}
+
+function extractMessage(payload) {
+  if (!payload) {
+    return "";
+  }
+
+  if (typeof payload === "string") {
+    return payload.trim();
+  }
+
+  if (payload instanceof Error) {
+    return readMessageValue(payload.message);
+  }
+
+  if (Array.isArray(payload)) {
+    for (const item of payload) {
+      const nextMessage = extractMessage(item);
+      if (nextMessage) {
+        return nextMessage;
+      }
+    }
+
+    return "";
+  }
+
+  if (typeof payload !== "object") {
+    return "";
+  }
+
+  return (
+    readMessageValue(payload.message) ||
+    readMessageValue(payload.error) ||
+    extractMessage(payload.error) ||
+    extractMessage(payload.errors) ||
+    extractMessage(payload.details) ||
+    extractMessage(payload.issues)
+  );
+}
+
+function normalizeApiPayload(payload, isSuccessfulResponse) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return payload;
+  }
+
+  const normalizedMessage = extractMessage(payload);
+
+  if (normalizedMessage && !readMessageValue(payload.message)) {
+    payload.message = normalizedMessage;
+  }
+
+  if (payload.success === undefined) {
+    payload.success = isSuccessfulResponse;
+  }
+
+  return payload;
+}
+
+export function getResultMessage(resultOrData, fallback = "") {
+  const payload =
+    resultOrData && typeof resultOrData === "object" && "data" in resultOrData
+      ? resultOrData.data
+      : resultOrData;
+
+  return extractMessage(payload) || fallback;
+}
+
+export function isSuccessfulResult(result) {
+  return Boolean(result?.ok && result?.data?.success);
+}
+
 export function getAccessToken() {
   return sessionStorage.getItem(TOKEN_KEY) || localStorage.getItem(TOKEN_KEY);
 }
@@ -68,16 +141,25 @@ export function saveSession({ accessToken, user, remember } = {}) {
 async function parseResponse(response) {
   const contentType = response.headers.get("content-type") || "";
   if (contentType.includes("application/json")) {
-    return response.json();
+    const data = await response.json();
+    return normalizeApiPayload(data, response.ok);
   }
 
   const text = await response.text();
-  if (!text) return {};
+  if (!text) {
+    return {
+      success: response.ok,
+    };
+  }
 
   try {
-    return JSON.parse(text);
+    const data = JSON.parse(text);
+    return normalizeApiPayload(data, response.ok);
   } catch {
-    return { message: text };
+    return {
+      success: response.ok,
+      message: text,
+    };
   }
 }
 
@@ -316,31 +398,10 @@ export async function fetchWishlistPage({ page = 1, limit = 12 } = {}) {
   });
 }
 
-export async function fetchOwnerWishlistPage({ page = 1, limit = 12 } = {}) {
-  return fetchApi(`/api/v1/wishlists/owner?${buildQuery({ page, limit })}`, {
-    auth: true,
-  });
-}
-
 export async function removeWishlistItem(productId) {
   return fetchApi(`/api/v1/wishlists/${productId}`, {
     method: "DELETE",
     auth: true,
-  });
-}
-
-export async function removeOwnerWishlistItem(wishlistId) {
-  return fetchApi(`/api/v1/wishlists/owner/${wishlistId}`, {
-    method: "DELETE",
-    auth: true,
-  });
-}
-
-export async function sendWishlistNotification(wishlistId, payload = {}) {
-  return fetchApi(`/api/v1/wishlists/owner/${wishlistId}/notify`, {
-    method: "POST",
-    auth: true,
-    body: payload,
   });
 }
 

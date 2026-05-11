@@ -495,6 +495,8 @@ function buildCreateProductData(ownerId, payload) {
     categoryId: payload.categoryId,
     title: payload.title,
     description: payload.description,
+    status: "available",
+    isApproved: true,
   };
 
   if (payload.pricePerHour !== undefined)
@@ -1238,24 +1240,12 @@ async function createProduct(req, res) {
         select: MANAGE_PRODUCT_SELECT,
       });
 
-      await createAdminNotifications(tx, {
-        title: "New listing submitted",
-        message: `${req.user.name} submitted "${nextProduct.title}" for review`,
-        data: {
-          action: "product_submitted_for_review",
-          productId: nextProduct.id,
-          productTitle: nextProduct.title,
-          ownerId: req.user.id,
-          categoryId: nextProduct.category?.id ?? payload.categoryId,
-        },
-      });
-
       return nextProduct;
     });
 
     return res.status(201).json({
       success: true,
-      message: "Listing created successfully and sent for review",
+      message: "Listing created successfully and published",
       data: createdProduct,
     });
   } catch (error) {
@@ -1580,9 +1570,22 @@ async function updateProductStatus(req, res) {
     }
 
     const updatedProduct = await db.$transaction(async (tx) => {
+      const statusUpdateData = { status };
+
+      if (req.user.role === "admin") {
+        if (APPROVED_PRODUCT_STATUSES.includes(status)) {
+          statusUpdateData.isApproved = true;
+          statusUpdateData.adminReviewNote = null;
+          statusUpdateData.ownerReviewReply = null;
+          statusUpdateData.ownerRepliedAt = null;
+        } else if (status === "under_review") {
+          statusUpdateData.isApproved = false;
+        }
+      }
+
       const nextProduct = await tx.product.update({
         where: { id },
-        data: { status },
+        data: statusUpdateData,
         select: MANAGE_PRODUCT_SELECT,
       });
 

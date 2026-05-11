@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { fetchApi, getDefaultAuthenticatedPath } from "../lib/airent";
 import { useCanvasCursor } from "../lib/hooks";
+import { SiteAssistant } from "./SiteAssistant";
 
 const MOBILE_NAV_BREAKPOINT = 720;
 const HEADER_CLEARANCE_PX = 24;
@@ -253,10 +254,12 @@ export function SiteLayout({
   cursorConfig,
   notificationBadgeCount,
   notificationBadgeCounts,
+  assistantContext,
 }) {
   useCanvasCursor(cursorConfig);
 
   const isAdmin = user?.role === "admin";
+  const showAssistant = page !== "admin" && !isAdmin;
   const heroHeaderSelector = HERO_HEADER_SELECTORS[page] || null;
   const normalHeaderSectionSelectors =
     NORMAL_HEADER_SECTION_SELECTORS[page] || [];
@@ -1007,6 +1010,13 @@ export function SiteLayout({
       </header>
       <main className={mainClassName}>{children}</main>
       <SiteFooter user={user} />
+      {showAssistant ? (
+        <SiteAssistant
+          page={page}
+          user={user}
+          assistantContext={assistantContext}
+        />
+      ) : null}
     </>
   );
 }

@@ -259,11 +259,19 @@ export function MessageText({ message, id }) {
   const text = typeof message === "string" ? message : message?.text || "";
   const type = typeof message === "string" ? "" : message?.type || "";
   const className = `message${type ? ` message--${type}` : ""}`;
+
   if (text === "") {
     return null;
   }
+
   return (
-    <p className={className} id={id}>
+    <p
+      className={className}
+      id={id}
+      role={type === "error" ? "alert" : "status"}
+      aria-live={type === "error" ? "assertive" : "polite"}
+      aria-atomic="true"
+    >
       {text}
     </p>
   );

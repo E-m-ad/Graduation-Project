@@ -1,7 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
+import "../styles/picker.css";
+import "../styles/products.css";
 import {
   fetchApi,
   fetchWishlistIds,
+  getResultMessage,
+  isSuccessfulResult,
   replaceUrl,
   toggleWishlist,
   trackBehavior,
@@ -15,7 +19,6 @@ import {
   SectionHeading,
 } from "../components/Common";
 import { SiteLayout } from "../components/Layout";
-import { de } from "zod/locales";
 
 function readFiltersFromUrl() {
   const params = new URLSearchParams(window.location.search);
@@ -63,7 +66,9 @@ export function ProductsPage({ page }) {
 
       const result = await fetchApi("/api/v1/categories");
       if (!active) return;
-      setCategories(result.data?.data?.categories || []);
+      setCategories(
+        isSuccessfulResult(result) ? result.data?.data?.categories || [] : [],
+      );
     }
 
     loadCategories();
@@ -127,11 +132,8 @@ export function ProductsPage({ page }) {
 
       setLoadingProducts(false);
 
-      if (!result.ok || !result.data?.success) {
-        showMessage(
-          result.data?.message || "Unable to load listings.",
-          "error",
-        );
+      if (!isSuccessfulResult(result)) {
+        showMessage(getResultMessage(result, "Unable to load listings."), "error");
         setProducts([]);
         setPagination(null);
         return;
@@ -254,6 +256,12 @@ export function ProductsPage({ page }) {
       user={user}
       onLogout={logout}
       cursorConfig={CURSOR_CONFIG[page]}
+      assistantContext={{
+        search: filters.search,
+        city: filters.city,
+        categoryName: selectedCategory?.name || "",
+        resultsCount: pagination?.totalItems ?? products.length,
+      }}
     >
       <section className="listings-hero">
         <div className="listing-hero-inner">

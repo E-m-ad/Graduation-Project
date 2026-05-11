@@ -1,8 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
+import "../styles/picker.css";
+import "../styles/my-listings.css";
 import {
   buildQuery,
   fetchApi,
   getDefaultAuthenticatedPath,
+  getResultMessage,
   redirectToLogin,
 } from "../lib/airent";
 import { useActionDialog, useMessageState, useSession } from "../lib/hooks";
@@ -213,7 +216,7 @@ export function MyListingsPage({ page }) {
 
       if (!result.ok || !result.data?.success) {
         showMessage(
-          result.data?.message || "Unable to load your listings.",
+          getResultMessage(result, "Unable to load your listings."),
           "error",
         );
         setListings([]);
@@ -320,6 +323,7 @@ export function MyListingsPage({ page }) {
 
   async function handleSubmit(event) {
     event.preventDefault();
+    showMessage("");
     setSubmitting(true);
 
     const isEditing = Boolean(editingListingId);
@@ -334,10 +338,12 @@ export function MyListingsPage({ page }) {
 
     if (!result.ok || !result.data?.success) {
       showMessage(
-        result.data?.message ||
-          (isEditing
+        getResultMessage(
+          result,
+          isEditing
             ? "Unable to update the listing."
-            : "Unable to create the listing."),
+            : "Unable to create the listing.",
+        ),
         "error",
       );
       setSubmitting(false);
@@ -349,10 +355,12 @@ export function MyListingsPage({ page }) {
 
     if (!uploadResult.ok) {
       showMessage(
-        uploadResult.data?.message ||
-          (isEditing
+        getResultMessage(
+          uploadResult,
+          isEditing
             ? "Listing updated, but image upload was not completed."
-            : "Listing created, but image upload was not completed."),
+            : "Listing created, but image upload was not completed.",
+        ),
         "error",
       );
       setSubmitting(false);
@@ -361,10 +369,12 @@ export function MyListingsPage({ page }) {
     }
 
     showMessage(
-      result.data?.message ||
-        (isEditing
+      getResultMessage(
+        result,
+        isEditing
           ? "Listing updated successfully."
-          : "Listing created successfully."),
+          : "Listing created successfully.",
+      ),
       "success",
     );
     setSubmitting(false);
@@ -441,7 +451,7 @@ export function MyListingsPage({ page }) {
     }
 
     showMessage(
-      result.data?.message || "Listing updated.",
+      getResultMessage(result, "Listing updated."),
       result.ok ? "success" : "error",
     );
 
@@ -462,6 +472,9 @@ export function MyListingsPage({ page }) {
     .map((file) => file?.name)
     .filter(Boolean)
     .join(", ");
+  const listingMessageText =
+    typeof message === "string" ? message : message?.text || "";
+  const hasListingMessage = Boolean(listingMessageText);
 
   return (
     <SiteLayout
@@ -473,8 +486,6 @@ export function MyListingsPage({ page }) {
       {/* <section className="page-hero">
         <div></div>
       </section> */}
-
-      <MessageText message={message} id="listingMessage" />
 
       <section className="listing-layout">
         <article className="surface-panel" ref={formPanelRef}>
@@ -834,6 +845,9 @@ export function MyListingsPage({ page }) {
                   type="submit"
                   className="btn btn--primary"
                   disabled={submitting}
+                  aria-describedby={
+                    hasListingMessage ? "listingMessage" : undefined
+                  }
                 >
                   {submitting
                     ? editingListingId
@@ -852,6 +866,11 @@ export function MyListingsPage({ page }) {
                   >
                     Cancel
                   </button>
+                ) : null}
+                {hasListingMessage ? (
+                  <div className="listing-actions__message">
+                    <MessageText message={message} id="listingMessage" />
+                  </div>
                 ) : null}
               </div>
             </div>

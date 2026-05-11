@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import "../styles/admin-dashboard.css";
 import {
   buildQuery,
   fetchApi,
@@ -22,7 +23,7 @@ const PANEL_META = {
   overview: { eyebrow: "Operations", title: "Overview" },
   notifications: { eyebrow: "Inbox", title: "Notifications" },
   users: { eyebrow: "Admin tools", title: "Users" },
-  products: { eyebrow: "Moderation", title: "Products" },
+  products: { eyebrow: "Listing controls", title: "Products" },
   rentals: { eyebrow: "Operations", title: "Rentals" },
   reports: { eyebrow: "Insights", title: "Reports" },
   categories: { eyebrow: "Catalog", title: "Categories" },
@@ -365,7 +366,7 @@ function ProductItem({ product, onModerate, onChangeStatus }) {
               )
             }
           >
-            {isUnlistedApprovedListing ? "Relist" : "Unlist"}
+            {isUnlistedApprovedListing ? "Activate" : "Deactivate"}
           </button>
         ) : null}
       </div>
@@ -1008,7 +1009,7 @@ export function AdminDashboardPage({ page }) {
         {
           label: "Products",
           value: String(overview.summary?.products?.total || 0),
-          hint: `${overview.summary?.products?.pendingReview || 0} pending review`,
+          hint: `${overview.summary?.products?.pendingReview || 0} need review`,
         },
         {
           label: "Rentals",
@@ -1125,7 +1126,7 @@ export function AdminDashboardPage({ page }) {
                 panelName === "notifications"
                   ? `${attentionCount} unread notifications`
                   : panelName === "products"
-                    ? `${attentionCount} products need approval`
+                    ? `${attentionCount} products need review`
                     : `${attentionCount} rentals need attention`;
 
               return (
@@ -1201,12 +1202,12 @@ export function AdminDashboardPage({ page }) {
               <article className="surface-panel">
                 <SectionHeading
                   eyebrow="Pending products"
-                  title="Listings waiting for review"
+                  title="Listings needing review"
                   compact
                 />
                 <AdminList
                   items={overview?.recent?.pendingProducts || []}
-                  emptyMessage="No products are waiting for review."
+                  emptyMessage="No products need review."
                   renderItem={(item) => (
                     <PendingProductItem
                       key={item.id}
@@ -1621,7 +1622,7 @@ export function AdminDashboardPage({ page }) {
               <div className="section-heading section-heading--compact">
                 <div>
                   <p className="eyebrow">Moderation queue</p>
-                  <h3>Listings and approval state</h3>
+                  <h3>Listings and visibility</h3>
                 </div>
                 <AdminPagination
                   pagination={productsPagination}

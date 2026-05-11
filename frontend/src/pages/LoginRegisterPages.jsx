@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from "react";
+import "../styles/login.css";
 import {
   fetchApi,
   getDefaultAuthenticatedPath,
+  getResultMessage,
   goToNextPage,
+  isSuccessfulResult,
   saveSession,
 } from "../lib/airent";
 import { useMessageState, useSession } from "../lib/hooks";
@@ -31,7 +34,7 @@ function validateEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-function AuthIntro({ eyebrow, title, description, points = [] }) {
+function AuthIntro({ eyebrow, title, description }) {
   return (
     <article className="auth-intro">
       <div className="inner-intro">
@@ -121,7 +124,7 @@ export function LoginPage({ page }) {
       },
     });
 
-    if (!result.ok || !result.data?.success) {
+    if (!isSuccessfulResult(result)) {
       const normalizedEmail = form.email.trim();
       if (
         result.data?.requiresEmailVerification ||
@@ -137,9 +140,10 @@ export function LoginPage({ page }) {
       }
 
       showMessage(
-        result.data?.error?.message ||
-          result.data?.message ||
+        getResultMessage(
+          result,
           "Login failed. Please check your credentials.",
+        ),
         "error",
       );
       setSubmitting(false);
@@ -193,7 +197,7 @@ export function LoginPage({ page }) {
       result.ok ? "success" : "error",
     );
 
-    if (!result.ok || !result.data?.success) {
+    if (!isSuccessfulResult(result)) {
       return;
     }
 
@@ -407,11 +411,9 @@ export function RegisterPage({ page }) {
 
     setSubmitting(false);
 
-    if (!result.ok || !result.data?.success) {
+    if (!isSuccessfulResult(result)) {
       showMessage(
-        result.data?.error?.message ||
-          result.data?.message ||
-          "Registration failed. Please try again.",
+        getResultMessage(result, "Registration failed. Please try again."),
         "error",
       );
       return;

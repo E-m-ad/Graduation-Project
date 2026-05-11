@@ -171,7 +171,7 @@ model Product {
   latitude        Decimal? @db.Decimal(10, 8)
   longitude       Decimal? @db.Decimal(11, 8)
 
-  status    ProductStatus    @default(under_review)
+  status    ProductStatus    @default(available)
   condition ProductCondition @default(good)
 
   minRentalPeriod Int @default(1)
@@ -185,7 +185,7 @@ model Product {
   totalRentals Int     @default(0)
   viewCount    Int     @default(0)
 
-  isApproved Boolean @default(false)
+  isApproved Boolean @default(true)
   isFeatured Boolean @default(false)
 
   adminReviewNote  String?   @db.Text

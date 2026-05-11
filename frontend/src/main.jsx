@@ -1,52 +1,101 @@
-import React from "react";
+import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./styles/common.css";
-import "./styles/home.css";
-import "./styles/products.css";
-import "./styles/login.css";
-import "./styles/profile.css";
-import "./styles/my-listings.css";
-import "./styles/product-details.css";
-import "./styles/admin-dashboard.css";
-import "./styles/wishlist.css";
-import "./styles/rentals.css";
-import { HomePage } from "./pages/HomePage";
-import { ProductsPage } from "./pages/ProductsPage";
-import { ProductDetailsPage } from "./pages/ProductDetailsPage";
-import { LoginPage, RegisterPage } from "./pages/LoginRegisterPages";
-import {
-  ForgotPasswordPage,
-  ResetPasswordPage,
-  VerifyEmailPage,
-} from "./pages/RecoveryPages";
-import { ProfilePage } from "./pages/ProfilePage";
-import { MyListingsPage } from "./pages/MyListingsPage";
-import { AdminDashboardPage } from "./pages/AdminDashboardPage";
-import { WishlistPage } from "./pages/WishlistPage";
-import { BookingsPage, RentalsPage } from "./pages/RentalPages";
 
-const pages = {
-  home: HomePage,
-  products: ProductsPage,
-  "product-details": ProductDetailsPage,
-  login: LoginPage,
-  register: RegisterPage,
-  "forgot-password": ForgotPasswordPage,
-  "reset-password": ResetPasswordPage,
-  "verify-email": VerifyEmailPage,
-  profile: ProfilePage,
-  wishlist: WishlistPage,
-  "my-listings": MyListingsPage,
-  bookings: BookingsPage,
-  rentals: RentalsPage,
-  admin: AdminDashboardPage,
+const pageLoaders = {
+  home: () => import("./pages/HomePage").then((module) => module.HomePage),
+  products: () =>
+    import("./pages/ProductsPage").then((module) => module.ProductsPage),
+  "product-details": () =>
+    import("./pages/ProductDetailsPage").then(
+      (module) => module.ProductDetailsPage,
+    ),
+  login: () =>
+    import("./pages/LoginRegisterPages").then((module) => module.LoginPage),
+  register: () =>
+    import("./pages/LoginRegisterPages").then((module) => module.RegisterPage),
+  "forgot-password": () =>
+    import("./pages/RecoveryPages").then(
+      (module) => module.ForgotPasswordPage,
+    ),
+  "reset-password": () =>
+    import("./pages/RecoveryPages").then((module) => module.ResetPasswordPage),
+  "verify-email": () =>
+    import("./pages/RecoveryPages").then((module) => module.VerifyEmailPage),
+  profile: () =>
+    import("./pages/ProfilePage").then((module) => module.ProfilePage),
+  wishlist: () =>
+    import("./pages/WishlistPage").then((module) => module.WishlistPage),
+  "my-listings": () =>
+    import("./pages/MyListingsPage").then((module) => module.MyListingsPage),
+  bookings: () =>
+    import("./pages/RentalPages").then((module) => module.BookingsPage),
+  rentals: () =>
+    import("./pages/RentalPages").then((module) => module.RentalsPage),
+  admin: () =>
+    import("./pages/AdminDashboardPage").then(
+      (module) => module.AdminDashboardPage,
+    ),
 };
 
 const page = document.body.dataset.page || "home";
-const PageComponent = pages[page] || HomePage;
+
+function PageLoadErrorState({ message }) {
+  return (
+    <main className="page-shell">
+      <section className="section">
+        <div className="surface-panel">
+          <p className="message message--error" role="alert">
+            {message}
+          </p>
+        </div>
+      </section>
+    </main>
+  );
+}
 
 function AppBootstrap() {
-  React.useEffect(() => {
+  const [PageComponent, setPageComponent] = useState(null);
+  const [loadError, setLoadError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadPageComponent() {
+      try {
+        const loadPage = pageLoaders[page] || pageLoaders.home;
+        const nextPageComponent = await loadPage();
+
+        if (!active) {
+          return;
+        }
+
+        setLoadError("");
+        setPageComponent(() => nextPageComponent);
+      } catch (error) {
+        console.error(`Failed to load page bundle for "${page}"`, error);
+
+        if (!active) {
+          return;
+        }
+
+        setPageComponent(null);
+        setLoadError("Unable to load this page right now. Please refresh.");
+      }
+    }
+
+    loadPageComponent();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!PageComponent && !loadError) {
+      return undefined;
+    }
+
     const hideBootLoader = () => {
       if (typeof window.__AIRentHideBootLoader === "function") {
         window.__AIRentHideBootLoader();
@@ -68,7 +117,15 @@ function AppBootstrap() {
     return () => {
       window.removeEventListener("load", hideBootLoader);
     };
-  }, []);
+  }, [PageComponent, loadError]);
+
+  if (loadError) {
+    return <PageLoadErrorState message={loadError} />;
+  }
+
+  if (!PageComponent) {
+    return null;
+  }
 
   return <PageComponent page={page} />;
 }

@@ -175,6 +175,7 @@ const openApiDocument = {
     { name: "Reviews" },
     { name: "Wishlists" },
     { name: "Recommendations" },
+    { name: "Assistant" },
     { name: "Behavior" },
     { name: "Notifications" },
     { name: "Admin" },
@@ -407,10 +408,12 @@ const openApiDocument = {
       post: operation({
         tag: "Products",
         summary: "Create product listing",
+        description:
+          "New listings are published immediately as approved and available. Admins can later deactivate or reactivate listings through status controls.",
         security: bearerSecurity,
         requestBody: jsonRequestBody(refSchema("ProductCreateRequest")),
         successStatus: 201,
-        successDescription: "Listing created successfully",
+        successDescription: "Listing created successfully and published",
         extraResponses: ["ValidationError", "Unauthorized", "Forbidden", "NotFound", "Conflict", "ServerError"],
       }),
     },
@@ -463,7 +466,7 @@ const openApiDocument = {
         tag: "Products",
         summary: "Update product status",
         description:
-          "Owners can set `available` or `unavailable`. Admins can also use `under_review` and `suspended`.",
+          "Owners can set `available` or `unavailable`. Admins can activate listings with `available`/`unavailable`, deactivate them with `suspended`, or send legacy records back to `under_review`.",
         security: bearerSecurity,
         parameters: [uuidPathParameter("id", "Product id")],
         requestBody: jsonRequestBody(refSchema("ProductStatusUpdateRequest")),
@@ -766,6 +769,18 @@ const openApiDocument = {
           ...paginationParameters,
         ],
         extraResponses: ["ValidationError", "NotFound", "ServerError"],
+      }),
+    },
+    "/assistant/chat": {
+      post: operation({
+        tag: "Assistant",
+        summary: "Get a context-aware assistant reply",
+        description:
+          "Returns an assistant answer for marketplace and listing questions. Authentication is optional, but signed-in requests can include user context.",
+        requestBody: jsonRequestBody(refSchema("AssistantChatRequest")),
+        successDescription: "Assistant reply generated successfully",
+        successSchema: "AssistantChatResponse",
+        extraResponses: ["ValidationError", "ServerError"],
       }),
     },
     "/behavior/track": {
@@ -1231,7 +1246,8 @@ const openApiDocument = {
       ProductCreateRequest: {
         type: "object",
         required: ["categoryId", "title", "description"],
-        description: "At least one rental price must be provided.",
+        description:
+          "At least one rental price must be provided. Created listings become approved and available immediately.",
         properties: {
           categoryId: { type: "string", format: "uuid" },
           title: { type: "string", minLength: 3, maxLength: 200 },
@@ -1346,6 +1362,84 @@ const openApiDocument = {
           sessionId: { type: "string", maxLength: 100 },
           deviceInfo: { type: "string", maxLength: 200 },
           metadata: { type: "object", additionalProperties: true },
+        },
+      },
+      AssistantChatRequest: {
+        type: "object",
+        required: ["message"],
+        properties: {
+          message: {
+            type: "string",
+            minLength: 1,
+            maxLength: 2000,
+          },
+          history: {
+            type: "array",
+            maxItems: 12,
+            items: {
+              type: "object",
+              required: ["role", "content"],
+              properties: {
+                role: {
+                  type: "string",
+                  enum: ["user", "assistant"],
+                },
+                content: {
+                  type: "string",
+                  minLength: 1,
+                  maxLength: 4000,
+                },
+              },
+            },
+          },
+          context: {
+            type: "object",
+            properties: {
+              page: { type: "string", maxLength: 60 },
+              pathname: { type: "string", maxLength: 500 },
+              pageTitle: { type: "string", maxLength: 160 },
+              productId: { type: "string", format: "uuid" },
+              productTitle: { type: "string", maxLength: 200 },
+              search: { type: "string", maxLength: 200 },
+              city: { type: "string", maxLength: 100 },
+              categoryName: { type: "string", maxLength: 100 },
+              resultsCount: { type: "integer", minimum: 0 },
+            },
+          },
+        },
+      },
+      AssistantChatResponse: {
+        type: "object",
+        required: ["success", "data"],
+        properties: {
+          success: { type: "boolean", example: true },
+          data: {
+            type: "object",
+            required: ["answer", "suggestedPrompts", "source", "context"],
+            properties: {
+              answer: { type: "string" },
+              suggestedPrompts: {
+                type: "array",
+                items: { type: "string" },
+              },
+              source: {
+                type: "string",
+                enum: ["llm", "fallback"],
+              },
+              context: {
+                type: "object",
+                properties: {
+                  page: { type: "string", nullable: true },
+                  productId: {
+                    type: "string",
+                    format: "uuid",
+                    nullable: true,
+                  },
+                  productTitle: { type: "string", nullable: true },
+                },
+              },
+            },
+          },
         },
       },
       AdminUserStatusRequest: {

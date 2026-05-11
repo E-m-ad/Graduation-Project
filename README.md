@@ -157,7 +157,7 @@ flowchart LR
 | --- | --- | --- |
 | `guest` | Unauthenticated visitor | Browse public listings, categories, product details, similar products, and public owner profiles |
 | `renter` | Authenticated marketplace user | Book products, manage bookings, save wishlist items, review completed rentals |
-| `owner` | Listing manager | Create listings, upload images, handle approvals and rental lifecycle |
+| `owner` | Listing manager | Create listings, upload images, manage availability, and handle rental lifecycle |
 | `both` | User acting as renter and owner | Can use both renter and owner workflows |
 | `admin` | Marketplace operator | Moderate users, products, rentals, and reports |
 
@@ -174,7 +174,7 @@ Notes:
 - Guest browses categories and available products
 - User registers, verifies email, and logs in
 - Owner creates a listing and uploads images
-- Admin reviews and approves or rejects listings
+- Admin can deactivate or reactivate listings when needed
 - Renter requests a rental for an approved listing
 - Owner approves or rejects the request
 - Owner starts and completes the rental lifecycle
@@ -237,7 +237,7 @@ flowchart LR
 2. A user registers an account, receives a verification email, and verifies the email address.
 3. The user updates the profile and uploads an avatar.
 4. An owner creates a listing from `My Listings`.
-5. The admin reviews the listing and approves it.
+5. The listing is published immediately.
 6. A renter opens the product details page and submits a rental request.
 7. The owner manages the request from the `Rentals` page.
 8. The renter follows the booking from the `Bookings` page.
@@ -248,11 +248,10 @@ flowchart LR
 
 1. Create a listing
 2. Upload images
-3. Wait for admin approval
-4. Reply to moderation notes if needed
-5. Toggle availability
-6. Handle rental requests
-7. Track completed rentals and reviews
+3. Listing becomes live immediately
+4. Toggle availability
+5. Handle rental requests
+6. Track completed rentals and reviews
 
 ### Rental Lifecycle
 
@@ -739,7 +738,7 @@ The smoke test currently checks:
 - registration, email verification, and login
 - category creation
 - product creation and image upload
-- admin approval
+- public listing publication
 - public product listing
 - rental availability
 - booking creation

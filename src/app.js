@@ -18,6 +18,7 @@ import rental from "./routes/rental.js";
 import review from "./routes/review.js";
 import wishlist from "./routes/wishlist.js";
 import recommendation from "./routes/recommendation.js";
+import assistant from "./routes/assistant.js";
 import behavior from "./routes/behavior.js";
 import notification from "./routes/notification.js";
 import admin from "./routes/admin.js";
@@ -156,6 +157,7 @@ export function createApp() {
   app.use("/api/v1/reviews", review);
   app.use("/api/v1/wishlists", wishlist);
   app.use("/api/v1/recommendations", recommendation);
+  app.use("/api/v1/assistant", assistant);
   app.use("/api/v1/behavior", behavior);
   app.use("/api/v1/notifications", notification);
   app.use("/api/v1/admin", admin);

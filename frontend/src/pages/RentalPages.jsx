@@ -1,8 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
+import "../styles/chat.css";
+import "../styles/rentals.css";
 import {
   buildQuery,
   fetchApi,
   getDefaultAuthenticatedPath,
+  getResultMessage,
+  isSuccessfulResult,
   redirectToLogin,
   replaceUrl,
 } from "../lib/airent";
@@ -569,9 +573,12 @@ function RentalWorkspacePage({ mode, page }) {
 
       setLoadingRentals(false);
 
-      if (!result.ok || !result.data?.success) {
+      if (!isSuccessfulResult(result)) {
         showMessage(
-          result.data?.message || `Unable to load your ${config.statusNoun}s.`,
+          getResultMessage(
+            result,
+            `Unable to load your ${config.statusNoun}s.`,
+          ),
           "error",
         );
         setRentals([]);
@@ -623,7 +630,7 @@ function RentalWorkspacePage({ mode, page }) {
       auth: true,
     });
 
-    if (!result.ok || !result.data?.success) {
+    if (!isSuccessfulResult(result)) {
       setRentals([]);
       setPagination(null);
       return;
@@ -677,14 +684,16 @@ function RentalWorkspacePage({ mode, page }) {
       return;
     }
 
-    if (!result.ok || !result.data?.success) {
+    if (!isSuccessfulResult(result)) {
       setChatState((previous) =>
         previous.rentalId === rentalId
           ? {
               ...previous,
               loading: false,
-              error:
-                result.data?.message || "Unable to load the rental chat right now.",
+              error: getResultMessage(
+                result,
+                "Unable to load the rental chat right now.",
+              ),
             }
           : previous,
       );
@@ -748,14 +757,16 @@ function RentalWorkspacePage({ mode, page }) {
       },
     });
 
-    if (!result.ok || !result.data?.success) {
+    if (!isSuccessfulResult(result)) {
       setChatState((previous) =>
         previous.rentalId === rentalId
           ? {
               ...previous,
               sending: false,
-              error:
-                result.data?.message || "Unable to send your message right now.",
+              error: getResultMessage(
+                result,
+                "Unable to send your message right now.",
+              ),
             }
           : previous,
       );

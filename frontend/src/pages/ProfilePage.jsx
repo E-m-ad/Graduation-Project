@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import "../styles/profile.css";
 import {
   AVATAR_PLACEHOLDER,
   fetchApi,
@@ -148,7 +149,8 @@ function getNotificationProductId(notification) {
 }
 
 function getNotificationRentalId(notification) {
-  const rawRentalId = notification?.rentalId || notification?.rental?.id || null;
+  const rawRentalId =
+    notification?.rentalId || notification?.rental?.id || null;
 
   return typeof rawRentalId === "string" && rawRentalId.trim()
     ? rawRentalId
@@ -211,12 +213,7 @@ function getNotificationDestination(notification) {
   return `/html/product-details.html?id=${encodeURIComponent(productId)}`;
 }
 
-function NotificationListItem({
-  notification,
-  onMarkRead,
-  onDelete,
-  onOpen,
-}) {
+function NotificationListItem({ notification, onMarkRead, onDelete, onOpen }) {
   const contextLines = getNotificationContextText(notification);
   const productHref = getNotificationDestination(notification);
   const hasChatLink = isChatNotification(notification);

@@ -11,7 +11,6 @@ import {
   db,
 } from "./testing/test-harness.mjs";
 import {
-  approveProduct,
   createCategory,
   createDefaultActors,
   createProduct,
@@ -433,6 +432,11 @@ async function runCatalogAndModerationTests(context, actors) {
     },
     "Create flow product",
   );
+  assert(
+    flowProduct?.isApproved === true && flowProduct?.status === "available",
+    "Created products should be published immediately",
+    flowProduct,
+  );
 
   const ownerRecord = await db.user.findUnique({
     where: { email: actors.ownerEmail },
@@ -516,17 +520,6 @@ async function runCatalogAndModerationTests(context, actors) {
     "Create delete product",
   );
 
-  const approvedProduct = await approveProduct(
-    actors.adminUser,
-    flowProduct.id,
-    "QA approval for integration workflow",
-  );
-  assert(
-    approvedProduct?.isApproved === true,
-    "Approved product should be marked approved",
-    approvedProduct,
-  );
-
   const adminUnlistResult = await actors.adminUser.request(
     "PUT",
     `/products/${flowProduct.id}/status`,
@@ -534,15 +527,15 @@ async function runCatalogAndModerationTests(context, actors) {
       json: { status: "suspended" },
     },
   );
-  expectStatus(adminUnlistResult, 200, "Admin unlist approved product");
+  expectStatus(adminUnlistResult, 200, "Admin deactivate published product");
   assert(
     adminUnlistResult.body?.data?.status === "suspended",
-    "Admin unlist should suspend the product",
+    "Admin deactivate should suspend the product",
     adminUnlistResult.body,
   );
   assert(
     adminUnlistResult.body?.data?.isApproved === true,
-    "Admin unlist should keep approval state so it can be relisted",
+    "Admin deactivate should keep approval state so it can be reactivated",
     adminUnlistResult.body,
   );
 
@@ -550,7 +543,7 @@ async function runCatalogAndModerationTests(context, actors) {
     useCookies: false,
     useAccessToken: false,
   });
-  expectStatus(unlistedPublicDetail, 404, "Unlisted approved product should be hidden publicly");
+  expectStatus(unlistedPublicDetail, 404, "Deactivated product should be hidden publicly");
 
   const adminRelistResult = await actors.adminUser.request(
     "PUT",
@@ -559,10 +552,10 @@ async function runCatalogAndModerationTests(context, actors) {
       json: { status: "available" },
     },
   );
-  expectStatus(adminRelistResult, 200, "Admin relist approved product");
+  expectStatus(adminRelistResult, 200, "Admin reactivate published product");
   assert(
     adminRelistResult.body?.data?.status === "available",
-    "Admin relist should restore availability",
+    "Admin reactivate should restore availability",
     adminRelistResult.body,
   );
 
@@ -645,7 +638,7 @@ async function runCatalogAndModerationTests(context, actors) {
   expectStatus(publicProducts, 200, "List public products");
   assert(
     publicProducts.body?.data?.products?.some((product) => product.id === flowProduct.id),
-    "Public products should include the approved flow product",
+    "Public products should include the published flow product",
     publicProducts.body,
   );
 
@@ -771,7 +764,7 @@ async function runTransactionalFeatureTests(context, actors, fixtures) {
   expectStatus(availabilityResult, 200, "Check rental availability");
   assert(
     availabilityResult.body?.data?.isAvailable === true,
-    "Approved product should be available for the initial booking dates",
+    "Published product should be available for the initial booking dates",
     availabilityResult.body,
   );
 
@@ -1069,7 +1062,7 @@ async function runTransactionalFeatureTests(context, actors, fixtures) {
     getWishlistResult.body?.data?.wishlists?.some(
       (wishlist) => wishlist.productId === fixtures.flowProductId,
     ),
-    "Wishlist should include the approved product",
+    "Wishlist should include the published product",
     getWishlistResult.body,
   );
 

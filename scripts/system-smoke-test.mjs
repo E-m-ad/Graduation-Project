@@ -9,7 +9,6 @@ import {
   db,
 } from "./testing/test-harness.mjs";
 import {
-  approveProduct,
   createCategory,
   createDefaultActors,
   createProduct,
@@ -188,16 +187,10 @@ async function run() {
       "Owner should be promoted to both after creating a listing",
       ownerRecord,
     );
-
-    const approvedProduct = await approveProduct(
-      actors.adminUser,
-      product.id,
-      "Smoke approval for the happy-path journey",
-    );
     assert(
-      approvedProduct?.isApproved === true,
-      "Approved smoke product should be marked approved",
-      approvedProduct,
+      product?.isApproved === true && product?.status === "available",
+      "Smoke product should be published immediately",
+      product,
     );
 
     const publicProducts = await actors.guest.request("GET", "/products", {

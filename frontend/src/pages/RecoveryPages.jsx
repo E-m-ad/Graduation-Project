@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { fetchApi } from "../lib/airent";
+import "../styles/login.css";
+import { fetchApi, getResultMessage, isSuccessfulResult } from "../lib/airent";
 import { useMessageState, useSession } from "../lib/hooks";
 import { MessageText } from "../components/Common";
 import { SiteLayout } from "../components/Layout";
@@ -90,11 +91,8 @@ export function ForgotPasswordPage({ page }) {
 
     setSubmitting(false);
 
-    if (!result.ok || !result.data?.success) {
-      showMessage(
-        result.data?.message || "Unable to process your request.",
-        "error",
-      );
+    if (!isSuccessfulResult(result)) {
+      showMessage(getResultMessage(result, "Unable to process your request."), "error");
       return;
     }
 
@@ -232,11 +230,9 @@ export function ResetPasswordPage({ page }) {
 
     setSubmitting(false);
 
-    if (!result.ok || !result.data?.success) {
+    if (!isSuccessfulResult(result)) {
       showMessage(
-        result.data?.error?.message ||
-          result.data?.message ||
-          "Unable to reset your password.",
+        getResultMessage(result, "Unable to reset your password."),
         "error",
       );
       return;
@@ -393,11 +389,9 @@ export function VerifyEmailPage({ page }) {
 
     setSubmitting(false);
 
-    if (!result.ok || !result.data?.success) {
+    if (!isSuccessfulResult(result)) {
       showMessage(
-        result.data?.error?.message ||
-          result.data?.message ||
-          "Unable to verify your email.",
+        getResultMessage(result, "Unable to verify your email."),
         "error",
       );
       return;

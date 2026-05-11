@@ -1,4 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
+import "../styles/chat.css";
+import "../styles/product-details.css";
 import {
   AVATAR_PLACEHOLDER,
   buildQuery,
@@ -1999,6 +2001,14 @@ export function ProductDetailsPage({ page }) {
       user={user}
       onLogout={logout}
       cursorConfig={CURSOR_CONFIG[page]}
+      assistantContext={{
+        ...(productId ? { productId } : {}),
+        ...(product?.title ? { productTitle: product.title } : {}),
+        ...(product?.city ? { city: product.city } : {}),
+        ...(product?.category?.name
+          ? { categoryName: product.category.name }
+          : {}),
+      }}
     >
       <MessageText message={pageMessage} />
 
